@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import GeospatialDashboard from "./GeospatialDashboard";
+import Unit311WorkspacePreview from "./Unit311WorkspacePreview";
 
 const CONSTRUCTION_BG = "/images/construction-bg.jpg";
 
@@ -134,10 +134,10 @@ export default function HomeOfferPlatform() {
 
           <div className="mt-10 w-full">
             <p className="mx-auto mb-4 max-w-2xl text-center text-sm text-white/50">
-              Hover any panel to explore the centralised workspace — clients, CRM, projects, finance,
-              HR, logistics, files, email, messaging, and social in one place.
+              The same workspace your team uses every day — sidebar modules plus the internal operations command
+              centre for actions, schedule, missions, and projects.
             </p>
-            <GeospatialDashboard className="w-full" />
+            <Unit311WorkspacePreview className="w-full" />
           </div>
         </div>
       </div>
