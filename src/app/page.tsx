@@ -1,5 +1,13 @@
-import BcdLoginPage from "@/components/auth/BcdLoginPage";
+import HomeHero from "@/components/home/HomeHero";
+import HomeOfferPlatform from "@/components/home/HomeOfferPlatform";
+import WhoWeWorkWith from "@/components/home/WhoWeWorkWith";
 
 export default function HomePage() {
-  return <BcdLoginPage />;
+  return (
+    <>
+      <HomeHero />
+      <HomeOfferPlatform />
+      <WhoWeWorkWith />
+    </>
+  );
 }

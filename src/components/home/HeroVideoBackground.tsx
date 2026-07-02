@@ -3,9 +3,9 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-const HERO_VIDEO = "/videos/drone.mp4";
+const HERO_VIDEO = "/images/video.mp4";
 const HERO_IMAGE = "/images/hero/drone-quarry-scan.webp";
-const HERO_OBJECT_POSITION = "73% 24%";
+const HERO_OBJECT_POSITION = "50% 50%";
 const PLAYBACK_RATE = 0.8;
 const LOOP_LEAD_IN_SECONDS = 0.05;
 const LOOP_TRIM_SECONDS = 0.12;

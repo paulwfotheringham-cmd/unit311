@@ -21,12 +21,11 @@ function scrollToSection(hash: string) {
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
-  const isDarkNav = pathname === "/" || pathname === "/clientlogin" || pathname === "/contact";
+  const isLoginPage = pathname === "/login" || pathname === "/clientlogin";
+  const isDarkNav = pathname === "/" || pathname === "/contact" || isLoginPage;
   const isDashboard =
-    pathname === "/" ||
-    pathname === "/clientlogin" ||
-    pathname?.startsWith("/client/") ||
     pathname?.startsWith("/test1") ||
+    pathname?.startsWith("/client/") ||
     pathname?.startsWith("/testflighthub") ||
     pathname?.startsWith("/internaldashboard") ||
     pathname?.startsWith("/files") ||

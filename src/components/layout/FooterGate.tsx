@@ -7,7 +7,7 @@ export default function FooterGate() {
   const pathname = usePathname();
 
   if (
-    pathname === "/" ||
+    pathname === "/login" ||
     pathname === "/clientlogin" ||
     pathname?.startsWith("/client/") ||
     pathname?.startsWith("/test1") ||
