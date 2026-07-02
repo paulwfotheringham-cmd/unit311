@@ -1,14 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 const HERO_VIDEO = "/images/video.mp4";
-const HERO_IMAGE = "/images/hero/drone-quarry-scan.webp";
-const HERO_OBJECT_POSITION = "50% 50%";
 const PLAYBACK_RATE = 0.8;
 const LOOP_LEAD_IN_SECONDS = 0.05;
 const LOOP_TRIM_SECONDS = 0.12;
+const HERO_OBJECT_POSITION = "50% 42%";
 
 export default function HeroVideoBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,6 +30,8 @@ export default function HeroVideoBackground() {
     if (!video || !container) return;
 
     const primePlayback = () => {
+      video.muted = true;
+      video.volume = 0;
       video.playbackRate = PLAYBACK_RATE;
       void video.play().catch(() => {});
     };
@@ -73,26 +73,30 @@ export default function HeroVideoBackground() {
   }, [prefersReducedMotion]);
 
   return (
-    <div ref={containerRef} className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+    <div
+      ref={containerRef}
+      className="pointer-events-none absolute inset-0 z-0 min-h-full w-full overflow-hidden"
+      aria-hidden
+    >
       {prefersReducedMotion ? (
-        <Image
-          src={HERO_IMAGE}
-          alt=""
-          fill
-          priority
-          className="object-cover"
-          style={{ objectPosition: HERO_OBJECT_POSITION }}
-          sizes="100vw"
+        <div
+          className="absolute inset-0 bg-[#020617]"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% 20%, rgba(37, 99, 235, 0.22), transparent 70%), #020617",
+          }}
         />
       ) : (
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ width: "100%", height: "100%", objectPosition: HERO_OBJECT_POSITION }}
+          style={{ objectPosition: HERO_OBJECT_POSITION }}
           autoPlay
           muted
           loop
           playsInline
+          disablePictureInPicture
+          controls={false}
           preload="auto"
           aria-hidden
           tabIndex={-1}

@@ -4,7 +4,7 @@ import { SITE_DESCRIPTION, SITE_HERO_LINE, SITE_TAGLINE } from "@/lib/site";
 
 export default function HomeHero() {
   return (
-    <section className="relative min-h-[88vh] overflow-x-hidden bg-[#020617] sm:min-h-[92vh]">
+    <section className="relative min-h-[100svh] overflow-hidden bg-[#020617]">
       <HeroVideoBackground />
 
       <div
@@ -16,7 +16,7 @@ export default function HomeHero() {
         }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-[88vh] max-w-[1400px] items-end px-5 pb-20 pt-24 sm:min-h-[92vh] sm:px-8 sm:pb-24 sm:pt-[104px] lg:items-center lg:px-10 lg:pb-28 lg:pt-[120px]">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-5 pb-16 pt-24 sm:px-8 sm:pb-20 sm:pt-[104px] lg:items-center lg:px-10 lg:pb-24 lg:pt-[120px]">
         <div className="relative max-w-[640px]">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/55 sm:text-sm">
             Unit311
