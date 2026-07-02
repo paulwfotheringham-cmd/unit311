@@ -72,6 +72,67 @@ function stepExpenseAmount(current: number, delta: number) {
   return Math.max(0, Math.round((current + delta) * 100) / 100);
 }
 
+type ExpenseReportMode = "total" | "byPerson" | "byCategory";
+
+function inferExpenseCategory(purpose: string) {
+  const text = purpose.toLowerCase();
+  if (/travel|flight|hotel|taxi|mileage|fuel/.test(text)) return "Travel";
+  if (/software|subscription|license|saas/.test(text)) return "Software";
+  if (/equipment|hardware|drone|camera|sensor/.test(text)) return "Equipment";
+  if (/meal|food|restaurant|entertainment/.test(text)) return "Meals & entertainment";
+  if (/office|supplies|stationery/.test(text)) return "Office";
+  return "General";
+}
+
+type ExpenseReportRow = {
+  label: string;
+  count: number;
+  total: number;
+  paid: number;
+  unpaid: number;
+};
+
+function buildExpenseReport(expenses: FinancialExpense[], mode: ExpenseReportMode): ExpenseReportRow[] {
+  if (mode === "total") {
+    const paid = expenses.filter((entry) => entry.paid).reduce((sum, entry) => sum + entry.amount, 0);
+    const unpaid = expenses.filter((entry) => !entry.paid).reduce((sum, entry) => sum + entry.amount, 0);
+    return [
+      {
+        label: "All expenses",
+        count: expenses.length,
+        total: paid + unpaid,
+        paid,
+        unpaid,
+      },
+    ];
+  }
+
+  const buckets = new Map<string, { count: number; paid: number; unpaid: number }>();
+
+  for (const expense of expenses) {
+    const label =
+      mode === "byPerson"
+        ? expense.submitterName
+        : inferExpenseCategory(expense.purposeDescription);
+    const current = buckets.get(label) ?? { count: 0, paid: 0, unpaid: 0 };
+    buckets.set(label, {
+      count: current.count + 1,
+      paid: current.paid + (expense.paid ? expense.amount : 0),
+      unpaid: current.unpaid + (expense.paid ? 0 : expense.amount),
+    });
+  }
+
+  return [...buckets.entries()]
+    .map(([label, data]) => ({
+      label,
+      count: data.count,
+      total: data.paid + data.unpaid,
+      paid: data.paid,
+      unpaid: data.unpaid,
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
 type ExpensesWorkspaceProps = {
   onBackToFinancials?: () => void;
 };
@@ -86,6 +147,7 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
   const [newDraft, setNewDraft] = useState<FinancialExpense | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<FinancialExpense | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [reportMode, setReportMode] = useState<ExpenseReportMode>("total");
   const snapshottedIdRef = useRef<string | null>(null);
 
   const selected = useMemo(() => {
@@ -106,6 +168,23 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
   );
 
   const totalOutstanding = useMemo(() => sumOutstandingExpenses(expenses), [expenses]);
+
+  const reportData = useMemo(
+    () => buildExpenseReport(expenses, reportMode),
+    [expenses, reportMode],
+  );
+
+  const reportChartData = useMemo(
+    () =>
+      reportData.map((row) => ({
+        label: row.label.length > 18 ? `${row.label.slice(0, 16)}…` : row.label,
+        fullLabel: row.label,
+        total: Math.round(row.total * 100) / 100,
+        paid: Math.round(row.paid * 100) / 100,
+        unpaid: Math.round(row.unpaid * 100) / 100,
+      })),
+    [reportData],
+  );
 
   const loadExpenses = useCallback(async () => {
     setLoading(true);
@@ -327,6 +406,105 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
           </button>
         </div>
       </section>
+
+      {!loading && expenses.length > 0 && (
+        <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Reports</h3>
+              <p className="mt-1 text-xs text-white/45">
+                Expense summary computed from loaded entries
+              </p>
+            </div>
+            <div>
+              <FieldLabel>View</FieldLabel>
+              <select
+                value={reportMode}
+                onChange={(event) => setReportMode(event.target.value as ExpenseReportMode)}
+                className={cn(inputClassName(), "mt-0 w-44")}
+              >
+                <option value="total">Total</option>
+                <option value="byPerson">By person</option>
+                <option value="byCategory">By category</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.08] text-[10px] font-medium uppercase tracking-[0.12em] text-white/35">
+                  <th className="px-3 py-2 font-medium">
+                    {reportMode === "byPerson"
+                      ? "Person"
+                      : reportMode === "byCategory"
+                        ? "Category"
+                        : "Summary"}
+                  </th>
+                  <th className="px-3 py-2 font-medium text-right">Items</th>
+                  <th className="px-3 py-2 font-medium text-right">Total</th>
+                  <th className="px-3 py-2 font-medium text-right">Paid</th>
+                  <th className="px-3 py-2 font-medium text-right">Unpaid</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((row) => (
+                  <tr key={row.label} className="border-b border-white/[0.05] last:border-0">
+                    <td className="px-3 py-2.5 font-medium text-white/90">{row.label}</td>
+                    <td className="px-3 py-2.5 text-right text-white/55">{row.count}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-white/80">
+                      {formatExpenseAmount(row.total, "EUR")}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-emerald-300/90">
+                      {formatExpenseAmount(row.paid, "EUR")}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono text-amber-200/90">
+                      {formatExpenseAmount(row.unpaid, "EUR")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {reportChartData.length > 0 && (
+            <div className="mt-6 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={reportChartData} margin={{ top: 8, right: 8, left: -4, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 11 }}
+                    interval={0}
+                    angle={reportChartData.length > 3 ? -20 : 0}
+                    textAnchor={reportChartData.length > 3 ? "end" : "middle"}
+                    height={reportChartData.length > 3 ? 52 : 30}
+                  />
+                  <YAxis
+                    tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 11 }}
+                    tickFormatter={(value: number) => `€${value}`}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }) => (
+                      <ChartTooltip
+                        active={active}
+                        label={String(payload?.[0]?.payload?.fullLabel ?? label ?? "")}
+                        payload={payload?.map((entry) => ({
+                          name: entry.name === "paid" ? "Paid" : "Unpaid",
+                          value: entry.value as number,
+                          color: entry.name === "paid" ? "#34d399" : "#fbbf24",
+                        }))}
+                      />
+                    )}
+                  />
+                  <Bar dataKey="paid" name="paid" stackId="a" fill="#34d399" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="unpaid" name="unpaid" stackId="a" fill="#fbbf24" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </section>
+      )}
 
       {saveMessage && (
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">

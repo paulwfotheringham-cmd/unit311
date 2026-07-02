@@ -9,6 +9,7 @@ import {
   geocodeConnection,
   type CrmConnection,
 } from "@/lib/connections-data";
+import { createInitialConnections } from "@/lib/connections-seed-data";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Loader2, Plus, Save, Trash2, Users } from "lucide-react";
 
@@ -122,6 +123,7 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
   const [savedSnapshot, setSavedSnapshot] = useState<CrmConnection | null>(null);
   const [filterSpecialty, setFilterSpecialty] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
+  const [useLocalFallback, setUseLocalFallback] = useState(false);
   const snapshottedIdRef = useRef<string | null>(null);
 
   const selected = useMemo(() => {
@@ -180,9 +182,11 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
         return next[0]?.id ?? null;
       });
     } catch (loadError) {
+      const fallback = createInitialConnections();
+      setConnections(fallback);
+      setUseLocalFallback(true);
+      setSelectedId(fallback[0]?.id ?? null);
       setError(loadError instanceof Error ? loadError.message : "Failed to load connections");
-      setConnections([]);
-      setSelectedId(null);
     } finally {
       setLoading(false);
     }
@@ -214,11 +218,51 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
     }
   }, [selectedId, connections]);
 
+  function saveConnectionLocally(connection: CrmConnection, isNew: boolean) {
+    const now = new Date().toISOString();
+
+    if (isNew) {
+      if (!connection.name.trim()) {
+        throw new Error("Name is required before saving");
+      }
+
+      const saved: CrmConnection = {
+        ...connection,
+        id: `conn-local-${Date.now()}`,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      setConnections((current) =>
+        [...current, saved].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setNewDraft(null);
+      setSelectedId(saved.id);
+      snapshottedIdRef.current = saved.id;
+      setSavedSnapshot(saved);
+      setSaveMessage("Contact saved locally");
+      return;
+    }
+
+    const saved: CrmConnection = { ...connection, updatedAt: now };
+    setConnections((current) =>
+      current.map((entry) => (entry.id === saved.id ? saved : entry)),
+    );
+    snapshottedIdRef.current = saved.id;
+    setSavedSnapshot(saved);
+    setSaveMessage("Changes saved locally");
+  }
+
   async function saveConnection(connection: CrmConnection, isNew: boolean) {
     setBusy(true);
     setError(null);
 
     try {
+      if (useLocalFallback) {
+        saveConnectionLocally(connection, isNew);
+        return;
+      }
+
       if (isNew) {
         if (!connection.name.trim()) {
           throw new Error("Name is required before saving");
@@ -343,6 +387,15 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
     setError(null);
 
     try {
+      if (useLocalFallback) {
+        const remaining = connections.filter((entry) => entry.id !== selected.id);
+        setConnections(remaining);
+        snapshottedIdRef.current = remaining[0]?.id ?? null;
+        setSelectedId(remaining[0]?.id ?? null);
+        setSavedSnapshot(remaining[0] ? { ...remaining[0] } : null);
+        return;
+      }
+
       const response = await fetch(`/api/crm/connections/${selected.id}`, { method: "DELETE" });
       const data = await readApiJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(data.error ?? "Failed to delete contact");
@@ -395,6 +448,12 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
           </button>
         </div>
       </section>
+
+      {useLocalFallback && (
+        <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200/90">
+          Using local connection directory
+        </div>
+      )}
 
       {saveMessage && (
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">

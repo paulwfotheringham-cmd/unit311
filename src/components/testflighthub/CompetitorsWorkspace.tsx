@@ -43,7 +43,47 @@ type CompetitorDraft = Pick<
   "companyName" | "website" | "services" | "droneTechnology" | "lastRevenue" | "notes"
 > & {
   serviceCategories: ServiceCategory[];
+  customServiceTags: string[];
 };
+
+type RegionOption = {
+  id: CompetitorRegion;
+  title: string;
+  subtitle: string;
+};
+
+const CUSTOM_REGIONS_STORAGE_KEY = "unit311-custom-competitor-regions";
+
+function slugifyRegionId(name: string): CompetitorRegion {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 24);
+  return (slug || "custom") as CompetitorRegion;
+}
+
+function parseCustomServiceTags(services: string): string[] {
+  if (!services.trim()) return [];
+  return services
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter(
+      (item) =>
+        !SERVICE_CATEGORY_ORDER.some(
+          (category) => SERVICE_CATEGORY_LABELS[category].toLowerCase() === item.toLowerCase(),
+        ),
+    );
+}
+
+function mergeServicesWithCustomTags(detail: string, tags: string[]) {
+  const normalizedTags = tags.map((tag) => tag.trim()).filter(Boolean);
+  const detailText = detail.trim();
+  if (normalizedTags.length === 0) return detailText;
+  if (!detailText) return normalizedTags.join(", ");
+  return `${normalizedTags.join(", ")} | ${detailText}`;
+}
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -97,7 +137,7 @@ function formatWebsiteDisplay(website: string) {
   }
 }
 
-const TABLE_MIN_WIDTH = "min-w-[88rem]";
+const TABLE_MIN_WIDTH = "min-w-[96rem]";
 
 export default function CompetitorsWorkspace() {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
@@ -108,10 +148,20 @@ export default function CompetitorsWorkspace() {
   const [busy, setBusy] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [customRegions, setCustomRegions] = useState<RegionOption[]>([]);
+  const [newRegionName, setNewRegionName] = useState("");
+  const [customTagInput, setCustomTagInput] = useState("");
+
+  const regionOptions = useMemo(() => {
+    const merged = new Map<string, RegionOption>();
+    for (const region of COMPETITOR_REGIONS) merged.set(region.id, region);
+    for (const region of customRegions) merged.set(region.id, region);
+    return Array.from(merged.values());
+  }, [customRegions]);
 
   const regionMeta = useMemo(
-    () => COMPETITOR_REGIONS.find((region) => region.id === selectedRegion) ?? COMPETITOR_REGIONS[0],
-    [selectedRegion],
+    () => regionOptions.find((region) => region.id === selectedRegion) ?? regionOptions[0],
+    [regionOptions, selectedRegion],
   );
 
   const regionCompetitors = useMemo(
@@ -144,26 +194,47 @@ export default function CompetitorsWorkspace() {
   }, [loadCompetitors]);
 
   useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(CUSTOM_REGIONS_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as RegionOption[];
+      if (Array.isArray(parsed)) setCustomRegions(parsed);
+    } catch {
+      setCustomRegions([]);
+    }
+  }, []);
+
+  useEffect(() => {
     setEditingId(null);
     setDraft(null);
+    setCustomTagInput("");
   }, [selectedRegion]);
 
   function startEdit(competitor: Competitor) {
     setEditingId(competitor.id);
+    const customServiceTags = parseCustomServiceTags(competitor.services);
+    const servicesDetail = competitor.services.includes("|")
+      ? competitor.services.split("|").slice(1).join("|").trim()
+      : customServiceTags.length > 0
+        ? ""
+        : competitor.services;
     setDraft({
       companyName: competitor.companyName,
       website: competitor.website,
-      services: competitor.services,
+      services: servicesDetail,
       droneTechnology: competitor.droneTechnology,
       serviceCategories: resolveServiceCategories(competitor),
+      customServiceTags,
       lastRevenue: competitor.lastRevenue,
       notes: competitor.notes,
     });
+    setCustomTagInput("");
   }
 
   function cancelEdit() {
     setEditingId(null);
     setDraft(null);
+    setCustomTagInput("");
   }
 
   function patchDraft(patch: Partial<CompetitorDraft>) {
@@ -183,6 +254,50 @@ export default function CompetitorsWorkspace() {
     });
   }
 
+  function addCustomServiceTag() {
+    const trimmed = customTagInput.trim();
+    if (!trimmed) return;
+    setDraft((current) => {
+      if (!current) return current;
+      const existing = new Set(current.customServiceTags.map((tag) => tag.toLowerCase()));
+      if (existing.has(trimmed.toLowerCase())) return current;
+      return { ...current, customServiceTags: [...current.customServiceTags, trimmed] };
+    });
+    setCustomTagInput("");
+  }
+
+  function removeCustomServiceTag(tag: string) {
+    setDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        customServiceTags: current.customServiceTags.filter((item) => item !== tag),
+      };
+    });
+  }
+
+  function handleAddRegion() {
+    const trimmed = newRegionName.trim();
+    if (!trimmed) return;
+
+    const id = slugifyRegionId(trimmed);
+    const nextRegion: RegionOption = { id, title: trimmed, subtitle: "" };
+    const exists = regionOptions.some(
+      (region) => region.id === id || region.title.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (exists) {
+      setSelectedRegion(id);
+      setNewRegionName("");
+      return;
+    }
+
+    const nextRegions = [nextRegion, ...customRegions];
+    setCustomRegions(nextRegions);
+    window.localStorage.setItem(CUSTOM_REGIONS_STORAGE_KEY, JSON.stringify(nextRegions));
+    setSelectedRegion(id);
+    setNewRegionName("");
+  }
+
   async function saveEdit(competitorId: string) {
     if (!draft) return;
 
@@ -196,7 +311,7 @@ export default function CompetitorsWorkspace() {
         body: JSON.stringify({
           companyName: draft.companyName,
           website: draft.website,
-          services: draft.services,
+          services: mergeServicesWithCustomTags(draft.services, draft.customServiceTags),
           serviceCategories: serializeServiceCategories(draft.serviceCategories),
           droneTechnology: draft.droneTechnology,
           lastRevenue: draft.lastRevenue,
@@ -232,7 +347,7 @@ export default function CompetitorsWorkspace() {
       const data = await readApiJson<{ competitor?: Competitor; error?: string }>(response);
       if (!response.ok || !data.competitor) throw new Error(data.error ?? "Failed to create competitor");
 
-      setCompetitors((current) => [...current, data.competitor!]);
+      setCompetitors((current) => [data.competitor!, ...current]);
       startEdit(data.competitor!);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Failed to create competitor");
@@ -286,12 +401,37 @@ export default function CompetitorsWorkspace() {
                 onChange={(event) => setSelectedRegion(event.target.value as CompetitorRegion)}
                 className={selectClassName()}
               >
-                {COMPETITOR_REGIONS.map((region) => (
+                {regionOptions.map((region) => (
                   <option key={region.id} value={region.id}>
                     {region.title}
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="min-w-[12rem] flex-1 sm:flex-none">
+              <FieldLabel>Add country/region</FieldLabel>
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  value={newRegionName}
+                  onChange={(event) => setNewRegionName(event.target.value)}
+                  placeholder="e.g. France"
+                  className={cellInputClassName()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleAddRegion();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddRegion}
+                  disabled={!newRegionName.trim()}
+                  className="inline-flex h-10 shrink-0 items-center rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.05] disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
             </div>
             <button
               type="button"
@@ -338,12 +478,12 @@ export default function CompetitorsWorkspace() {
           <div className="overflow-x-auto">
             <table className={cn("w-full table-fixed border-collapse text-left", TABLE_MIN_WIDTH)}>
               <colgroup>
-                <col className="w-[12%]" />
-                <col className="w-[16%]" />
+                <col className="min-w-[14rem] w-[18%]" />
                 <col className="w-[14%]" />
-                <col className="w-[20%]" />
-                <col className="w-[12%]" />
+                <col className="w-[22%]" />
                 <col className="w-[18%]" />
+                <col className="w-[10%]" />
+                <col className="w-[14%]" />
                 <col className="w-[8%]" />
               </colgroup>
               <thead>
@@ -379,11 +519,14 @@ export default function CompetitorsWorkspace() {
                   const categories = isEditing && draft
                     ? draft.serviceCategories
                     : resolveServiceCategories(competitor);
+                  const customTags = isEditing && draft
+                    ? draft.customServiceTags
+                    : parseCustomServiceTags(competitor.services);
 
                   return (
                     <Fragment key={competitor.id}>
                       <tr className="align-top">
-                      <td className="px-4 py-3 sm:px-5">
+                      <td className="min-w-[14rem] px-4 py-3 sm:px-5">
                         {isEditing ? (
                           <input
                             value={row.companyName}
@@ -425,39 +568,92 @@ export default function CompetitorsWorkspace() {
 
                       <td className="px-4 py-3 sm:px-5">
                         {isEditing ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {SERVICE_CATEGORY_ORDER.map((category) => {
-                              const selected = draft?.serviceCategories.includes(category) ?? false;
-                              return (
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {SERVICE_CATEGORY_ORDER.map((category) => {
+                                const selected = draft?.serviceCategories.includes(category) ?? false;
+                                return (
+                                  <button
+                                    key={category}
+                                    type="button"
+                                    onClick={() => toggleDraftCategory(category)}
+                                    className={cn(
+                                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                      selected
+                                        ? serviceBadgeClass(category)
+                                        : "border-white/10 bg-white/[0.03] text-white/40 hover:border-white/20",
+                                    )}
+                                  >
+                                    {SERVICE_CATEGORY_LABELS[category]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {draft?.customServiceTags.map((tag) => (
                                 <button
-                                  key={category}
+                                  key={tag}
                                   type="button"
-                                  onClick={() => toggleDraftCategory(category)}
+                                  onClick={() => removeCustomServiceTag(tag)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-100"
+                                  title="Remove custom tag"
+                                >
+                                  {tag}
+                                  <X className="h-3 w-3" />
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              <input
+                                value={customTagInput}
+                                onChange={(event) => setCustomTagInput(event.target.value)}
+                                placeholder="Custom service tag"
+                                className={cellInputClassName()}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    addCustomServiceTag();
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={addCustomServiceTag}
+                                disabled={!customTagInput.trim()}
+                                className="inline-flex h-10 shrink-0 items-center rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/70 hover:bg-white/[0.05] disabled:opacity-50"
+                              >
+                                Add tag
+                              </button>
+                            </div>
+                          </div>
+                        ) : categories.length > 0 || customTags.length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap gap-1">
+                              {categories.map((category) => (
+                                <span
+                                  key={category}
                                   className={cn(
-                                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
-                                    selected
-                                      ? serviceBadgeClass(category)
-                                      : "border-white/10 bg-white/[0.03] text-white/40 hover:border-white/20",
+                                    "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]",
+                                    serviceBadgeClass(category),
                                   )}
                                 >
                                   {SERVICE_CATEGORY_LABELS[category]}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : categories.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {categories.map((category) => (
-                              <span
-                                key={category}
-                                className={cn(
-                                  "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]",
-                                  serviceBadgeClass(category),
-                                )}
-                              >
-                                {SERVICE_CATEGORY_LABELS[category]}
-                              </span>
-                            ))}
+                                </span>
+                              ))}
+                              {customTags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-100"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                            {competitor.services.trim() && (
+                              <p className="whitespace-pre-wrap text-sm leading-snug text-white/65">
+                                {competitor.services}
+                              </p>
+                            )}
                           </div>
                         ) : (
                           <p className="text-sm text-white/45">Other</p>

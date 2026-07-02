@@ -67,7 +67,7 @@ function MessageBody({ message }: { message: EmailMessage }) {
 export default function InfoEmailWorkspace() {
   const [accounts, setAccounts] = useState<EmailAccountOption[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(true);
-  const [selectedAccountId, setSelectedAccountId] = useState<EmailAccountId>("dc-info");
+  const [selectedAccountId, setSelectedAccountId] = useState<EmailAccountId>("info");
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -480,10 +480,8 @@ export default function InfoEmailWorkspace() {
                 >
                   {accounts.length === 0 ? (
                     <>
-                      <option value="dc-info">info@unit311.com</option>
-                      <option value="dc-paul">paul@unit311.com</option>
-                      <option value="info">hello@unit311.com</option>
-                      <option value="paul">paul.fotheringham@unit311.com</option>
+                      <option value="info">info@dronecatalyst.com</option>
+                      <option value="paul">paul@dronecatalyst.com</option>
                     </>
                   ) : (
                     accounts.map((account) => (
@@ -496,7 +494,7 @@ export default function InfoEmailWorkspace() {
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
               </div>
               <p className="mt-1 text-xs text-white/45">
-                {mailboxName} · Zoho Mail · visible to all operators
+                {mailboxName} · shared Drone Catalyst mailbox · Zoho Mail · visible to all operators
               </p>
             </div>
           </div>
@@ -570,6 +568,10 @@ export default function InfoEmailWorkspace() {
           </div>
         </div>
       </div>
+
+      <p className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-100">
+        Uses the same Zoho credentials as Drone Catalyst production.
+      </p>
 
       {error && (
         <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
@@ -694,8 +696,9 @@ export default function InfoEmailWorkspace() {
         <section className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 sm:px-5">
           <h3 className="text-sm font-semibold text-amber-100">Connect {mailboxEmail}</h3>
           <p className="mt-1 text-sm text-amber-100/80">
-            Enter the Zoho app-specific password for this mailbox. It is stored securely on the
-            server and never sent back to the browser.
+            This workspace reads the shared Drone Catalyst mailboxes (info@ and paul@). Enter the
+            Zoho app-specific password for the selected mailbox. Credentials are stored securely on
+            the server and never sent back to the browser.
           </p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">

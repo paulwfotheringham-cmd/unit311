@@ -14,7 +14,60 @@ import {
 } from "@/lib/support-data";
 import { cn } from "@/lib/utils";
 import SupportTicketClientActions from "@/components/testflighthub/SupportTicketClientActions";
-import { Archive, ArchiveRestore, LifeBuoy, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BarChart3, LifeBuoy, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
+
+type SupportStatsPeriod = "week" | "month" | "quarter";
+
+const STATS_PERIOD_LABELS: Record<SupportStatsPeriod, string> = {
+  week: "Last week",
+  month: "Last month",
+  quarter: "Last quarter",
+};
+
+function periodStart(period: SupportStatsPeriod): Date {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (period === "week") return new Date(now - 7 * dayMs);
+  if (period === "month") return new Date(now - 30 * dayMs);
+  return new Date(now - 90 * dayMs);
+}
+
+function ticketInPeriod(ticket: SupportTicket, period: SupportStatsPeriod) {
+  const start = periodStart(period);
+  return new Date(ticket.updatedAt).getTime() >= start.getTime();
+}
+
+function StatBar({
+  label,
+  count,
+  max,
+  tone,
+}: {
+  label: string;
+  count: number;
+  max: number;
+  tone: "sky" | "amber" | "emerald";
+}) {
+  const width = max > 0 ? Math.max(8, Math.round((count / max) * 100)) : 0;
+  const toneClass =
+    tone === "sky"
+      ? "border-sky-400/30 bg-sky-500/20"
+      : tone === "amber"
+        ? "border-amber-400/30 bg-amber-500/20"
+        : "border-emerald-400/30 bg-emerald-500/20";
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex items-end justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">{label}</p>
+        <p className="text-2xl font-semibold tabular-nums text-white">{count}</p>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+        <div className={cn("h-full rounded-full border", toneClass)} style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  );
+}
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -49,6 +102,7 @@ export default function SupportWorkspace() {
   const [savedSnapshot, setSavedSnapshot] = useState<SupportTicket | null>(null);
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
+  const [statsPeriod, setStatsPeriod] = useState<SupportStatsPeriod>("month");
   const snapshottedIdRef = useRef<string | null>(null);
 
   const visibleTickets = useMemo(() => {
@@ -74,11 +128,11 @@ export default function SupportWorkspace() {
       if (!query) return true;
 
       const haystack = [
-        ticket.id,
         ticket.name,
+        ticket.userAssigned ?? "",
+        ticket.id,
         ticket.organisation,
         ticket.description,
-        ticket.userAssigned ?? "",
       ]
         .join(" ")
         .toLowerCase();
@@ -86,6 +140,34 @@ export default function SupportWorkspace() {
       return haystack.includes(query);
     });
   }, [clientFilter, search, visibleTickets]);
+
+  const periodTickets = useMemo(
+    () => tickets.filter((ticket) => ticketInPeriod(ticket, statsPeriod)),
+    [statsPeriod, tickets],
+  );
+
+  const inQueueCount = useMemo(
+    () =>
+      periodTickets.filter(
+        (ticket) => !ticket.archived && !ticket.closed && !ticket.userAssigned?.trim(),
+      ).length,
+    [periodTickets],
+  );
+
+  const outstandingCount = useMemo(
+    () =>
+      periodTickets.filter(
+        (ticket) => !ticket.archived && !ticket.closed && Boolean(ticket.userAssigned?.trim()),
+      ).length,
+    [periodTickets],
+  );
+
+  const resolvedCount = useMemo(
+    () => periodTickets.filter((ticket) => ticket.closed && !ticket.archived).length,
+    [periodTickets],
+  );
+
+  const statsMax = Math.max(inQueueCount, outstandingCount, resolvedCount, 1);
 
   const latestTicket = visibleTickets[0] ?? null;
   const urgentOpenCount = useMemo(
@@ -318,6 +400,33 @@ export default function SupportWorkspace() {
         </div>
       </section>
 
+      {!loading && (
+        <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-sky-300" />
+              <h3 className="text-sm font-semibold text-white">Ticket stats</h3>
+            </div>
+            <select
+              value={statsPeriod}
+              onChange={(event) => setStatsPeriod(event.target.value as SupportStatsPeriod)}
+              className={cn(inputClassName(), "mt-0 w-auto min-w-[10rem]")}
+            >
+              {(Object.keys(STATS_PERIOD_LABELS) as SupportStatsPeriod[]).map((period) => (
+                <option key={period} value={period}>
+                  {STATS_PERIOD_LABELS[period]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <StatBar label="In queue" count={inQueueCount} max={statsMax} tone="sky" />
+            <StatBar label="Outstanding" count={outstandingCount} max={statsMax} tone="amber" />
+            <StatBar label="Resolved" count={resolvedCount} max={statsMax} tone="emerald" />
+          </div>
+        </section>
+      )}
+
       {error && (
         <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
@@ -377,7 +486,7 @@ export default function SupportWorkspace() {
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search tickets, clients, IDs…"
+                  placeholder="Search by user name, assignee, ID…"
                   className={cn(inputClassName(), "mt-0 pl-10")}
                 />
               </div>
@@ -395,7 +504,7 @@ export default function SupportWorkspace() {
               </select>
             </div>
 
-            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+            <div className="mt-4 max-h-[28rem] space-y-2 overflow-y-auto pr-1">
               {filteredTickets.length === 0 ? (
                 <p className="text-sm text-white/45">No tickets match your filters.</p>
               ) : (
@@ -409,7 +518,7 @@ export default function SupportWorkspace() {
                       type="button"
                       onClick={() => setSelectedTicketId(ticket.id)}
                       className={cn(
-                        "min-w-[14rem] shrink-0 rounded-xl border px-4 py-3 text-left transition-colors",
+                        "w-full rounded-xl border px-4 py-3 text-left transition-colors",
                         selected
                           ? "border-sky-400/40 bg-sky-500/10 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.15)]"
                           : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
@@ -427,7 +536,10 @@ export default function SupportWorkspace() {
                         )}
                       </div>
                       <p className="mt-1 text-sm font-semibold text-white">{ticket.name || "Unnamed"}</p>
-                      <p className="mt-1 text-xs text-white/45">{ticket.organisation || "No organisation"}</p>
+                      <p className="mt-1 text-xs text-white/45">
+                        {ticket.organisation || "No organisation"}
+                        {ticket.userAssigned ? ` · assigned ${ticket.userAssigned}` : ""}
+                      </p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span
                           className={cn(

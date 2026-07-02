@@ -17,11 +17,12 @@ const DEMO_LOGIN = {
   username: "client",
   password: "client",
   redirectPath: "/internaldashboard",
+  userId: "00000000-0000-4000-8000-000000000001",
 } as const;
 
 function createDemoLoginResponse() {
   const session: PlatformSession = {
-    sub: "demo-client",
+    sub: DEMO_LOGIN.userId,
     username: DEMO_LOGIN.username,
     displayName: "Client",
     userType: "internal",

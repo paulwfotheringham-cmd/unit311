@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
       createdByOperatorName?: string;
       memberOperatorIds?: string[];
       memberClientUsernames?: string[];
+      description?: string;
+      isPrivate?: boolean;
     };
 
     if (!body.name || !body.createdByOperatorId || !body.createdByOperatorName) {
@@ -83,6 +85,8 @@ export async function POST(request: NextRequest) {
       createdByOperatorName: body.createdByOperatorName,
       memberOperatorIds: body.memberOperatorIds ?? [],
       memberClientUsernames: body.memberClientUsernames,
+      description: body.description,
+      isPrivate: body.isPrivate,
     });
 
     return NextResponse.json({ channel });

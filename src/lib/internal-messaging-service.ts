@@ -237,6 +237,8 @@ export async function createChannel(input: {
   createdByOperatorName: string;
   memberOperatorIds: string[];
   memberClientUsernames?: string[];
+  description?: string;
+  isPrivate?: boolean;
 }): Promise<MessageChannel> {
   const name = input.name.trim();
   if (!name) throw new Error("Channel name is required.");
@@ -277,14 +279,19 @@ export async function createChannel(input: {
 
   const channel = mapMessageChannel(data as DbChannel);
 
+  const privacyLabel = input.isPrivate ? "Private channel" : "Channel";
+  const descriptionLine = input.description?.trim()
+    ? ` ${input.description.trim()}`
+    : "";
+
   await sendMessage({
     operatorId: input.createdByOperatorId,
     operatorName: input.createdByOperatorName,
     username: "system",
     content:
       channelType === "client"
-        ? `Channel created for ${clientKey} client collaboration.`
-        : "Channel created for internal team collaboration.",
+        ? `${privacyLabel} created for ${clientKey} client collaboration.${descriptionLine}`
+        : `${privacyLabel} created for internal team collaboration.${descriptionLine}`,
     room: channel.room,
     messageType: "system",
   });

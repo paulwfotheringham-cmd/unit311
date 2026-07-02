@@ -15,7 +15,7 @@ import {
   type GrantStatus,
 } from "@/lib/grants-data";
 import { cn } from "@/lib/utils";
-import { Landmark, TrendingUp } from "lucide-react";
+import { Landmark, LayoutGrid, Plus, TrendingUp, X } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -43,6 +43,48 @@ const STATUS_FILTER_OPTIONS: Array<GrantStatus | "All"> = [
 ];
 
 const PIE_COLORS = ["#94a3b8", "#38bdf8", "#fbbf24", "#34d399", "#f87171", "#a78bfa"];
+
+type DashboardSection =
+  | "kpis"
+  | "pipelineChart"
+  | "programmeChart"
+  | "submissionsChart"
+  | "applicationsTable";
+
+const SECTION_LABELS: Record<DashboardSection, string> = {
+  kpis: "KPI cards",
+  pipelineChart: "Pipeline by status",
+  programmeChart: "Funding by programme",
+  submissionsChart: "Submissions vs approvals",
+  applicationsTable: "Grant applications",
+};
+
+function inputClassName() {
+  return "mt-1.5 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/50";
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+      {children}
+    </label>
+  );
+}
+
+function createBlankGrantInput(): Omit<GrantApplication, "id"> {
+  return {
+    programme: "",
+    funder: "",
+    title: "",
+    amountEur: 0,
+    status: "Draft",
+    owner: "Tom",
+    submittedAt: null,
+    deadline: new Date().toISOString().slice(0, 10),
+    region: "",
+    coFundingPct: 25,
+  };
+}
 
 function panelClassName() {
   return "rounded-2xl border border-white/10 bg-[#0a1422]/80 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:p-5";
@@ -132,18 +174,50 @@ function GrantCard({ grant }: { grant: GrantApplication }) {
 }
 
 export default function GrantsWorkspace() {
+  const [grants, setGrants] = useState<GrantApplication[]>(() => [...GRANT_APPLICATIONS]);
   const [statusFilter, setStatusFilter] = useState<GrantStatus | "All">("All");
+  const [showNewGrantModal, setShowNewGrantModal] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [newGrantDraft, setNewGrantDraft] = useState(createBlankGrantInput);
+  const [visibleSections, setVisibleSections] = useState<Record<DashboardSection, boolean>>({
+    kpis: true,
+    pipelineChart: true,
+    programmeChart: true,
+    submissionsChart: true,
+    applicationsTable: true,
+  });
 
   const filteredGrants = useMemo(() => {
-    if (statusFilter === "All") return GRANT_APPLICATIONS;
-    return GRANT_APPLICATIONS.filter((grant) => grant.status === statusFilter);
-  }, [statusFilter]);
+    if (statusFilter === "All") return grants;
+    return grants.filter((grant) => grant.status === statusFilter);
+  }, [grants, statusFilter]);
 
   const pipelineChartData = GRANTS_BY_STATUS.map((item) => ({
     name: item.status,
     applications: item.count,
     value: item.value / 1000,
   }));
+
+  function toggleSection(section: DashboardSection) {
+    setVisibleSections((current) => ({ ...current, [section]: !current[section] }));
+  }
+
+  function handleCreateGrant() {
+    if (!newGrantDraft.title.trim() || !newGrantDraft.programme.trim()) return;
+
+    const grant: GrantApplication = {
+      ...newGrantDraft,
+      id: `grant-${Date.now().toString(36)}`,
+      title: newGrantDraft.title.trim(),
+      programme: newGrantDraft.programme.trim(),
+      funder: newGrantDraft.funder.trim() || newGrantDraft.programme.trim(),
+      region: newGrantDraft.region.trim() || "EU",
+    };
+
+    setGrants((current) => [grant, ...current]);
+    setNewGrantDraft(createBlankGrantInput());
+    setShowNewGrantModal(false);
+  }
 
   return (
     <section className="min-w-0 space-y-4 sm:space-y-5" aria-label="Grants workspace">
@@ -159,15 +233,65 @@ export default function GrantsWorkspace() {
             across EU, national, and regional schemes.
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCustomize((open) => !open)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors",
+              showCustomize
+                ? "border-violet-400/40 bg-violet-500/15 text-violet-200"
+                : "border-white/10 bg-white/[0.03] text-white/60 hover:text-white/80",
+            )}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            Customize dashboard
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowNewGrantModal(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
+          >
+            <Plus className="h-4 w-4" />
+            New grant
+          </button>
+        </div>
       </header>
 
+      {showCustomize && (
+        <div className={panelClassName()}>
+          <h3 className="text-sm font-semibold text-white">Visible sections</h3>
+          <p className="mt-1 text-xs text-white/45">Choose which dashboard sections to show</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {(Object.keys(SECTION_LABELS) as DashboardSection[]).map((section) => (
+              <label
+                key={section}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/70"
+              >
+                <input
+                  type="checkbox"
+                  checked={visibleSections[section]}
+                  onChange={() => toggleSection(section)}
+                  className="h-4 w-4 rounded border-white/20 bg-transparent accent-sky-500"
+                />
+                {SECTION_LABELS[section]}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {visibleSections.kpis && (
       <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 xl:grid-cols-4">
         {GRANTS_KPIS.map((kpi) => (
           <KpiCard key={kpi.id} kpi={kpi} />
         ))}
       </div>
+      )}
 
+      {(visibleSections.pipelineChart || visibleSections.programmeChart) && (
       <div className="grid gap-4 xl:grid-cols-2">
+        {visibleSections.pipelineChart && (
         <div className={panelClassName()}>
           <h3 className="text-sm font-semibold text-white">Pipeline by status</h3>
           <p className="mt-1 text-xs text-white/45">Application count and value (€k) by stage</p>
@@ -198,7 +322,9 @@ export default function GrantsWorkspace() {
             </ResponsiveContainer>
           </div>
         </div>
+        )}
 
+        {visibleSections.programmeChart && (
         <div className={panelClassName()}>
           <h3 className="text-sm font-semibold text-white">Funding by programme</h3>
           <p className="mt-1 text-xs text-white/45">Approved and in-flight awards by scheme</p>
@@ -225,8 +351,11 @@ export default function GrantsWorkspace() {
             </ResponsiveContainer>
           </div>
         </div>
+        )}
       </div>
+      )}
 
+      {visibleSections.submissionsChart && (
       <div className={panelClassName()}>
         <h3 className="text-sm font-semibold text-white">Submissions vs approvals</h3>
         <p className="mt-1 text-xs text-white/45">Monthly grant activity — last 6 months</p>
@@ -268,7 +397,9 @@ export default function GrantsWorkspace() {
           </ResponsiveContainer>
         </div>
       </div>
+      )}
 
+      {visibleSections.applicationsTable && (
       <div className={panelClassName()}>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
@@ -319,6 +450,109 @@ export default function GrantsWorkspace() {
           ))}
         </div>
       </div>
+      )}
+
+      {showNewGrantModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <section className="w-full max-w-lg rounded-2xl border border-white/15 bg-[#0b1524] p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-white">New grant application</h3>
+                <p className="mt-1 text-sm text-white/50">Add a grant to the local pipeline</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewGrantModal(false)}
+                className="rounded-lg border border-white/10 p-1.5 text-white/50 hover:text-white"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FieldLabel>Title</FieldLabel>
+                <input
+                  value={newGrantDraft.title}
+                  onChange={(event) =>
+                    setNewGrantDraft((current) => ({ ...current, title: event.target.value }))
+                  }
+                  placeholder="Application title"
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <FieldLabel>Programme</FieldLabel>
+                <input
+                  value={newGrantDraft.programme}
+                  onChange={(event) =>
+                    setNewGrantDraft((current) => ({ ...current, programme: event.target.value }))
+                  }
+                  placeholder="Horizon Europe"
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <FieldLabel>Amount (EUR)</FieldLabel>
+                <input
+                  type="number"
+                  min={0}
+                  value={newGrantDraft.amountEur || ""}
+                  onChange={(event) =>
+                    setNewGrantDraft((current) => ({
+                      ...current,
+                      amountEur: Number(event.target.value) || 0,
+                    }))
+                  }
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <FieldLabel>Region</FieldLabel>
+                <input
+                  value={newGrantDraft.region}
+                  onChange={(event) =>
+                    setNewGrantDraft((current) => ({ ...current, region: event.target.value }))
+                  }
+                  placeholder="EU, Spain, UK…"
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <FieldLabel>Owner</FieldLabel>
+                <input
+                  value={newGrantDraft.owner}
+                  onChange={(event) =>
+                    setNewGrantDraft((current) => ({ ...current, owner: event.target.value }))
+                  }
+                  placeholder="Tom"
+                  className={inputClassName()}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowNewGrantModal(false)}
+                className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-white/70 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!newGrantDraft.title.trim() || !newGrantDraft.programme.trim()}
+                onClick={handleCreateGrant}
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/15 px-4 py-2 text-xs font-semibold text-sky-100 hover:bg-sky-500/25 disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add grant
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }

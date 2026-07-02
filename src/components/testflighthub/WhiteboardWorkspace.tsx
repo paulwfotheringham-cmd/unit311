@@ -1,9 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
-import { Loader2, PenLine, Plus, Save } from "lucide-react";
+import { Check, Link2, Loader2, PenLine, Plus, Save, Share2, X } from "lucide-react";
+
+import { createInitialUsers, type ManagedUser } from "@/lib/user-management-data";
 
 import {
   EMPTY_WHITEBOARD_SCENE,
@@ -43,6 +45,16 @@ function inputClassName() {
   return "h-10 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 text-sm text-white outline-none transition-colors focus:border-sky-400/50";
 }
 
+function buildShareUrl(projectId: string | null) {
+  if (typeof window === "undefined" || !projectId) return "";
+  const url = new URL(window.location.href);
+  url.searchParams.set("view", "whiteboard");
+  url.searchParams.set("projectId", projectId);
+  return url.toString();
+}
+
+const MOCK_USERS = createInitialUsers();
+
 export default function WhiteboardWorkspace() {
   const [projects, setProjects] = useState<WhiteboardProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -56,6 +68,9 @@ export default function WhiteboardWorkspace() {
   const [creating, setCreating] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [collaboratorsByProject, setCollaboratorsByProject] = useState<Record<string, string[]>>({});
+  const [collaboratorPickerOpen, setCollaboratorPickerOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
 
   const pendingSceneRef = useRef<WhiteboardScene>(EMPTY_WHITEBOARD_SCENE);
@@ -108,14 +123,76 @@ export default function WhiteboardWorkspace() {
     }
   }, []);
 
+  const shareUrl = useMemo(
+    () => buildShareUrl(selectedProjectId),
+    [selectedProjectId],
+  );
+
+  const selectedCollaboratorIds = selectedProjectId
+    ? (collaboratorsByProject[selectedProjectId] ?? [])
+    : [];
+
+  const selectedCollaborators = useMemo(
+    () =>
+      MOCK_USERS.filter((user) => selectedCollaboratorIds.includes(user.id)),
+    [selectedCollaboratorIds],
+  );
+
   useEffect(() => {
     void (async () => {
       const nextProjects = await loadProjects();
-      if (nextProjects[0]) {
-        await loadProject(nextProjects[0].id);
+      const params = new URLSearchParams(window.location.search);
+      const projectIdFromUrl = params.get("projectId");
+      const target =
+        projectIdFromUrl && nextProjects.some((project) => project.id === projectIdFromUrl)
+          ? projectIdFromUrl
+          : nextProjects[0]?.id;
+      if (target) {
+        await loadProject(target);
       }
     })();
   }, [loadProjects, loadProject]);
+
+  useEffect(() => {
+    if (!linkCopied) return;
+    const timer = window.setTimeout(() => setLinkCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [linkCopied]);
+
+  const handleCopyShareLink = useCallback(async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+    } catch {
+      setError("Could not copy link to clipboard.");
+    }
+  }, [shareUrl]);
+
+  const toggleCollaborator = useCallback(
+    (userId: string) => {
+      if (!selectedProjectId) return;
+      setCollaboratorsByProject((current) => {
+        const existing = current[selectedProjectId] ?? [];
+        const next = existing.includes(userId)
+          ? existing.filter((id) => id !== userId)
+          : [...existing, userId];
+        return { ...current, [selectedProjectId]: next };
+      });
+    },
+    [selectedProjectId],
+  );
+
+  const removeCollaborator = useCallback(
+    (userId: string) => {
+      if (!selectedProjectId) return;
+      setCollaboratorsByProject((current) => ({
+        ...current,
+        [selectedProjectId]: (current[selectedProjectId] ?? []).filter((id) => id !== userId),
+      }));
+    },
+    [selectedProjectId],
+  );
 
   const handleSelectProject = useCallback(
     async (projectId: string) => {
@@ -362,10 +439,117 @@ export default function WhiteboardWorkspace() {
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save
             </button>
+            <button
+              type="button"
+              onClick={() => void handleCopyShareLink()}
+              disabled={!selectedProjectId}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white/75 transition-colors hover:border-sky-400/40 hover:text-white disabled:opacity-50"
+            >
+              {linkCopied ? <Check className="h-4 w-4 text-emerald-300" /> : <Share2 className="h-4 w-4" />}
+              {linkCopied ? "Copied" : "Share"}
+            </button>
             {dirty && (
               <span className="pb-2 text-xs text-amber-200/80">Unsaved changes</span>
             )}
           </div>
+
+          {selectedProjectId && (
+            <div className="space-y-3 border-b border-white/10 bg-[#121212] px-4 py-3 sm:px-5">
+              <div>
+                <label className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  <Link2 className="h-3 w-3" />
+                  Smart link
+                </label>
+                <div className="mt-1.5 flex gap-2">
+                  <input
+                    readOnly
+                    value={shareUrl}
+                    className={cn(inputClassName(), "text-xs text-white/70")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyShareLink()}
+                    className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 text-xs font-medium text-white/70 transition-colors hover:border-sky-400/40 hover:text-white"
+                  >
+                    {linkCopied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Share2 className="h-3.5 w-3.5" />}
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  Collaborators
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setCollaboratorPickerOpen((open) => !open)}
+                  className={cn(inputClassName(), "mt-1.5 flex items-center justify-between text-left text-white/70")}
+                >
+                  <span>
+                    {selectedCollaborators.length > 0
+                      ? `${selectedCollaborators.length} selected`
+                      : "Add collaborators…"}
+                  </span>
+                  <span className="text-white/35">▾</span>
+                </button>
+
+                {collaboratorPickerOpen && (
+                  <ul className="absolute left-0 right-0 z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-[#0b1524] py-1 shadow-xl">
+                    {MOCK_USERS.map((user: ManagedUser) => {
+                      const selected = selectedCollaboratorIds.includes(user.id);
+                      return (
+                        <li key={user.id}>
+                          <button
+                            type="button"
+                            onClick={() => toggleCollaborator(user.id)}
+                            className={cn(
+                              "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-white/5",
+                              selected ? "text-sky-300" : "text-white/75",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                                selected
+                                  ? "border-sky-400/60 bg-sky-500/20"
+                                  : "border-white/20 bg-transparent",
+                              )}
+                            >
+                              {selected && <Check className="h-3 w-3" />}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate">{user.fullName}</span>
+                            <span className="truncate text-xs text-white/40">{user.email}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {selectedCollaborators.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedCollaborators.map((user) => (
+                      <span
+                        key={user.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-xs text-sky-200"
+                      >
+                        {user.fullName}
+                        <button
+                          type="button"
+                          onClick={() => removeCollaborator(user.id)}
+                          className="rounded-full p-0.5 text-sky-300/70 transition-colors hover:bg-sky-500/20 hover:text-white"
+                          aria-label={`Remove ${user.fullName}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="relative min-h-[520px] flex-1">
             {loadingProject || !selectedProjectId ? (

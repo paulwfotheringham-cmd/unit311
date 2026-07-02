@@ -46,6 +46,21 @@ type CustomFinancialTile = {
   type: CustomTileType;
 };
 
+const BANK_BALANCES = [
+  { bank: "Barclays", currency: "GBP", balance: 284_350.42, accountRef: "****4821" },
+  { bank: "Caixa", currency: "EUR", balance: 512_890.0, accountRef: "****7734" },
+  { bank: "Santander", currency: "EUR", balance: 198_420.75, accountRef: "****1190" },
+  { bank: "HSBC", currency: "USD", balance: 156_200.0, accountRef: "****3305" },
+] as const;
+
+function formatBankBalance(amount: number, currency: string) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
 function panelClassName() {
   return "rounded-2xl border border-white/10 bg-[#0a1422]/80 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:p-5";
 }
@@ -218,6 +233,40 @@ export default function FinancialsWorkspace() {
           </span>
         </div>
       </div>
+
+      <section className={panelClassName()}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-white">Bank balances</h3>
+            <p className="mt-1 text-xs text-white/45">
+              Cash positions across operating accounts — mock preview data
+            </p>
+          </div>
+          <span className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-200">
+            Live sync preview
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {BANK_BALANCES.map((account) => (
+            <article
+              key={`${account.bank}-${account.currency}`}
+              className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-white">{account.bank}</p>
+                <span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-medium text-white/55">
+                  {account.currency}
+                </span>
+              </div>
+              <p className="mt-3 text-2xl font-semibold tabular-nums text-white">
+                {formatBankBalance(account.balance, account.currency)}
+              </p>
+              <p className="mt-2 text-[11px] text-white/40">Account {account.accountRef}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {FINANCIAL_KPIS.map((kpi) => (

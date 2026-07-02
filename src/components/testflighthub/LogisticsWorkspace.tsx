@@ -21,17 +21,36 @@ import {
   MapPin,
   Package,
   Plane,
+  Plus,
+  Search,
+  Settings,
   Truck,
 } from "lucide-react";
 
 const LogisticsRouteMap = dynamic(() => import("./LogisticsRouteMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[min(36vh,280px)] items-center justify-center rounded-xl border border-white/10 bg-[#0b1524] text-sm text-white/45 sm:h-[min(44vh,340px)] md:h-[min(48vh,380px)] lg:h-[min(52vh,420px)]">
+    <div className="flex h-[200px] items-center justify-center rounded-xl border border-white/10 bg-[#0b1524] text-sm text-white/45">
       Loading route map…
     </div>
   ),
 });
+
+const MOCK_COURIER_LINKS = [
+  { name: "FedEx", url: "https://www.fedex.com/fedextrack/" },
+  { name: "DHL", url: "https://www.dhl.com/global-en/home/tracking.html" },
+  { name: "UPS", url: "https://www.ups.com/track" },
+  { name: "Royal Mail", url: "https://www.royalmail.com/track-your-item" },
+];
+
+const CARRIER_OPTIONS = ["FedEx", "DHL", "UPS", "Unit311 Courier", "Royal Mail"] as const;
+
+type NewPackageForm = {
+  id: string;
+  origin: string;
+  destination: string;
+  carrier: (typeof CARRIER_OPTIONS)[number];
+};
 
 function ShipmentCard({
   shipment,
@@ -91,18 +110,78 @@ function ShipmentCard({
 }
 
 export default function LogisticsWorkspace() {
-  const inbound = useMemo(() => getInboundShipments(), []);
-  const outbound = useMemo(() => getOutboundShipments(), []);
-  const featured = useMemo(() => getFeaturedShipment(), []);
+  const [shipments, setShipments] = useState(LOGISTICS_MOCK_SHIPMENTS);
+  const inbound = useMemo(() => getInboundShipments(shipments), [shipments]);
+  const outbound = useMemo(() => getOutboundShipments(shipments), [shipments]);
+  const featured = useMemo(() => getFeaturedShipment(shipments), [shipments]);
   const [selectedId, setSelectedId] = useState(featured.id);
+  const [packageSearchQuery, setPackageSearchQuery] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newPackage, setNewPackage] = useState<NewPackageForm>({
+    id: "",
+    origin: "",
+    destination: "",
+    carrier: "FedEx",
+  });
 
   const selectedShipment =
-    LOGISTICS_MOCK_SHIPMENTS.find((shipment) => shipment.id === selectedId) ?? featured;
+    shipments.find((shipment) => shipment.id === selectedId) ?? featured;
 
   const routeSnapshot =
     selectedShipment.id === FEATURED_BARCELONA_LONDON_ROUTE.shipmentId
       ? FEATURED_BARCELONA_LONDON_ROUTE
       : null;
+
+  function handlePackageSearch(query: string) {
+    setPackageSearchQuery(query);
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return;
+
+    const match = shipments.find(
+      (shipment) =>
+        shipment.id.toLowerCase().includes(trimmed) ||
+        shipment.trackingNumber.toLowerCase().includes(trimmed) ||
+        shipment.contents.toLowerCase().includes(trimmed),
+    );
+    if (match) setSelectedId(match.id);
+  }
+
+  function handleAddPackage() {
+    const id = newPackage.id.trim();
+    const origin = newPackage.origin.trim();
+    const destination = newPackage.destination.trim();
+    if (!id || !origin || !destination) return;
+
+    const trackingNumber = id.replace(/^shp-/i, "").toUpperCase();
+    const shipment: LogisticsShipment = {
+      id: id.startsWith("shp-") ? id : `shp-${id}`,
+      trackingNumber,
+      direction: "outbound",
+      status: "Scheduled",
+      carrier: newPackage.carrier,
+      carrierTrackingUrl:
+        MOCK_COURIER_LINKS.find((link) => link.name === newPackage.carrier)?.url ??
+        "https://www.fedex.com/fedextrack/",
+      sentAt: new Date().toISOString(),
+      eta: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      origin,
+      destination,
+      recipient: "TBD",
+      sender: "Unit311 — Logistics",
+      sentBy: "Manual entry",
+      contents: "New package",
+      weightKg: 1,
+    };
+
+    setShipments((current) => [shipment, ...current]);
+    setSelectedId(shipment.id);
+    setPackageSearchQuery(shipment.trackingNumber);
+    setNewPackage({ id: "", origin: "", destination: "", carrier: "FedEx" });
+    setShowAddForm(false);
+  }
+
+  const inputClassName =
+    "mt-1.5 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/50";
 
   return (
     <div className="space-y-6">
@@ -127,8 +206,122 @@ export default function LogisticsWorkspace() {
               <p className="text-[10px] uppercase tracking-[0.12em] text-sky-200/80">Outbound</p>
               <p className="text-lg font-semibold text-white">{outbound.length}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowAddForm((current) => !current)}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/10 px-4 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add package
+            </button>
           </div>
         </div>
+
+        <div className="mt-4 relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <input
+            type="search"
+            value={packageSearchQuery}
+            onChange={(event) => handlePackageSearch(event.target.value)}
+            placeholder="Search packages by ID, tracking number, or contents…"
+            className={cn(inputClassName, "mt-0 pl-10")}
+          />
+        </div>
+
+        {showAddForm && (
+          <div className="mt-4 grid gap-3 rounded-xl border border-white/10 bg-[#0b1524]/60 p-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                Package ID
+              </label>
+              <input
+                value={newPackage.id}
+                onChange={(event) => setNewPackage((current) => ({ ...current, id: event.target.value }))}
+                placeholder="shp-custom-001"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                Origin
+              </label>
+              <input
+                value={newPackage.origin}
+                onChange={(event) =>
+                  setNewPackage((current) => ({ ...current, origin: event.target.value }))
+                }
+                placeholder="Barcelona HQ, Spain"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                Destination
+              </label>
+              <input
+                value={newPackage.destination}
+                onChange={(event) =>
+                  setNewPackage((current) => ({ ...current, destination: event.target.value }))
+                }
+                placeholder="Oxford, UK"
+                className={inputClassName}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                Carrier
+              </label>
+              <select
+                value={newPackage.carrier}
+                onChange={(event) =>
+                  setNewPackage((current) => ({
+                    ...current,
+                    carrier: event.target.value as NewPackageForm["carrier"],
+                  }))
+                }
+                className={inputClassName}
+              >
+                {CARRIER_OPTIONS.map((carrier) => (
+                  <option key={carrier} value={carrier}>
+                    {carrier}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={handleAddPackage}
+                disabled={!newPackage.id.trim() || !newPackage.origin.trim() || !newPackage.destination.trim()}
+                className="inline-flex h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 text-xs font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Save package
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-white/55">
+          <Settings className="h-3.5 w-3.5 shrink-0 text-sky-300" />
+          <span>
+            Configure courier tracking URLs in{" "}
+            <span className="font-medium text-white/75">Settings → Logistics couriers</span>.
+            Mock links:
+          </span>
+          {MOCK_COURIER_LINKS.map((link) => (
+            <a
+              key={link.name}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-0.5 text-[10px] font-medium text-sky-200 hover:bg-white/5"
+            >
+              {link.name}
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          ))}
+        </p>
       </section>
 
       {routeSnapshot && (
@@ -144,6 +337,9 @@ export default function LogisticsWorkspace() {
               <p className="mt-1 flex items-center gap-1.5 text-sm text-white/55">
                 <MapPin className="h-3.5 w-3.5 text-amber-300" />
                 {routeSnapshot.currentLocationLabel}
+              </p>
+              <p className="mt-1 font-mono text-xs text-sky-300/80">
+                Package ID: {selectedShipment.id}
               </p>
               <p className="mt-1 text-xs text-white/40">
                 {routeSnapshot.currentLeg === "air" ? "Air freight leg" : "Ground delivery leg"} ·{" "}
@@ -162,7 +358,7 @@ export default function LogisticsWorkspace() {
           </div>
 
           <div className="mt-4">
-            <LogisticsRouteMap snapshot={routeSnapshot} />
+            <LogisticsRouteMap snapshot={routeSnapshot} className="h-[200px]" />
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-white/45">

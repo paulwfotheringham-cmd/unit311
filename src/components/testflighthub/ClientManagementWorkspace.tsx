@@ -305,45 +305,48 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
               />
             </div>
 
-            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-              {filteredClients.length === 0 ? (
-                <p className="text-sm text-white/45">No clients match your search.</p>
-              ) : (
-                filteredClients.map((client) => {
+            {filteredClients.length === 0 ? (
+              <p className="mt-4 text-sm text-white/45">No clients match your search.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-white/10 rounded-xl border border-white/10 bg-[#0b1524]/40">
+                {filteredClients.map((client) => {
                   const selected = client.id === selectedClient?.id;
 
                   return (
-                    <button
+                    <li
                       key={client.id}
-                      type="button"
-                      onClick={() => setSelectedClientId(client.id)}
                       className={cn(
-                        "min-w-[12rem] shrink-0 rounded-xl border px-4 py-3 text-left transition-colors",
-                        selected
-                          ? "border-sky-400/40 bg-sky-500/10 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.15)]"
-                          : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
+                        "flex flex-wrap items-center gap-3 px-4 py-3 transition-colors sm:gap-4",
+                        selected && "bg-sky-500/[0.06]",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-white">{client.companyName}</p>
-                        <span
-                          className={cn(
-                            "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
-                            clientStatusClass(client.accountStatus),
-                          )}
-                        >
-                          {client.accountStatus}
-                        </span>
+                      <div className="min-w-0 flex-1 grid gap-1 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-4">
+                        <p className="truncate text-sm font-semibold text-white">{client.companyName}</p>
+                        <p className="truncate text-xs text-white/50">{client.primaryContact}</p>
+                        <p className="text-xs text-white/45">{client.region}</p>
+                        <p className="text-xs text-white/45">{client.industry}</p>
                       </div>
-                      <p className="mt-1 text-xs text-white/45">
-                        {client.industry} · {client.region}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-white/35">{client.primaryContact}</p>
-                    </button>
+                      <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-emerald-300">
+                        Active
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClientId(client.id)}
+                        className={cn(
+                          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors",
+                          selected
+                            ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
+                            : "border-white/15 bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/[0.08]",
+                        )}
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        Open
+                      </button>
+                    </li>
                   );
-                })
-              )}
-            </div>
+                })}
+              </ul>
+            )}
           </section>
 
           {selectedClient ? (

@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import HrDashboardPanel from "./HrDashboardPanel";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
-import { Briefcase, FileText, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Briefcase, FileText, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -356,8 +356,37 @@ export default function HrWorkspace() {
   const [savedSnapshot, setSavedSnapshot] = useState<HrEmployee | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEmployee, setNewEmployee] = useState(() => createBlankEmployeeInput());
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
+  const [locationFilter, setLocationFilter] = useState("All");
   const snapshottedIdRef = useRef<string | null>(null);
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
+
+  const roleOptions = useMemo(() => {
+    const roles = new Set(employees.map((e) => e.role).filter(Boolean));
+    return Array.from(roles).sort();
+  }, [employees]);
+
+  const locationOptions = useMemo(() => {
+    const locations = new Set(employees.map((e) => e.location).filter(Boolean));
+    return Array.from(locations).sort();
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    const query = employeeSearch.trim().toLowerCase();
+    return employees.filter((employee) => {
+      const roleMatch = roleFilter === "All" || employee.role === roleFilter;
+      const locationMatch = locationFilter === "All" || employee.location === locationFilter;
+      if (!roleMatch || !locationMatch) return false;
+      if (!query) return true;
+      const haystack =
+        `${employee.fullName} ${employee.email} ${employee.role} ${employee.department} ${employee.location}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [employees, employeeSearch, roleFilter, locationFilter]);
+
+  const hasEmployeeFilter =
+    employeeSearch.trim().length > 0 || roleFilter !== "All" || locationFilter !== "All";
 
   const managerOptions = useMemo(
     () => employees.map((employee) => employee.fullName).filter(Boolean),
@@ -610,42 +639,113 @@ export default function HrWorkspace() {
                 </button>
               </div>
 
-              <ul className="mt-4 space-y-2">
-                {employees.map((employee) => {
-                  const selected = employee.id === selectedEmployee?.id;
+              <div className="mt-4 space-y-3">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
+                  <input
+                    type="search"
+                    value={employeeSearch}
+                    onChange={(event) => setEmployeeSearch(event.target.value)}
+                    placeholder="Search by name, email, role…"
+                    className={cn(inputClassName(), "mt-0 pl-9")}
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Filter by role</FieldLabel>
+                    <select
+                      className={selectClassName()}
+                      value={roleFilter}
+                      onChange={(event) => setRoleFilter(event.target.value)}
+                    >
+                      <option value="All">All roles</option>
+                      {roleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>Filter by location</FieldLabel>
+                    <select
+                      className={selectClassName()}
+                      value={locationFilter}
+                      onChange={(event) => setLocationFilter(event.target.value)}
+                    >
+                      <option value="All">All locations</option>
+                      {locationOptions.map((location) => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <FieldLabel>Select employee</FieldLabel>
+                  <select
+                    className={selectClassName()}
+                    value={selectedEmployee?.id ?? ""}
+                    onChange={(event) => {
+                      setSelectedEmployeeId(event.target.value || null);
+                      openDetail();
+                    }}
+                  >
+                    <option value="">Choose an employee…</option>
+                    {(hasEmployeeFilter ? filteredEmployees : employees).map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.fullName} · {employee.role || employee.location}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-                  return (
-                    <li key={employee.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedEmployeeId(employee.id);
-                          openDetail();
-                        }}
-                        className={cn(
-                          "w-full rounded-xl border px-4 py-3 text-left transition-colors",
-                          selected
-                            ? "border-violet-400/40 bg-violet-500/10 shadow-[inset_0_0_0_1px_rgba(167,139,250,0.15)]"
-                            : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
-                        )}
-                      >
-                        <p className="text-sm font-semibold text-white">{employee.fullName}</p>
-                        <p className="mt-1 text-xs text-white/45">
-                          {[employee.role, employee.department].filter(Boolean).join(" · ") ||
-                            employee.email}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-white/40">
-                          <span>{employee.location}</span>
-                          <span>·</span>
-                          <span>Joined {formatHrDate(employee.dateJoined)}</span>
-                          <span>·</span>
-                          <span>{formatSalary(employee.salaryCurrent)}</span>
-                        </div>
-                      </button>
+              {hasEmployeeFilter && (
+                <ul className="mt-4 max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                  {filteredEmployees.length === 0 ? (
+                    <li className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-white/45">
+                      No employees match your search or filters.
                     </li>
-                  );
-                })}
-              </ul>
+                  ) : (
+                    filteredEmployees.map((employee) => {
+                      const selected = employee.id === selectedEmployee?.id;
+
+                      return (
+                        <li key={employee.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedEmployeeId(employee.id);
+                              openDetail();
+                            }}
+                            className={cn(
+                              "w-full rounded-xl border px-4 py-3 text-left transition-colors",
+                              selected
+                                ? "border-violet-400/40 bg-violet-500/10 shadow-[inset_0_0_0_1px_rgba(167,139,250,0.15)]"
+                                : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
+                            )}
+                          >
+                            <p className="text-sm font-semibold text-white">{employee.fullName}</p>
+                            <p className="mt-1 text-xs text-white/45">
+                              {[employee.role, employee.department].filter(Boolean).join(" · ") ||
+                                employee.email}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-white/40">
+                              <span>{employee.location}</span>
+                              <span>·</span>
+                              <span>Joined {formatHrDate(employee.dateJoined)}</span>
+                              <span>·</span>
+                              <span>{formatSalary(employee.salaryCurrent)}</span>
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
+              )}
             </section>
           }
           detail={

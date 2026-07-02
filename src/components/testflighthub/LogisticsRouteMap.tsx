@@ -8,6 +8,7 @@ import "leaflet/dist/leaflet.css";
 import type { FeaturedRouteSnapshot } from "@/lib/logistics-data";
 
 import MapTileLayers from "./MapTileLayers";
+import { cn } from "@/lib/utils";
 
 type LatLng = [number, number];
 
@@ -155,9 +156,10 @@ function RouteMarkers({
 
 type LogisticsRouteMapProps = {
   snapshot: FeaturedRouteSnapshot;
+  className?: string;
 };
 
-export default function LogisticsRouteMap({ snapshot }: LogisticsRouteMapProps) {
+export default function LogisticsRouteMap({ snapshot, className }: LogisticsRouteMapProps) {
   const [compactTooltip, setCompactTooltip] = useState(false);
   const route = snapshot.route.map((point) => [point.lat, point.lng] as LatLng);
   const completedIndex = Math.max(
@@ -176,7 +178,12 @@ export default function LogisticsRouteMap({ snapshot }: LogisticsRouteMapProps) 
   }, []);
 
   return (
-    <div className="h-[min(36vh,280px)] overflow-hidden rounded-xl border border-white/10 sm:h-[min(44vh,340px)] md:h-[min(48vh,380px)] lg:h-[min(52vh,420px)]">
+    <div
+      className={cn(
+        "h-[200px] overflow-hidden rounded-xl border border-white/10",
+        className,
+      )}
+    >
       <MapContainer
         center={[46.5, -1]}
         zoom={5}

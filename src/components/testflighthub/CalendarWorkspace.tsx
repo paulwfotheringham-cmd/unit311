@@ -29,6 +29,7 @@ import {
   Loader2,
   MapPin,
   Plus,
+  Search,
   Trash2,
   Users,
 } from "lucide-react";
@@ -98,13 +99,13 @@ function blankDraft(date: Date): EventDraft {
 
 const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-type CalendarViewMode = "shared" | "internal" | "client" | "training";
+type TimeRangeView = "today" | "week" | "month" | "quarter";
 
-const CALENDAR_VIEW_OPTIONS: { value: CalendarViewMode; label: string }[] = [
-  { value: "shared", label: "Shared" },
-  { value: "internal", label: "Internal user" },
-  { value: "client", label: "Client" },
-  { value: "training", label: "Training" },
+const TIME_RANGE_OPTIONS: { value: TimeRangeView; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+  { value: "quarter", label: "Quarter" },
 ];
 
 type CalendarWorkspaceProps = {
@@ -112,43 +113,62 @@ type CalendarWorkspaceProps = {
   clients?: ManagedClient[];
 };
 
-function matchesCalendarView(
+function getWeekStart(date: Date) {
+  const start = new Date(date);
+  const day = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - day);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function getWeekDays(date: Date) {
+  const start = getWeekStart(date);
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+}
+
+function getQuarterMonths(date: Date) {
+  const quarterStart = Math.floor(date.getMonth() / 3) * 3;
+  return [0, 1, 2].map((offset) => new Date(date.getFullYear(), quarterStart + offset, 1));
+}
+
+function matchesEventFilters(
   event: CalendarEvent,
-  viewMode: CalendarViewMode,
-  selectedUserId: string,
-  selectedClientId: string,
+  searchQuery: string,
+  filterUserId: string,
+  eventTypeFilter: string,
+  clientInteractionsOnly: boolean,
   users: ManagedUser[],
-  clients: ManagedClient[],
 ) {
-  const haystack = `${event.title} ${event.notes ?? ""} ${event.location ?? ""}`.toLowerCase();
-
-  if (viewMode === "shared") return true;
-
-  if (viewMode === "training") {
-    return /\btraining\b/i.test(haystack);
+  const query = searchQuery.trim().toLowerCase();
+  if (query) {
+    const haystack =
+      `${event.title} ${event.notes ?? ""} ${event.location ?? ""} ${event.clientName ?? ""}`.toLowerCase();
+    if (!haystack.includes(query)) return false;
   }
 
-  if (viewMode === "client") {
-    if (selectedClientId === "all") {
-      return event.eventType === "onsite" || Boolean(event.clientName?.trim());
+  if (eventTypeFilter !== "all" && event.eventType !== eventTypeFilter) return false;
+
+  if (clientInteractionsOnly) {
+    const isClientEvent = event.eventType === "onsite" || Boolean(event.clientName?.trim());
+    if (!isClientEvent) return false;
+  }
+
+  if (filterUserId !== "all") {
+    const user = users.find((entry) => entry.id === filterUserId);
+    if (!user) return false;
+    const haystack = `${event.title} ${event.notes ?? ""}`.toLowerCase();
+    const fullName = user.fullName.trim().toLowerCase();
+    const username = user.username.trim().toLowerCase();
+    if (!haystack.includes(fullName) && !(username.length > 0 && haystack.includes(username))) {
+      return false;
     }
-
-    const client = clients.find((entry) => entry.id === selectedClientId);
-    if (!client) return false;
-    const needle = client.companyName.trim().toLowerCase();
-    return Boolean(event.clientName?.trim().toLowerCase().includes(needle));
   }
 
-  if (selectedUserId === "all") {
-    return event.eventType === "meeting" || (!event.clientName?.trim() && event.eventType !== "onsite");
-  }
-
-  const user = users.find((entry) => entry.id === selectedUserId);
-  if (!user) return false;
-
-  const fullName = user.fullName.trim().toLowerCase();
-  const username = user.username.trim().toLowerCase();
-  return haystack.includes(fullName) || (username.length > 0 && haystack.includes(username));
+  return true;
 }
 
 export default function CalendarWorkspace({
@@ -164,36 +184,80 @@ export default function CalendarWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<EventDraft>(() => blankDraft(today));
   const [editing, setEditing] = useState(false);
-  const [viewMode, setViewMode] = useState<CalendarViewMode>("shared");
-  const [selectedUserId, setSelectedUserId] = useState("all");
-  const [selectedClientId, setSelectedClientId] = useState("all");
+  const [timeRangeView, setTimeRangeView] = useState<TimeRangeView>("month");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterUserId, setFilterUserId] = useState("all");
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
+  const [clientInteractionsOnly, setClientInteractionsOnly] = useState(false);
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
 
-  const monthLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(viewDate),
-    [viewDate],
-  );
+  const periodLabel = useMemo(() => {
+    if (timeRangeView === "today") {
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(selectedDate);
+    }
+    if (timeRangeView === "week") {
+      const days = getWeekDays(selectedDate);
+      const start = days[0];
+      const end = days[6];
+      const fmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+      return `${fmt.format(start)} – ${fmt.format(end)}, ${end.getFullYear()}`;
+    }
+    if (timeRangeView === "quarter") {
+      const months = getQuarterMonths(viewDate);
+      const fmt = new Intl.DateTimeFormat(undefined, { month: "short" });
+      return `Q${Math.floor(viewDate.getMonth() / 3) + 1} · ${fmt.format(months[0])} – ${fmt.format(months[2])} ${viewDate.getFullYear()}`;
+    }
+    return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(viewDate);
+  }, [selectedDate, timeRangeView, viewDate]);
 
   const monthGrid = useMemo(
     () => getMonthGrid(viewDate.getFullYear(), viewDate.getMonth()),
     [viewDate],
   );
 
+  const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate]);
+
+  const quarterMonths = useMemo(() => getQuarterMonths(viewDate), [viewDate]);
+
+  const visibleDates = useMemo(() => {
+    if (timeRangeView === "today") return [selectedDate];
+    if (timeRangeView === "week") return weekDays;
+    if (timeRangeView === "quarter") {
+      return quarterMonths.flatMap((monthStart) =>
+        getMonthGrid(monthStart.getFullYear(), monthStart.getMonth()),
+      );
+    }
+    return monthGrid;
+  }, [monthGrid, quarterMonths, selectedDate, timeRangeView, weekDays]);
+
   const rangeFrom = useMemo(() => {
-    const start = monthGrid[0];
+    const start = visibleDates[0];
     return new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0).toISOString();
-  }, [monthGrid]);
+  }, [visibleDates]);
 
   const rangeTo = useMemo(() => {
-    const end = monthGrid[monthGrid.length - 1];
+    const end = visibleDates[visibleDates.length - 1];
     return new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString();
-  }, [monthGrid]);
+  }, [visibleDates]);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const event of events) {
-      if (!matchesCalendarView(event, viewMode, selectedUserId, selectedClientId, users, clients)) {
+      if (
+        !matchesEventFilters(
+          event,
+          searchQuery,
+          filterUserId,
+          eventTypeFilter,
+          clientInteractionsOnly,
+          users,
+        )
+      ) {
         continue;
       }
       const key = dateKeyFromIso(event.startsAt);
@@ -205,7 +269,7 @@ export default function CalendarWorkspace({
       list.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
     }
     return map;
-  }, [clients, events, selectedClientId, selectedUserId, users, viewMode]);
+  }, [clientInteractionsOnly, eventTypeFilter, events, filterUserId, searchQuery, users]);
 
   const selectedDateKey = toDateKey(selectedDate);
   const selectedDayEvents = eventsByDate.get(selectedDateKey) ?? [];
@@ -235,11 +299,51 @@ export default function CalendarWorkspace({
     void loadEvents();
   }, [loadEvents]);
 
-  function goToPreviousMonth() {
+  function goToPreviousPeriod() {
+    if (timeRangeView === "today") {
+      setSelectedDate((current) => {
+        const next = new Date(current);
+        next.setDate(next.getDate() - 1);
+        return next;
+      });
+      return;
+    }
+    if (timeRangeView === "week") {
+      setSelectedDate((current) => {
+        const next = new Date(current);
+        next.setDate(next.getDate() - 7);
+        return next;
+      });
+      return;
+    }
+    if (timeRangeView === "quarter") {
+      setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 3, 1));
+      return;
+    }
     setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
   }
 
-  function goToNextMonth() {
+  function goToNextPeriod() {
+    if (timeRangeView === "today") {
+      setSelectedDate((current) => {
+        const next = new Date(current);
+        next.setDate(next.getDate() + 1);
+        return next;
+      });
+      return;
+    }
+    if (timeRangeView === "week") {
+      setSelectedDate((current) => {
+        const next = new Date(current);
+        next.setDate(next.getDate() + 7);
+        return next;
+      });
+      return;
+    }
+    if (timeRangeView === "quarter") {
+      setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 3, 1));
+      return;
+    }
     setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
   }
 
@@ -249,6 +353,60 @@ export default function CalendarWorkspace({
     setSelectedDate(now);
     setDraft(blankDraft(now));
     setEditing(true);
+    if (timeRangeView !== "month" && timeRangeView !== "quarter") {
+      setTimeRangeView("today");
+    }
+  }
+
+  function renderDayCell(date: Date, options?: { compact?: boolean; inMonth?: boolean }) {
+    const key = toDateKey(date);
+    const dayEvents = eventsByDate.get(key) ?? [];
+    const inMonth = options?.inMonth ?? true;
+    const isToday = isSameDay(date, today);
+    const isSelected = isSameDay(date, selectedDate);
+    const compact = options?.compact ?? false;
+
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => selectDay(date)}
+        className={cn(
+          "flex flex-col rounded-lg border p-1.5 text-left transition-colors sm:rounded-xl sm:p-2",
+          compact ? "min-h-[5rem]" : "min-h-[4.25rem] sm:min-h-[5.5rem] lg:min-h-[6.5rem]",
+          inMonth ? "border-white/8 bg-[#0b1524]/70" : "border-transparent bg-transparent opacity-40",
+          isSelected && "border-sky-400/40 bg-sky-500/10",
+          !isSelected && "hover:border-white/15 hover:bg-[#0d1828]",
+        )}
+      >
+        <span
+          className={cn(
+            "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
+            isToday ? "bg-sky-500 text-white" : "text-white/80",
+          )}
+        >
+          {date.getDate()}
+        </span>
+        <div className="mt-1 space-y-1 overflow-hidden">
+          {dayEvents.slice(0, compact ? 1 : 2).map((event) => (
+            <div
+              key={event.id}
+              className={cn(
+                "truncate rounded-md border px-1.5 py-0.5 text-[10px] leading-tight",
+                eventTypeClass(event.eventType),
+              )}
+            >
+              {toTimeInputValue(event.startsAt)} {event.title}
+            </div>
+          ))}
+          {dayEvents.length > (compact ? 1 : 2) && (
+            <div className="text-[10px] text-white/45">
+              +{dayEvents.length - (compact ? 1 : 2)} more
+            </div>
+          )}
+        </div>
+      </button>
+    );
   }
 
   function selectDay(date: Date) {
@@ -346,18 +504,18 @@ export default function CalendarWorkspace({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-sky-300" />
-            <h2 className="text-lg font-semibold text-white">{monthLabel}</h2>
+            <h2 className="text-lg font-semibold text-white">{periodLabel}</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-xl border border-white/10 bg-[#0b1524]/80 p-1">
-              {CALENDAR_VIEW_OPTIONS.map((option) => (
+              {TIME_RANGE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setViewMode(option.value)}
+                  onClick={() => setTimeRangeView(option.value)}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                    viewMode === option.value
+                    timeRangeView === option.value
                       ? "bg-sky-500 text-white"
                       : "text-white/60 hover:text-white",
                   )}
@@ -366,34 +524,6 @@ export default function CalendarWorkspace({
                 </button>
               ))}
             </div>
-            {viewMode === "internal" && (
-              <select
-                value={selectedUserId}
-                onChange={(event) => setSelectedUserId(event.target.value)}
-                className="rounded-xl border border-white/10 bg-[#0b1524] px-3 py-1.5 text-xs text-white outline-none focus:border-sky-400/50"
-              >
-                <option value="all">All internal users</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.fullName}
-                  </option>
-                ))}
-              </select>
-            )}
-            {viewMode === "client" && (
-              <select
-                value={selectedClientId}
-                onChange={(event) => setSelectedClientId(event.target.value)}
-                className="rounded-xl border border-white/10 bg-[#0b1524] px-3 py-1.5 text-xs text-white outline-none focus:border-sky-400/50"
-              >
-                <option value="all">All clients</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.companyName}
-                  </option>
-                ))}
-              </select>
-            )}
             <button
               type="button"
               onClick={goToToday}
@@ -403,16 +533,16 @@ export default function CalendarWorkspace({
             </button>
             <button
               type="button"
-              onClick={goToPreviousMonth}
-              aria-label="Previous month"
+              onClick={goToPreviousPeriod}
+              aria-label="Previous period"
               className="rounded-lg border border-white/10 p-2 text-white/70 transition-colors hover:bg-white/5 hover:text-white"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               type="button"
-              onClick={goToNextMonth}
-              aria-label="Next month"
+              onClick={goToNextPeriod}
+              aria-label="Next period"
               className="rounded-lg border border-white/10 p-2 text-white/70 transition-colors hover:bg-white/5 hover:text-white"
             >
               <ChevronRight className="h-4 w-4" />
@@ -420,67 +550,146 @@ export default function CalendarWorkspace({
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-7 gap-0.5 text-center text-[10px] font-medium uppercase tracking-[0.08em] text-white/40 sm:mt-4 sm:gap-1 sm:text-[11px]">
-          {weekdayLabels.map((label) => (
-            <div key={label} className="py-2">
-              {label}
+        <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-[#0b1524]/50 p-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search events…"
+              className={cn(inputClassName(), "mt-0 pl-9")}
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <FieldLabel>User</FieldLabel>
+              <select
+                value={filterUserId}
+                onChange={(event) => setFilterUserId(event.target.value)}
+                className={inputClassName()}
+              >
+                <option value="all">Company-wide</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.fullName}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
+            <div>
+              <FieldLabel>Event type</FieldLabel>
+              <select
+                value={eventTypeFilter}
+                onChange={(event) => setEventTypeFilter(event.target.value)}
+                className={inputClassName()}
+              >
+                <option value="all">All types</option>
+                {CALENDAR_EVENT_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end sm:col-span-2 lg:col-span-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2.5 text-sm text-white/75">
+                <input
+                  type="checkbox"
+                  checked={clientInteractionsOnly}
+                  onChange={(event) => setClientInteractionsOnly(event.target.checked)}
+                  className="rounded border-white/20 bg-transparent"
+                />
+                Client interactions only
+              </label>
+            </div>
+          </div>
         </div>
 
         {loading ? (
           <div className="flex min-h-[18rem] items-center justify-center text-white/50">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
-        ) : (
-          <div className="grid grid-cols-7 gap-1">
-            {monthGrid.map((date) => {
-              const key = toDateKey(date);
-              const dayEvents = eventsByDate.get(key) ?? [];
-              const inMonth = date.getMonth() === viewDate.getMonth();
-              const isToday = isSameDay(date, today);
-              const isSelected = isSameDay(date, selectedDate);
+        ) : timeRangeView === "today" ? (
+          <div className="mt-4">
+            {renderDayCell(selectedDate, { inMonth: true })}
+            <div className="mt-4 space-y-2">
+              {(eventsByDate.get(toDateKey(selectedDate)) ?? []).length === 0 ? (
+                <p className="text-sm text-white/45">No events scheduled for this day.</p>
+              ) : (
+                (eventsByDate.get(toDateKey(selectedDate)) ?? []).map((event) => (
+                  <button
+                    key={event.id}
+                    type="button"
+                    onClick={() => editEvent(event)}
+                    className="w-full rounded-xl border border-white/10 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+                  >
+                    <p className="text-sm font-medium text-white">{event.title}</p>
+                    <p className="mt-1 text-xs text-white/50">
+                      {formatEventTimeRange(event.startsAt, event.endsAt)}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        ) : timeRangeView === "week" ? (
+          <div className="mt-4">
+            <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-medium uppercase tracking-[0.08em] text-white/40 sm:gap-1 sm:text-[11px]">
+              {weekdayLabels.map((label) => (
+                <div key={label} className="py-2">
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">{weekDays.map((date) => renderDayCell(date))}</div>
+          </div>
+        ) : timeRangeView === "quarter" ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {quarterMonths.map((monthStart) => {
+              const grid = getMonthGrid(monthStart.getFullYear(), monthStart.getMonth());
+              const label = new Intl.DateTimeFormat(undefined, {
+                month: "long",
+                year: "numeric",
+              }).format(monthStart);
 
               return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => selectDay(date)}
-                  className={cn(
-                    "flex min-h-[4.25rem] flex-col rounded-lg border p-1.5 text-left transition-colors sm:min-h-[5.5rem] sm:rounded-xl sm:p-2 lg:min-h-[6.5rem]",
-                    inMonth ? "border-white/8 bg-[#0b1524]/70" : "border-transparent bg-transparent opacity-40",
-                    isSelected && "border-sky-400/40 bg-sky-500/10",
-                    !isSelected && "hover:border-white/15 hover:bg-[#0d1828]",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
-                      isToday ? "bg-sky-500 text-white" : "text-white/80",
-                    )}
-                  >
-                    {date.getDate()}
-                  </span>
-                  <div className="mt-1 space-y-1 overflow-hidden">
-                    {dayEvents.slice(0, 2).map((event) => (
-                      <div
-                        key={event.id}
-                        className={cn(
-                          "truncate rounded-md border px-1.5 py-0.5 text-[10px] leading-tight",
-                          eventTypeClass(event.eventType),
-                        )}
-                      >
-                        {toTimeInputValue(event.startsAt)} {event.title}
+                <div key={label}>
+                  <p className="mb-2 text-sm font-medium text-white/80">{label}</p>
+                  <div className="grid grid-cols-7 gap-0.5 text-center text-[9px] font-medium uppercase tracking-[0.08em] text-white/35">
+                    {weekdayLabels.map((dayLabel) => (
+                      <div key={dayLabel} className="py-1">
+                        {dayLabel.slice(0, 1)}
                       </div>
                     ))}
-                    {dayEvents.length > 2 && (
-                      <div className="text-[10px] text-white/45">+{dayEvents.length - 2} more</div>
+                  </div>
+                  <div className="grid grid-cols-7 gap-0.5">
+                    {grid.map((date) =>
+                      renderDayCell(date, {
+                        compact: true,
+                        inMonth: date.getMonth() === monthStart.getMonth(),
+                      }),
                     )}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-7 gap-0.5 text-center text-[10px] font-medium uppercase tracking-[0.08em] text-white/40 sm:mt-4 sm:gap-1 sm:text-[11px]">
+              {weekdayLabels.map((label) => (
+                <div key={label} className="py-2">
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {monthGrid.map((date) =>
+                renderDayCell(date, { inMonth: date.getMonth() === viewDate.getMonth() }),
+              )}
+            </div>
+          </>
         )}
       </section>
       }

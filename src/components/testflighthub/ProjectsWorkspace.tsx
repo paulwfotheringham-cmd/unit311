@@ -14,8 +14,9 @@ import {
 } from "@/lib/projects-data";
 import { createInitialUsers } from "@/lib/user-management-data";
 import { cn } from "@/lib/utils";
-import { FolderKanban, Loader2, Plus, Trash2, X } from "lucide-react";
+import { ExternalLink, FolderKanban, Loader2, Plus, Trash2, X } from "lucide-react";
 
+import ProjectDetailWorkspace from "./ProjectDetailWorkspace";
 import ProjectsDashboardStrip from "./ProjectsDashboardStrip";
 
 const operators = createInitialUsers();
@@ -48,19 +49,30 @@ type ProjectsWorkspaceProps = {
 
 function ProjectCard({
   project,
+  onOpen,
   onDelete,
   busy,
   highlight,
 }: {
   project: InternalProject;
+  onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   busy: boolean;
   highlight?: boolean;
 }) {
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(project.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(project.id);
+        }
+      }}
       className={cn(
-        "rounded-xl border bg-white/[0.03] p-4",
+        "cursor-pointer rounded-xl border bg-white/[0.03] p-4 transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]",
         highlight ? "border-amber-400/40 bg-amber-500/10" : "border-white/10",
       )}
     >
@@ -72,7 +84,10 @@ function ProjectCard({
         <button
           type="button"
           disabled={busy}
-          onClick={() => onDelete(project.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete(project.id);
+          }}
           aria-label={`Delete ${project.name}`}
           className="shrink-0 rounded-lg border border-white/10 p-1.5 text-white/40 transition-colors hover:border-rose-400/30 hover:text-rose-300 disabled:opacity-50"
         >
@@ -115,6 +130,18 @@ function ProjectCard({
       {project.notes && (
         <p className="mt-3 line-clamp-2 text-[11px] leading-relaxed text-white/35">{project.notes}</p>
       )}
+
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen(project.id);
+        }}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/15 px-3 py-1.5 text-[11px] font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Open project
+      </button>
     </article>
   );
 }
@@ -132,7 +159,13 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [draft, setDraft] = useState(createBlankProjectInput);
+
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === selectedProjectId) ?? null,
+    [projects, selectedProjectId],
+  );
 
   const liveProjects = useMemo(() => {
     const live = projects.filter((project) => project.phase === "live");
@@ -236,11 +269,22 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
       const data = await readApiJson<{ ok?: boolean; error?: string }>(response);
       if (!response.ok) throw new Error(data.error ?? "Failed to delete project");
       setProjects((current) => current.filter((project) => project.id !== id));
+      setSelectedProjectId((current) => (current === id ? null : current));
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete project");
     } finally {
       setBusy(false);
     }
+  }
+
+  if (selectedProject) {
+    return (
+      <ProjectDetailWorkspace
+        project={selectedProject}
+        clients={clients}
+        onBack={() => setSelectedProjectId(null)}
+      />
+    );
   }
 
   return (
@@ -445,6 +489,7 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    onOpen={setSelectedProjectId}
                     onDelete={handleDeleteProject}
                     busy={busy}
                     highlight={
@@ -482,6 +527,7 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    onOpen={setSelectedProjectId}
                     onDelete={handleDeleteProject}
                     busy={busy}
                     highlight={

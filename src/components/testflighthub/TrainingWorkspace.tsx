@@ -1,15 +1,71 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink, GraduationCap, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ExternalLink, GraduationCap, Plus, Users, X } from "lucide-react";
 
 import {
   BCD_COURSE_TILES,
   BCD_TRAINING_CLIENTS,
   trainingStatusClass,
   type BcdCourseId,
+  type BcdCourseTile,
+  type BcdTrainingClient,
 } from "@/lib/bcd-training-data";
+import { createInitialUsers, type ManagedUser } from "@/lib/user-management-data";
 import { cn } from "@/lib/utils";
+
+const TRAINING_TYPES: { value: BcdCourseId; label: string }[] = [
+  { value: "uas-applications", label: "UAS Applications" },
+  { value: "sora-regulatory", label: "Regulatory & SORA" },
+  { value: "design-construction", label: "Design & Construction" },
+  { value: "integrated-pilot", label: "Integrated Pilot" },
+  { value: "operational-authorisation", label: "Operational Authorisation" },
+  { value: "radiophonist", label: "Radiophonist" },
+  { value: "geo-zones", label: "Geographical Zones" },
+  { value: "customized", label: "Customized" },
+];
+
+const MOCK_USERS = createInitialUsers();
+
+type TrainingDraft = {
+  title: string;
+  type: BcdCourseId;
+  client: string;
+  userIds: string[];
+  startDate: string;
+  endDate: string;
+};
+
+function blankDraft(): TrainingDraft {
+  return {
+    title: "",
+    type: "customized",
+    client: "",
+    userIds: [],
+    startDate: "",
+    endDate: "",
+  };
+}
+
+function formatEditionRange(startDate: string, endDate: string) {
+  if (!startDate && !endDate) return "On demand";
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const fmt = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+    return `${fmt.format(start)} – ${fmt.format(end)}`;
+  }
+  if (startDate) {
+    const start = new Date(startDate);
+    const fmt = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+    return `From ${fmt.format(start)}`;
+  }
+  return "On demand";
+}
+
+function inputClassName() {
+  return "mt-1.5 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/50 placeholder:text-white/30";
+}
 
 function CourseTile({
   title,
@@ -54,12 +110,69 @@ function CourseTile({
 }
 
 export default function TrainingWorkspace() {
-  const [selectedCourse, setSelectedCourse] = useState<BcdCourseId | "all">("all");
+  const [courses, setCourses] = useState<BcdCourseTile[]>(() => [...BCD_COURSE_TILES]);
+  const [clients, setClients] = useState<BcdTrainingClient[]>(() => [...BCD_TRAINING_CLIENTS]);
+  const [selectedCourse, setSelectedCourse] = useState<string | "all">("all");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [draft, setDraft] = useState<TrainingDraft>(blankDraft);
 
-  const filteredClients =
-    selectedCourse === "all"
-      ? BCD_TRAINING_CLIENTS
-      : BCD_TRAINING_CLIENTS.filter((client) => client.courseId === selectedCourse);
+  const filteredClients = useMemo(
+    () =>
+      selectedCourse === "all"
+        ? clients
+        : clients.filter((client) => client.courseId === selectedCourse),
+    [clients, selectedCourse],
+  );
+
+  const selectedUsers = MOCK_USERS.filter((user) => draft.userIds.includes(user.id));
+
+  function toggleDraftUser(userId: string) {
+    setDraft((current) => ({
+      ...current,
+      userIds: current.userIds.includes(userId)
+        ? current.userIds.filter((id) => id !== userId)
+        : [...current.userIds, userId],
+    }));
+  }
+
+  function handleAddTraining(event: React.FormEvent) {
+    event.preventDefault();
+    if (!draft.title.trim() || !draft.client.trim() || draft.userIds.length === 0) return;
+
+    const courseId = `training-${Date.now()}` as BcdCourseId;
+    const edition = formatEditionRange(draft.startDate, draft.endDate);
+    const typeLabel = TRAINING_TYPES.find((entry) => entry.value === draft.type)?.label ?? draft.type;
+
+    const newCourse: BcdCourseTile = {
+      id: courseId,
+      title: draft.title.trim(),
+      edition,
+      description: `${typeLabel} programme for ${draft.client.trim()}.`,
+      accent: "from-violet-500/20 to-purple-600/10 border-violet-400/30",
+      enrolled: draft.userIds.length,
+    };
+
+    const newClients: BcdTrainingClient[] = draft.userIds.map((userId, index) => {
+      const user = MOCK_USERS.find((entry) => entry.id === userId);
+      return {
+        id: `train-new-${Date.now()}-${index}`,
+        name: user?.fullName ?? "Participant",
+        organisation: draft.client.trim(),
+        country: user?.region ?? "—",
+        courseId,
+        courseLabel: draft.title.trim(),
+        edition,
+        status: "Confirmed" as const,
+        email: user?.email ?? "",
+      };
+    });
+
+    setCourses((current) => [...current, newCourse]);
+    setClients((current) => [...current, ...newClients]);
+    setSelectedCourse(courseId);
+    setDraft(blankDraft());
+    setShowAddForm(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -84,18 +197,166 @@ export default function TrainingWorkspace() {
           <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
             Course catalogue
           </h2>
-          {selectedCourse !== "all" && (
+          <div className="flex items-center gap-3">
+            {selectedCourse !== "all" && (
+              <button
+                type="button"
+                onClick={() => setSelectedCourse("all")}
+                className="text-xs text-sky-400 hover:text-sky-300"
+              >
+                Show all courses
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setSelectedCourse("all")}
-              className="text-xs text-sky-400 hover:text-sky-300"
+              onClick={() => setShowAddForm((open) => !open)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/40 bg-sky-500/15 px-2.5 py-1.5 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
             >
-              Show all courses
+              {showAddForm ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+              {showAddForm ? "Cancel" : "Add training"}
             </button>
-          )}
+          </div>
         </div>
+
+        {showAddForm && (
+          <form
+            onSubmit={handleAddTraining}
+            className="mb-4 rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.22)] sm:p-5"
+          >
+            <h3 className="text-sm font-semibold text-white">New training programme</h3>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  Title
+                </label>
+                <input
+                  required
+                  value={draft.title}
+                  onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+                  placeholder="Course title"
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  Type
+                </label>
+                <select
+                  value={draft.type}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      type: event.target.value as BcdCourseId,
+                    }))
+                  }
+                  className={inputClassName()}
+                >
+                  {TRAINING_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  Client
+                </label>
+                <input
+                  required
+                  value={draft.client}
+                  onChange={(event) => setDraft((current) => ({ ...current, client: event.target.value }))}
+                  placeholder="Organisation name"
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  Start date
+                </label>
+                <input
+                  type="date"
+                  value={draft.startDate}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, startDate: event.target.value }))
+                  }
+                  className={inputClassName()}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  End date
+                </label>
+                <input
+                  type="date"
+                  value={draft.endDate}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, endDate: event.target.value }))
+                  }
+                  className={inputClassName()}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                  Users
+                </label>
+                <div className="mt-1.5 max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-[#0b1524] p-2">
+                  {MOCK_USERS.map((user: ManagedUser) => {
+                    const selected = draft.userIds.includes(user.id);
+                    return (
+                      <label
+                        key={user.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-white/5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleDraftUser(user.id)}
+                          className="h-4 w-4 rounded border-white/20 bg-transparent accent-sky-500"
+                        />
+                        <span className="text-white/85">{user.fullName}</span>
+                        <span className="text-xs text-white/40">{user.email}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {selectedUsers.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedUsers.map((user) => (
+                      <span
+                        key={user.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-xs text-sky-200"
+                      >
+                        {user.fullName}
+                        <button
+                          type="button"
+                          onClick={() => toggleDraftUser(user.id)}
+                          className="text-sky-300/70 hover:text-white"
+                          aria-label={`Remove ${user.fullName}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="submit"
+                disabled={!draft.title.trim() || !draft.client.trim() || draft.userIds.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                Add to catalogue
+              </button>
+            </div>
+          </form>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {BCD_COURSE_TILES.map((course) => (
+          {courses.map((course) => (
             <CourseTile
               key={course.id}
               title={course.title}

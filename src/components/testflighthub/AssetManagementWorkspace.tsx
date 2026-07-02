@@ -20,6 +20,7 @@ import type { ManagedClient } from "@/lib/client-management-data";
 import { getOwnerUserIdForRegion, type ManagedUser } from "@/lib/user-management-data";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
+import { Search } from "lucide-react";
 
 type AssetManagementWorkspaceProps = {
   assets: ManagedAsset[];
@@ -84,6 +85,7 @@ export default function AssetManagementWorkspace({
   onLocationsChange,
 }: AssetManagementWorkspaceProps) {
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
+  const [assetSearchQuery, setAssetSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [locationFilter, setLocationFilter] = useState<string>("All");
   const [newCategory, setNewCategory] = useState("");
@@ -97,12 +99,19 @@ export default function AssetManagementWorkspace({
   );
 
   const filteredAssets = useMemo(() => {
+    const query = assetSearchQuery.trim().toLowerCase();
     return assets.filter((asset) => {
       const categoryMatch = categoryFilter === "All" || asset.category === categoryFilter;
       const locationMatch = locationFilter === "All" || asset.location === locationFilter;
-      return categoryMatch && locationMatch;
+      if (!categoryMatch || !locationMatch) return false;
+      if (!query) return true;
+      const haystack =
+        `${asset.assetTag} ${asset.category} ${asset.location} ${asset.model} ${asset.serialNumber} ${asset.notes}`.toLowerCase();
+      return haystack.includes(query);
     });
-  }, [assets, categoryFilter, locationFilter]);
+  }, [assets, assetSearchQuery, categoryFilter, locationFilter]);
+
+  const hasAssetSearch = assetSearchQuery.trim().length > 0;
 
   const modelOptions = useMemo(
     () => (selectedAsset ? getModelsForCategory(selectedAsset.category) : []),
@@ -117,6 +126,7 @@ export default function AssetManagementWorkspace({
     const next = createBlankAsset(categories, locations, addCategory, addLocation);
     onAssetsChange([next, ...assets]);
     onSelectAsset(next.id);
+    setAssetSearchQuery(next.assetTag || next.id);
     openDetail();
     setCategoryFilter(addCategory);
     setLocationFilter(addLocation);
@@ -173,7 +183,18 @@ export default function AssetManagementWorkspace({
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <input
+            type="search"
+            value={assetSearchQuery}
+            onChange={(event) => setAssetSearchQuery(event.target.value)}
+            placeholder="Search assets by tag, model, serial, location…"
+            className={cn(inputClassName(), "mt-0 pl-10")}
+          />
+        </div>
+
+        <div className="mt-5 grid gap-6 lg:grid-cols-2">
           <div>
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Categories</h3>
@@ -295,61 +316,77 @@ export default function AssetManagementWorkspace({
             <div>
               <h2 className="text-lg font-semibold text-white">Asset List</h2>
               <p className="mt-1 text-xs text-white/45">
-                {filteredAssets.length} of {assets.length} items
-                {categoryFilter !== "All" ? ` · ${categoryFilter}` : ""}
-                {locationFilter !== "All" ? ` · ${locationFilter}` : ""}
+                {hasAssetSearch
+                  ? `${filteredAssets.length} match${filteredAssets.length === 1 ? "" : "es"}`
+                  : "Search above to find assets"}
               </p>
             </div>
           </div>
 
-          <ul className="mt-4 max-h-[520px] space-y-2 overflow-y-auto pr-1">
-            {filteredAssets.map((asset) => {
-              const selected = asset.id === selectedAsset?.id;
-              const clientName =
-                clients.find((client) => client.id === asset.assignedClientId)?.companyName ??
-                "Unassigned";
-              const assignedTo = ownerLabel(asset.assignedToUserId);
+          {!hasAssetSearch ? (
+            <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-12 text-center">
+              <Search className="h-8 w-8 text-white/25" />
+              <p className="mt-3 text-sm text-white/50">Search above to find assets</p>
+              <p className="mt-1 text-xs text-white/35">
+                Enter a tag, model, serial number, or location to populate matches here.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 max-h-[520px] space-y-2 overflow-y-auto pr-1">
+              {filteredAssets.length === 0 ? (
+                <li className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-white/45">
+                  No assets match your search.
+                </li>
+              ) : (
+                filteredAssets.map((asset) => {
+                  const selected = asset.id === selectedAsset?.id;
+                  const clientName =
+                    clients.find((client) => client.id === asset.assignedClientId)?.companyName ??
+                    "Unassigned";
+                  const assignedTo = ownerLabel(asset.assignedToUserId);
 
-              return (
-                <li key={asset.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectAsset(asset.id);
-                      openDetail();
-                    }}
-                    className={cn(
-                      "w-full rounded-xl border px-4 py-3 text-left transition-colors",
-                      selected
-                        ? "border-sky-400/40 bg-sky-500/10 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.15)]"
-                        : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-mono text-sm font-semibold text-white">{asset.assetTag}</p>
-                        <p className="mt-1 text-xs text-white/45">
-                          {asset.category} · {asset.location}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-white/35">
-                          {asset.model} · {clientName}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-white/35">Assigned to {assignedTo}</p>
-                      </div>
-                      <span
+                  return (
+                    <li key={asset.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectAsset(asset.id);
+                          openDetail();
+                        }}
                         className={cn(
-                          "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
-                          assetStatusClass(asset.operationalStatus),
+                          "w-full rounded-xl border px-4 py-3 text-left transition-colors",
+                          selected
+                            ? "border-sky-400/40 bg-sky-500/10 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.15)]"
+                            : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]",
                         )}
                       >
-                        {asset.operationalStatus}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-mono text-sm font-semibold text-white">{asset.assetTag}</p>
+                            <p className="mt-1 text-xs text-white/45">
+                              {asset.category} · {asset.location}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-white/35">
+                              {asset.model} · {clientName}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-white/35">Assigned to {assignedTo}</p>
+                          </div>
+                          <span
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
+                              assetStatusClass(asset.operationalStatus),
+                            )}
+                          >
+                            {asset.operationalStatus}
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          )}
         </section>
         }
         detail={

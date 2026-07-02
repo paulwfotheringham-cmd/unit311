@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { COMPETITOR_REGION_IDS, type CompetitorRegion } from "@/lib/competitors-data";
+import { type CompetitorRegion } from "@/lib/competitors-data";
 import { createCompetitor, listCompetitors } from "@/lib/competitors-service";
 import { ensureCompetitorsSeedData, ensureCompetitorsTable, withCompetitorsTable } from "@/lib/internal-db-migrations";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       lastRevenue?: string;
     };
 
-    if (!body.region || !COMPETITOR_REGION_IDS.includes(body.region)) {
+    if (!body.region || !/^[a-z][a-z0-9]{1,23}$/.test(body.region)) {
       return NextResponse.json({ error: "A valid region is required." }, { status: 400 });
     }
 

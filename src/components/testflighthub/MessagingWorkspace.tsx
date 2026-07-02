@@ -135,6 +135,8 @@ export default function MessagingWorkspace() {
   );
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
+  const [newChannelDescription, setNewChannelDescription] = useState("");
+  const [newChannelPrivate, setNewChannelPrivate] = useState(false);
   const [newChannelMembers, setNewChannelMembers] = useState<string[]>(
     operators.map((operator) => operator.id),
   );
@@ -154,6 +156,8 @@ export default function MessagingWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const joinedOperator = joinedOperatorId ? operatorsById.get(joinedOperatorId) : undefined;
+  const isAdmin = joinedOperator?.role === "Admin";
+  const showCreateChannelPanel = isAdmin || showCreateChannel;
   const activeChannel =
     channels.find((channel) => channel.room === activeRoom) ??
     ({
@@ -513,6 +517,10 @@ export default function MessagingWorkspace() {
       return;
     }
 
+    const memberOperatorIds = newChannelPrivate
+      ? Array.from(new Set([joinedOperator.id, ...newChannelMembers]))
+      : newChannelMembers;
+
     const selectedClient =
       newChannelType === "client"
         ? CLIENT_MESSAGING_OPTIONS.find((client) => client.key === newChannelClientKey)
@@ -531,7 +539,9 @@ export default function MessagingWorkspace() {
           clientKey: newChannelType === "client" ? newChannelClientKey : undefined,
           createdByOperatorId: joinedOperator.id,
           createdByOperatorName: joinedOperator.fullName,
-          memberOperatorIds: newChannelMembers,
+          memberOperatorIds,
+          description: newChannelDescription.trim() || undefined,
+          isPrivate: newChannelPrivate,
           memberClientUsernames:
             newChannelType === "client"
               ? Array.from(
@@ -549,10 +559,12 @@ export default function MessagingWorkspace() {
 
       await loadChannels(joinedOperator.id);
       setNewChannelName("");
+      setNewChannelDescription("");
+      setNewChannelPrivate(false);
       setNewChannelType("internal");
       setNewChannelClientKey(CLIENT_MESSAGING_OPTIONS[0]?.key ?? "venturi");
       setNewChannelMembers(operators.map((operator) => operator.id));
-      setShowCreateChannel(false);
+      if (!isAdmin) setShowCreateChannel(false);
       selectChannel(data.channel.room);
     } catch (createError) {
       const message =
@@ -746,7 +758,188 @@ export default function MessagingWorkspace() {
     );
   }
 
+  function renderCreateChannelForm(options?: { className?: string; idPrefix?: string }) {
+    const idPrefix = options?.idPrefix ?? "channel";
+    const canSubmit = Boolean(joinedOperator) && !creatingChannel;
+
+    return (
+      <form
+        onSubmit={(event) => void handleCreateChannel(event)}
+        className={cn(
+          "space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3",
+          options?.className,
+        )}
+      >
+        <div>
+          <label
+            htmlFor={`${idPrefix}-name`}
+            className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45"
+          >
+            Channel name
+          </label>
+          <input
+            id={`${idPrefix}-name`}
+            value={newChannelName}
+            onChange={(event) => {
+              setNewChannelName(event.target.value);
+              if (createChannelError) setCreateChannelError(null);
+            }}
+            placeholder="e.g. Oxford survey ops"
+            autoFocus={idPrefix === "top"}
+            className={cn(
+              inputClassName(),
+              "mt-1.5",
+              createChannelError && !newChannelName.trim() && "border-amber-400/40",
+            )}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor={`${idPrefix}-description`}
+            className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45"
+          >
+            Description
+          </label>
+          <textarea
+            id={`${idPrefix}-description`}
+            value={newChannelDescription}
+            onChange={(event) => setNewChannelDescription(event.target.value)}
+            rows={2}
+            placeholder="What is this channel for?"
+            className={cn(inputClassName(), "mt-1.5 resize-y")}
+          />
+        </div>
+        <label className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/70">
+          <input
+            type="checkbox"
+            checked={newChannelPrivate}
+            onChange={(event) => {
+              const nextPrivate = event.target.checked;
+              setNewChannelPrivate(nextPrivate);
+              if (nextPrivate) {
+                setNewChannelMembers(
+                  joinedOperator ? [joinedOperator.id] : newChannelMembers.slice(0, 1),
+                );
+              } else {
+                setNewChannelMembers(operators.map((operator) => operator.id));
+              }
+            }}
+          />
+          Private channel (invite-only members)
+        </label>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+            Channel type
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setNewChannelType("internal")}
+              className={cn(
+                "rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+                newChannelType === "internal"
+                  ? "border-sky-400/40 bg-sky-500/10 text-white"
+                  : "border-white/10 text-white/60 hover:bg-white/[0.04]",
+              )}
+            >
+              Internal users
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewChannelType("client")}
+              className={cn(
+                "rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+                newChannelType === "client"
+                  ? "border-violet-400/40 bg-violet-500/10 text-white"
+                  : "border-white/10 text-white/60 hover:bg-white/[0.04]",
+              )}
+            >
+              External client
+            </button>
+          </div>
+        </div>
+        {newChannelType === "client" && (
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+              Client
+            </p>
+            <select
+              value={newChannelClientKey}
+              onChange={(event) => setNewChannelClientKey(event.target.value)}
+              className={cn(inputClassName(), "mt-2")}
+            >
+              {CLIENT_MESSAGING_OPTIONS.map((client) => (
+                <option key={client.key} value={client.key}>
+                  {client.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+            {newChannelType === "client" ? "Internal team members" : "Add users"}
+          </p>
+          <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto">
+            {operators.map((operator) => (
+              <label
+                key={operator.id}
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-white/70"
+              >
+                <input
+                  type="checkbox"
+                  checked={newChannelMembers.includes(operator.id)}
+                  onChange={() =>
+                    toggleMemberSelection(operator.id, newChannelMembers, setNewChannelMembers)
+                  }
+                />
+                {operator.fullName}
+              </label>
+            ))}
+          </div>
+        </div>
+        {createChannelError && (
+          <p className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+            {createChannelError}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
+        >
+          {creatingChannel ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating…
+            </>
+          ) : (
+            "Create channel"
+          )}
+        </button>
+      </form>
+    );
+  }
+
   return (
+    <div className="space-y-4">
+      {isAdmin && (
+        <section className="rounded-2xl border border-violet-400/25 bg-violet-500/5 p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Create channel</h2>
+              <p className="mt-1 text-xs text-white/50">
+                Admins can spin up internal or client channels from here.
+              </p>
+            </div>
+            {!joinedOperator && (
+              <p className="text-xs text-amber-200/80">Join as an operator to create channels.</p>
+            )}
+          </div>
+          <div className="mt-4">{renderCreateChannelForm({ idPrefix: "top" })}</div>
+        </section>
+      )}
+
     <ResponsiveMasterDetail
       showDetail={showChat}
       onBack={closeChat}
@@ -817,124 +1010,12 @@ export default function MessagingWorkspace() {
               className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 px-2.5 text-xs font-medium text-white/70 transition-colors hover:bg-white/[0.06] disabled:opacity-40"
             >
               <Plus className="h-3.5 w-3.5" />
-              New
+              Create channel
             </button>
           </div>
 
-          {showCreateChannel && joinedOperator && (
-            <form
-              onSubmit={(event) => void handleCreateChannel(event)}
-              className="mt-3 space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3"
-            >
-              <div>
-                <input
-                  value={newChannelName}
-                  onChange={(event) => {
-                    setNewChannelName(event.target.value);
-                    if (createChannelError) setCreateChannelError(null);
-                  }}
-                  placeholder="Channel name"
-                  autoFocus
-                  className={cn(
-                    inputClassName(),
-                    createChannelError && !newChannelName.trim() && "border-amber-400/40",
-                  )}
-                />
-                {!newChannelName.trim() && (
-                  <p className="mt-1.5 text-[11px] text-white/45">A channel name is required.</p>
-                )}
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
-                  Channel type
-                </p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setNewChannelType("internal")}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                      newChannelType === "internal"
-                        ? "border-sky-400/40 bg-sky-500/10 text-white"
-                        : "border-white/10 text-white/60 hover:bg-white/[0.04]",
-                    )}
-                  >
-                    Internal users
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNewChannelType("client")}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                      newChannelType === "client"
-                        ? "border-violet-400/40 bg-violet-500/10 text-white"
-                        : "border-white/10 text-white/60 hover:bg-white/[0.04]",
-                    )}
-                  >
-                    External client
-                  </button>
-                </div>
-              </div>
-              {newChannelType === "client" && (
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
-                    Client
-                  </p>
-                  <select
-                    value={newChannelClientKey}
-                    onChange={(event) => setNewChannelClientKey(event.target.value)}
-                    className={cn(inputClassName(), "mt-2")}
-                  >
-                    {CLIENT_MESSAGING_OPTIONS.map((client) => (
-                      <option key={client.key} value={client.key}>
-                        {client.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
-                  {newChannelType === "client" ? "Internal team members" : "Add users"}
-                </p>
-                <div className="mt-2 space-y-1.5">
-                  {operators.map((operator) => (
-                    <label
-                      key={operator.id}
-                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-white/70"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={newChannelMembers.includes(operator.id)}
-                        onChange={() =>
-                          toggleMemberSelection(operator.id, newChannelMembers, setNewChannelMembers)
-                        }
-                      />
-                      {operator.fullName}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              {createChannelError && (
-                <p className="rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                  {createChannelError}
-                </p>
-              )}
-              <button
-                type="submit"
-                disabled={!joinedOperator || creatingChannel}
-                className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-semibold text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
-              >
-                {creatingChannel ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating…
-                  </>
-                ) : (
-                  "Create channel"
-                )}
-              </button>
-            </form>
+          {showCreateChannelPanel && joinedOperator && !isAdmin && (
+            renderCreateChannelForm({ idPrefix: "sidebar" })
           )}
 
           <div className="mt-4 space-y-4">
@@ -1351,5 +1432,6 @@ export default function MessagingWorkspace() {
       </section>
       }
     />
+    </div>
   );
 }
