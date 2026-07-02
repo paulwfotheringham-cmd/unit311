@@ -1,15 +1,15 @@
 const INDUSTRIES = [
-  { label: "Construction Companies", icon: "building" },
-  { label: "Infrastructure Developers", icon: "bridge" },
+  { label: "Founders & Startups", icon: "building" },
+  { label: "Professional Services", icon: "megaphone" },
+  { label: "Construction & Infrastructure", icon: "bridge" },
+  { label: "Logistics & Trade", icon: "ship" },
+  { label: "Technology Ventures", icon: "bolt" },
+  { label: "Creative Agencies", icon: "camera" },
+  { label: "Manufacturing", icon: "factory" },
   { label: "Energy & Utilities", icon: "bolt" },
-  { label: "Industrial Facilities", icon: "factory" },
-  { label: "Media & Production", icon: "camera" },
-  { label: "Mining & Quarrying", icon: "pickaxe" },
-  { label: "Ports & Logistics", icon: "ship" },
-  { label: "Waste Management", icon: "recycle" },
-  { label: "Maritime & Yachting", icon: "anchor" },
-  { label: "Sports & Events", icon: "trophy" },
-  { label: "Brands & Agencies", icon: "megaphone" },
+  { label: "Retail & Hospitality", icon: "trophy" },
+  { label: "Franchise Operators", icon: "pickaxe" },
+  { label: "International Expansion", icon: "anchor" },
 ] as const;
 
 function IndustryIcon({ type }: { type: (typeof INDUSTRIES)[number]["icon"] }) {
@@ -93,7 +93,7 @@ export default function WhoWeWorkWith() {
         <div className="flex items-center justify-center gap-5 sm:gap-6">
           <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
           <p className="whitespace-nowrap text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
-            Who We Work With
+            Who we help start and scale
           </p>
           <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
         </div>

@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import BcdLoginPage from "@/components/auth/BcdLoginPage";
 
 export const metadata: Metadata = {
-  title: "Client Login | BCN Drone Center",
-  description: "Sign in to your BCN Drone Center client intelligence workspace.",
+  title: "Client Login | Unit311",
+  description: "Sign in to your Unit311 client intelligence workspace.",
   robots: { index: false, follow: false },
 };
 

@@ -488,7 +488,7 @@ export default function HrWorkspace() {
       fullName: newEmployee.fullName.trim(),
       email:
         newEmployee.email.trim() ||
-        `${newEmployee.fullName.trim().toLowerCase().replace(/\s+/g, ".")}.${slug}@barcelonadronecenter.com`,
+        `${newEmployee.fullName.trim().toLowerCase().replace(/\s+/g, ".")}.${slug}@unit311.com`,
     };
 
     try {

@@ -27,8 +27,8 @@ export default function Logo({
           )}
           style={{ fontSize: wordmarkSize }}
         >
-          BCN
-          <span className={onDark ? "text-[#60a5fa]" : "text-[#2563eb]"}> Drone Center</span>
+          Unit
+          <span className={onDark ? "text-[#60a5fa]" : "text-[#2563eb]"}>311</span>
         </span>
       </span>
     </span>

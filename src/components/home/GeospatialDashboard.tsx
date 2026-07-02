@@ -54,10 +54,10 @@ const KPI_DETAILS = [
     info: "Active client projects with live survey schedules and deliverable tracking.",
   },
   {
-    label: "Surveys",
+    label: "Milestones",
     value: "156",
     dot: "bg-sky-400",
-    info: "Completed aerial capture missions indexed by site, date, and sensor type.",
+    info: "Completed delivery milestones indexed by workstream, date, and owner.",
   },
   {
     label: "Issues",
@@ -274,7 +274,7 @@ export default function GeospatialDashboard({ className }: GeospatialDashboardPr
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
             </div>
             <p className="hidden text-[11px] text-white/45 sm:block">
-              Westport Logistics Hub · TerraBuild Infrastructure
+              North Campus Programme · Acme Holdings
             </p>
           </div>
         </div>
@@ -284,17 +284,17 @@ export default function GeospatialDashboard({ className }: GeospatialDashboardPr
               <div className="border-b border-white/10 px-4 py-4">
                 <div className="rounded-lg bg-white px-2.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
                   <span className="text-[13px] font-bold tracking-[-0.02em] text-[#1a2b4a]">
-                    Drone<span className="text-[#2563eb]">Catalyst</span>
+                    Unit<span className="text-[#2563eb]">311</span>
                   </span>
                 </div>
                 <div className="mt-4 space-y-2 text-[10px]">
                   <div>
                     <p className="font-semibold uppercase tracking-[0.12em] text-white/35">Client</p>
-                    <p className="mt-0.5 font-medium text-white/80">TerraBuild Infrastructure</p>
+                    <p className="mt-0.5 font-medium text-white/80">Acme Holdings</p>
                   </div>
                   <div>
                     <p className="font-semibold uppercase tracking-[0.12em] text-white/35">Project</p>
-                    <p className="mt-0.5 font-medium text-white/80">Westport Logistics Hub</p>
+                    <p className="mt-0.5 font-medium text-white/80">North Campus Programme</p>
                   </div>
                 </div>
               </div>
@@ -429,7 +429,7 @@ export default function GeospatialDashboard({ className }: GeospatialDashboardPr
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <HoverTile
                 title="Earthworks Volume"
-                description="Monthly cut-and-fill volumes derived from drone surveys and DSM differencing."
+                description="Monthly delivery volumes and programme variance across active workstreams."
               >
                 <Shell className="cursor-default p-3">
                   <p className="text-[11px] font-medium text-white/70">Earthworks Volume</p>
@@ -449,14 +449,14 @@ export default function GeospatialDashboard({ className }: GeospatialDashboardPr
 
               <HoverTile
                 title="Flight path map"
-                description="Live satellite map with planned orbit, flown path, and real-time drone position from FlightHub telemetry."
+                description="Live programme map with planned routes, completed work packages, and operational status."
                 placement="top"
               >
                 <HomeDashboardFlightPathPanel />
               </HoverTile>
 
               <HoverTile
-                title="FPV Live camera"
+                title="Live operations view"
                 description="Simulated first-person view from the Matrice 4T with terrain-linked chase camera and OSD telemetry."
                 placement="top"
               >

@@ -2,6 +2,7 @@
 
 import LoginForm from "@/components/auth/LoginForm";
 import Logo from "@/components/layout/Logo";
+import { SITE_NAME } from "@/lib/site";
 
 type BcdLoginPageProps = {
   variant?: "operations" | "client";
@@ -27,23 +28,23 @@ export default function BcdLoginPage({ variant = "operations" }: BcdLoginPagePro
             <Logo height={36} href={undefined} />
           </div>
           <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            {isClient ? "Client Portal" : "Operations Portal"}
+            {isClient ? "Client Portal" : "Workspace Sign In"}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-white/55">
             {isClient
-              ? "Sign in to access your BCN Drone Center client intelligence workspace — project dashboards, certification progress, and test site updates."
-              : "Sign in to access the BCN Drone Center internal workspace — training, certification programmes, and client intelligence."}
+              ? `Sign in to your ${SITE_NAME} client workspace — projects, documents, and delivery updates.`
+              : `Sign in to your ${SITE_NAME} operations workspace — projects, finance, files, logistics, and client delivery.`}
           </p>
         </div>
 
         <LoginForm
           dark
-          storageKey={isClient ? "bcd-client-login" : "bcd-operations-login"}
+          storageKey={isClient ? "unit311-client-login" : "unit311-operations-login"}
         />
       </div>
 
       <p className="relative mt-10 text-center text-xs text-white/35">
-        © {new Date().getFullYear()} BCN Drone Center · Official UAS Test Site, Catalonia
+        © {new Date().getFullYear()} {SITE_NAME}
       </p>
     </div>
   );

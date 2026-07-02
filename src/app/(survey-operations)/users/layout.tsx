@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Internal Users | DroneCatalyst",
-  description: "Internal operator accounts for Drone Catalyst survey operations.",
+  title: "Internal Users | Unit311",
+  description: "Internal operator accounts for Unit311 survey operations.",
   robots: { index: false, follow: false },
 };
 

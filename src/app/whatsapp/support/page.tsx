@@ -273,7 +273,7 @@ export default function WhatsAppSupportChatPage() {
 
   return (
     <main className="mx-auto flex h-dvh w-full max-w-6xl flex-col bg-[#0b141a] text-[#e9edef] lg:flex-row">
-      {/* Client ↔ BCN Support */}
+      {/* Client ↔ Unit311 Support */}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col border-white/10 lg:border-r">
         <header className="relative flex items-center gap-3 border-b border-white/10 bg-[#1f2c34] px-3 py-2.5">
           <div
@@ -283,7 +283,7 @@ export default function WhatsAppSupportChatPage() {
             BCN
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-semibold">BCN Drone Center Support</h1>
+            <h1 className="truncate text-base font-semibold">Unit311 Support</h1>
             <p className="truncate text-xs text-emerald-300/90">Client chat — type your own answers</p>
           </div>
           <div className="relative lg:hidden">
@@ -385,7 +385,7 @@ export default function WhatsAppSupportChatPage() {
         </div>
       </section>
 
-      {/* DroneCatalyst Info Messages (CallMeBot) */}
+      {/* Unit311 Info Messages (CallMeBot) */}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-white/10 lg:border-t-0">
         <header className="flex items-center gap-3 border-b border-white/10 bg-[#1f2c34] px-3 py-2.5">
           <div
@@ -395,7 +395,7 @@ export default function WhatsAppSupportChatPage() {
             DC
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold">DroneCatalyst Info Messages</h2>
+            <h2 className="truncate text-base font-semibold">Unit311 Info Messages</h2>
             <p className="truncate text-xs text-sky-300/90">CallMeBot alerts — read only</p>
           </div>
           <button
@@ -418,7 +418,7 @@ export default function WhatsAppSupportChatPage() {
           {notifyLines.length === 0 ? (
             <p className="mx-auto max-w-xs pt-16 text-center text-sm text-white/35">
               Ticket assignment confirmations appear here — same as on your phone in{" "}
-              <span className="text-white/55">DroneCatalyst Info Messages</span>.
+              <span className="text-white/55">Unit311 Info Messages</span>.
             </p>
           ) : (
             notifyLines.map((line) => <ChatBubble key={line.id} line={line} />)

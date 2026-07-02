@@ -67,12 +67,12 @@ export default function TrainingWorkspace() {
         <p className="text-sm text-white/60">
           Training programmes aligned with{" "}
           <a
-            href="https://www.barcelonadronecenter.com/drone-courses/"
+            href="https://www.unit311.com/drone-courses/"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300"
           >
-            BCN Drone Center courses
+            Unit311 courses
             <ExternalLink className="h-3 w-3" />
           </a>
           . Select a course tile to filter enrolled participants.

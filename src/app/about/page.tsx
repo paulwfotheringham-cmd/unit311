@@ -11,9 +11,9 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 import { CONTACT, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "About DroneCatalyst",
+  title: "About Unit311",
   description:
-    "DroneCatalyst is a Spain-based aerial intelligence provider delivering professional drone inspection, surveying and commercial imaging across Europe and internationally.",
+    "Unit311 is a Spain-based aerial intelligence provider delivering professional drone inspection, surveying and commercial imaging across Europe and internationally.",
   path: "/about",
 });
 
@@ -28,7 +28,7 @@ export default function AboutPage() {
       />
       <Hero
         compact
-        title="About DroneCatalyst"
+        title="About Unit311"
         subtitle={SITE_DESCRIPTION}
         image="https://images.unsplash.com/photo-1454165804603-c3d57bc86b40?auto=format&fit=crop&w=2000&q=80"
         imageAlt="Professional team planning operations"
@@ -45,7 +45,7 @@ export default function AboutPage() {
               />
               <div className="mt-10 space-y-4 text-sm leading-relaxed text-muted">
                 <p>
-                  Based in Spain with international capability, DroneCatalyst supports energy operators,
+                  Based in Spain with international capability, Unit311 supports energy operators,
                   engineering firms, contractors and premium hospitality groups who require reliable data
                   capture and production-quality imaging.
                 </p>

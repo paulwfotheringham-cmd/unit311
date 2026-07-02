@@ -14,7 +14,7 @@ export default function OfficeLocationsWorkspace() {
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white">Office locations</h2>
             <p className="mt-2 max-w-2xl text-sm text-white/55">
-              BCN Drone Center hubs across Spain, Portugal, and the United Kingdom.
+              Unit311 hubs across Spain, Portugal, and the United Kingdom.
             </p>
           </div>
           <div className="rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-center">

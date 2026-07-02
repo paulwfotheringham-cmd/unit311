@@ -69,7 +69,7 @@ const defaultData: DashboardData = {
   completionTrendData: COMPLETION_TREND_DATA,
   earthworksVolumeData: EARTHWORKS_VOLUME_DATA,
   images: IMAGES,
-  footerBrand: "Drone Catalyst Enterprise",
+  footerBrand: "Unit311 Enterprise",
 };
 
 const venturiData: DashboardData = {
@@ -88,7 +88,7 @@ const venturiData: DashboardData = {
   completionTrendData: COMPLETION_TREND_DATA,
   earthworksVolumeData: EARTHWORKS_VOLUME_DATA,
   images: IMAGES,
-  footerBrand: "BCN Drone Center",
+  footerBrand: "Unit311",
 };
 
 const DashboardDataContext = createContext<DashboardData>(defaultData);

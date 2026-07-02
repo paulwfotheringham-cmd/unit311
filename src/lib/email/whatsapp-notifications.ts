@@ -231,7 +231,7 @@ export async function processInfoMailboxWhatsAppNotifications(
 
 export async function sendWhatsAppTestNotification() {
   return sendWhatsAppMessage(
-    formatNewEmailWhatsAppMessage("BCN Drone Center Test", "WhatsApp alerts are working"),
+    formatNewEmailWhatsAppMessage("Unit311 Test", "WhatsApp alerts are working"),
   );
 }
 

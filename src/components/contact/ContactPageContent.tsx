@@ -32,7 +32,7 @@ export default function ContactPageContent() {
         <SectionTitle>Get in Touch</SectionTitle>
 
         <p className="mt-5 text-center text-[15px] leading-relaxed text-white/65 sm:text-[17px]">
-          Share your project scope, location and timeline. We respond within one business day.
+          Tell us about your business idea, launch timeline, and what you need from the Unit311 workspace.
         </p>
 
         <div className="mx-auto mt-12 w-full max-w-xl">

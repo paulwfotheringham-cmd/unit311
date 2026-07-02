@@ -9,33 +9,31 @@ export const SITE_URL =
       : DEFAULT_SITE_URL);
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Unit311";
-export const LOGO_PATH = "/images/dronecatalyst-logo-final.svg";
-export const SITE_TAGLINE =
-  "Official UAS training, certification, and test site operations in Catalonia.";
+export const SITE_TAGLINE = "The centralised platform to start and run your business.";
 export const SITE_DESCRIPTION =
-  "Unit311 delivers UAS pilot training, regulatory courses, certification support, and hands-on test site operations from an official European UAS test site.";
+  "Unit311 gives founders and operators one workspace for company setup, compliance, projects, finance, logistics, and client delivery — from day one.";
+export const SITE_HERO_LINE = "Start your business. Run it in one place.";
 
 export const CONTACT = {
-  email: "info@barcelonadronecenter.com",
-  infoEmail: "info@barcelonadronecenter.com",
-  linkedin: "https://www.linkedin.com/company/bcn-drone-center",
+  email: "hello@unit311.com",
+  infoEmail: "hello@unit311.com",
+  linkedin: "https://www.linkedin.com/company/unit311",
   phone: "+34 938 000 000",
   whatsapp: "34938000000",
-  location: "Catalonia, Spain · Official UAS Test Site",
+  location: "Europe · Remote-first operations platform",
 } as const;
 
 export const NAV_LINKS = [
-  { href: "/inspection", label: "Inspection" },
-  { href: "/surveying", label: "Surveying" },
-  { href: "/commercial-imaging", label: "Commercial Imaging" },
+  { href: "/#services", label: "Solutions" },
+  { href: "/#platform", label: "Platform" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
 export const SEO_KEYWORDS = [
-  "UAS Training Europe",
-  "Drone Certification Spain",
-  "SORA Training",
+  "start your business",
+  "business operations platform",
+  "company setup",
+  "founder workspace",
   "Unit311",
-  "Drone Pilot Course",
-  "UAS Test Site",
+  "centralised business management",
 ] as const;

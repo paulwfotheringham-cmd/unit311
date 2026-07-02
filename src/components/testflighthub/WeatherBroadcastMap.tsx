@@ -120,7 +120,7 @@ export default function WeatherBroadcastMap({
           </span>
         </div>
         <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-100/85">
-          Drone Catalyst · Regional Forecast
+          Unit311 · Regional Forecast
         </span>
       </div>
 

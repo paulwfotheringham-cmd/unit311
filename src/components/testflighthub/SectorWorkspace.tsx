@@ -54,7 +54,7 @@ export default function SectorWorkspace() {
             </div>
             <p className="mt-2 max-w-2xl text-sm text-white/60">
               Select a country, then choose a sub-sector to view addressable site counts, key
-              organisations, drone adoption, and DroneCatalyst service opportunities.
+              organisations, drone adoption, and Unit311 service opportunities.
             </p>
           </div>
 
@@ -198,7 +198,7 @@ export default function SectorWorkspace() {
 
             <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-400">
-                Tile 3 · DroneCatalyst services
+                Tile 3 · Unit311 services
               </p>
               <h3 className="mt-2 text-base font-semibold text-white">
                 What we can offer {subSectorMeta.label.toLowerCase()}

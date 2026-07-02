@@ -591,7 +591,7 @@ export default function WhatsAppSupportFlowPage() {
             style={{ width: columnWidth }}
           >
             <PanelShell
-              title="BCN Drone Center Support"
+              title="Unit311 Support"
               subtitle="Customer WhatsApp"
               badge="BCN"
               badgeClassName="bg-emerald-700 text-xs"
@@ -659,14 +659,14 @@ export default function WhatsAppSupportFlowPage() {
             </PanelShell>
           </div>
 
-          {/* Column 2 — DroneCatalyst Info Messages */}
+          {/* Column 2 — Unit311 Info Messages */}
           {visibleColumns >= 2 && (
             <div
               className="flex min-h-0 shrink-0 animate-in fade-in slide-in-from-right-4 duration-700"
               style={{ width: columnWidth }}
             >
               <PanelShell
-                title="DroneCatalyst Info Messages"
+                title="Unit311 Info Messages"
                 subtitle="CallMeBot alerts"
                 badge="DC"
                 badgeClassName="bg-sky-700"

@@ -15,12 +15,12 @@ export const maxDuration = 60;
 export async function POST() {
   try {
     const timestamp = new Date().toISOString();
-    const subject = `BCN Drone Center WhatsApp alert test ${timestamp.slice(11, 19)} UTC`;
+    const subject = `Unit311 WhatsApp alert test ${timestamp.slice(11, 19)} UTC`;
     const sendAccount = (await isAccountConfigured("paul")) ? "paul" : "info";
 
     const emailResult = await sendMailboxEmail({
       account: sendAccount,
-      to: "info@barcelonadronecenter.com",
+      to: "hello@unit311.com",
       subject,
       text: [
         "This is an automated test message for the info@ WhatsApp notification flow.",

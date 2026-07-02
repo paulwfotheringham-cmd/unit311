@@ -80,7 +80,7 @@ function OverviewContent() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
           Customised workspace for {VENTURI_CLIENT.contact} — electric VTOL development programme
           spanning feasibility, R&D flight testing, regulatory compliance, certification support,
-          and managed test site operations at BCN Drone Center.
+          and managed test site operations at Unit311.
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
@@ -120,15 +120,15 @@ function CertificationContent() {
           Class Identification Label, or proof of conformity with predefined technical standards.
         </p>
         <p className="mt-3 text-sm text-white/50">
-          BCN Drone Center supports UAS manufacturers through a complete, step-by-step certification
+          Unit311 supports UAS manufacturers through a complete, step-by-step certification
           process. Content sourced from{" "}
           <a
-            href="https://www.barcelonadronecenter.com/drone-certification/"
+            href="https://www.unit311.com/drone-certification/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sky-400 hover:text-sky-300"
           >
-            barcelonadronecenter.com/drone-certification
+            unit311.com/drone-certification
           </a>
           .
         </p>
@@ -155,7 +155,7 @@ function TestingContent() {
     <div className="space-y-6">
       <Panel title="Venturi client testing programme">
         <p className="text-sm text-white/55">
-          Dedicated client test campaign at the BCN UAS test site — separate from internal operator
+          Dedicated client test campaign at the Unit311 operations hub — separate from internal operator
           flight simulator and weather testing tools. Progress tracked per test card with sign-off
           status.
         </p>

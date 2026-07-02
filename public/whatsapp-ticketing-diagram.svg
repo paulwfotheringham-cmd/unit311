@@ -25,9 +25,9 @@
   </defs>
 
   <rect width="1280" height="920" fill="url(#bg)"/>
-  <text x="40" y="44" class="title">BCN WhatsApp ? Support Ticketing Flow</text>
-  <text x="40" y="72" class="subtitle">Conversational intake · platform assignment · updates · close · demo pages</text>
-  <text x="40" y="96" class="url">barcelonadronecenter.vercel.app/whatsapp-ticketing-diagram.html</text>
+  <text x="40" y="44" class="title">Unit311 WhatsApp ? Support Ticketing Flow</text>
+  <text x="40" y="72" class="subtitle">Conversational intake ï¿½ platform assignment ï¿½ updates ï¿½ close ï¿½ demo pages</text>
+  <text x="40" y="96" class="url">unit311.vercel.app/whatsapp-ticketing-diagram.html</text>
 
   <!-- Row 1: actors -->
   <text x="60" y="138" class="groupTitle">CLIENT</text>
@@ -43,10 +43,10 @@
   <text x="288" y="198" class="small">+34 657 106 176</text>
   <text x="288" y="218" class="small">Webhook ? API</text>
 
-  <text x="520" y="138" class="groupTitle">BCN SERVER</text>
+  <text x="520" y="138" class="groupTitle">Unit311 SERVER</text>
   <rect x="500" y="148" width="280" height="148" class="box" rx="14"/>
   <text x="518" y="176" class="label">POST /api/whatsapp/inbound</text>
-  <text x="518" y="198" class="small">support-intake · sessions</text>
+  <text x="518" y="198" class="small">support-intake ï¿½ sessions</text>
   <text x="518" y="218" class="small">support_tickets (Supabase)</text>
   <text x="518" y="238" class="small">support-desk channel</text>
   <text x="518" y="258" class="small">client-update / close APIs</text>
@@ -55,7 +55,7 @@
   <text x="830" y="138" class="groupTitle">OUTBOUND</text>
   <rect x="810" y="148" width="200" height="100" class="boxSky" rx="14"/>
   <text x="828" y="176" class="label">CallMeBot</text>
-  <text x="828" y="198" class="small">DroneCatalyst Info</text>
+  <text x="828" y="198" class="small">Unit311 Info</text>
   <text x="828" y="218" class="small">Assign / update / close</text>
 
   <text x="1060" y="138" class="groupTitle">PLATFORM</text>
@@ -72,24 +72,24 @@
 
   <!-- Row 2: support-flow panels -->
   <rect x="40" y="330" width="1200" height="130" fill="#0b1524" stroke="#334155" stroke-width="1" rx="16"/>
-  <text x="60" y="358" class="groupTitle">SUPPORT-FLOW DEMO — 4 PANELS (progressive)</text>
+  <text x="60" y="358" class="groupTitle">SUPPORT-FLOW DEMO ï¿½ 4 PANELS (progressive)</text>
   <text x="60" y="380" class="url">/whatsapp/support-flow</text>
 
   <rect x="60" y="392" width="250" height="52" class="boxGreen" rx="10"/>
-  <text x="76" y="414" class="small">1 · Customer WhatsApp</text>
+  <text x="76" y="414" class="small">1 ï¿½ Customer WhatsApp</text>
   <text x="76" y="432" class="tiny">intake + client replies</text>
 
   <rect x="330" y="392" width="250" height="52" class="boxSky" rx="10"/>
-  <text x="346" y="414" class="small">2 · DroneCatalyst Info</text>
+  <text x="346" y="414" class="small">2 ï¿½ Unit311 Info</text>
   <text x="346" y="432" class="tiny">after submit</text>
 
   <rect x="600" y="392" width="250" height="52" class="boxPurple" rx="10"/>
-  <text x="616" y="414" class="small">3 · Messaging · Support</text>
+  <text x="616" y="414" class="small">3 ï¿½ Messaging ï¿½ Support</text>
   <text x="616" y="432" class="tiny">type User 1 to assign</text>
 
   <rect x="870" y="392" width="250" height="52" class="boxAmber" rx="10"/>
-  <text x="886" y="414" class="small">4 · Ticket record</text>
-  <text x="886" y="432" class="tiny">updates · close ticket</text>
+  <text x="886" y="414" class="small">4 ï¿½ Ticket record</text>
+  <text x="886" y="432" class="tiny">updates ï¿½ close ticket</text>
 
   <line x1="310" y1="418" x2="330" y2="418" class="arrow"/>
   <line x1="580" y1="418" x2="600" y2="418" class="arrow"/>
@@ -99,17 +99,17 @@
   <rect x="40" y="490" width="1200" height="250" fill="#0b1524" stroke="#334155" stroke-width="1" rx="16"/>
   <text x="60" y="520" class="groupTitle">STEP-BY-STEP</text>
 
-  <text x="60" y="548" class="small">1. Client types <tspan font-weight="bold">Open new ticket</tspan> — name, organisation, priority, description (one question at a time)</text>
+  <text x="60" y="548" class="small">1. Client types <tspan font-weight="bold">Open new ticket</tspan> ï¿½ name, organisation, priority, description (one question at a time)</text>
   <text x="60" y="572" class="small">2. Ticket SUP-xxx created ? posted to Support channel with assignment prompt</text>
   <text x="60" y="596" class="small">3. Operator joins Messaging ? Support and types <tspan font-weight="bold">User 1</tspan> (client does NOT assign)</text>
-  <text x="60" y="620" class="small">4. Client WhatsApp: Support ticket SUP-xxx created. User1 assigned. Please wait…</text>
-  <text x="60" y="644" class="small">5. DroneCatalyst Info (operator phone): …User 1 – please check ticket record</text>
+  <text x="60" y="620" class="small">4. Client WhatsApp: Support ticket SUP-xxx created. User1 assigned. Please waitï¿½</text>
+  <text x="60" y="644" class="small">5. Unit311 Info (operator phone): ï¿½User 1 ï¿½ please check ticket record</text>
   <text x="60" y="668" class="small">6. Support workspace / flow panel 4: send client update ? exact text to WhatsApp</text>
   <text x="60" y="692" class="small">7. Close ticket ? client receives: Ticket SUP-xxx is now closed.</text>
 
   <!-- Row 4: warnings -->
   <rect x="60" y="760" width="560" height="56" fill="#1f1315" stroke="#f87171" rx="10"/>
-  <text x="76" y="784" class="small">Wrong: DroneCatalyst Info Messages — CallMeBot outbound only, no intake</text>
+  <text x="76" y="784" class="small">Wrong: Unit311 Info Messages ï¿½ CallMeBot outbound only, no intake</text>
   <text x="76" y="804" class="tiny">Do not reply in the alerts thread expecting ticket creation</text>
 
   <rect x="640" y="760" width="560" height="56" fill="#10251f" stroke="#4ade80" rx="10"/>
@@ -117,5 +117,5 @@
   <text x="656" y="804" class="tiny">Or message yourself at +34 657 106 176 via TextMeBot webhook</text>
 
   <rect x="60" y="840" width="1140" height="52" fill="#102033" stroke="#38bdf8" rx="10"/>
-  <text x="76" y="872" class="small">2-panel preview: /whatsapp/support · 4-panel demo: /whatsapp/support-flow · Dashboard: /internaldashboard?view=support</text>
+  <text x="76" y="872" class="small">2-panel preview: /whatsapp/support ï¿½ 4-panel demo: /whatsapp/support-flow ï¿½ Dashboard: /internaldashboard?view=support</text>
 </svg>

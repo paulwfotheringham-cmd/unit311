@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Westport Logistics Hub — Intelligence Platform | Drone Catalyst",
+  title: "Westport Logistics Hub — Intelligence Platform | Unit311",
   description:
     "Enterprise aerial intelligence dashboard for TerraBuild Infrastructure — Westport Logistics Hub, Western Australia.",
   robots: { index: false, follow: false },

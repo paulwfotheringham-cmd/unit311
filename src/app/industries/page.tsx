@@ -11,7 +11,7 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Industries We Serve",
   description:
-    "DroneCatalyst supports oil & gas, renewable energy, construction, infrastructure, hospitality and marine sectors with tailored aerial intelligence programs.",
+    "Unit311 supports oil & gas, renewable energy, construction, infrastructure, hospitality and marine sectors with tailored aerial intelligence programs.",
   path: "/industries",
 });
 

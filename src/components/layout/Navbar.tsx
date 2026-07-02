@@ -7,7 +7,7 @@ import Logo from "./Logo";
 import MobileMenu from "./MobileMenu";
 
 const NAV = [
-  { href: "/#services", label: "Services", hash: "services", chevron: true },
+  { href: "/#services", label: "Solutions", hash: "services", chevron: true },
   { href: "/#platform", label: "Platform", hash: "platform", chevron: false },
 ] as const;
 
@@ -104,7 +104,7 @@ export default function Navbar() {
                       : "h-[36px] rounded-md border border-[#cfe0ff] bg-[#EEF5FF] px-[16px] text-[14px] text-[#0b2d63]"
                 }`}
               >
-                Contact Us
+                Get Started
               </Link>
               <Link
                 href="/login"

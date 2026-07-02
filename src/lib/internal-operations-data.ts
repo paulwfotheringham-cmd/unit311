@@ -218,7 +218,7 @@ export const internalViewTitles: Record<
   InternalOperationsView,
   { title: string; subtitle: string }
 > = {
-  home: { title: "Internal Operations", subtitle: "BCN Drone Center" },
+  home: { title: "Internal Operations", subtitle: "Unit311" },
   clients: { title: "Client Directory", subtitle: "Internal Operations" },
   crm: { title: "CRM", subtitle: "Internal Operations" },
   connections: { title: "Connections", subtitle: "Internal Operations" },
@@ -228,7 +228,7 @@ export const internalViewTitles: Record<
   debtors: { title: "Debtors", subtitle: "Accounts Receivable" },
   creditors: { title: "Creditors", subtitle: "Accounts Payable" },
   expenses: { title: "Expenses", subtitle: "Internal Operations" },
-  hr: { title: "Human Resources", subtitle: "BCN Drone Center" },
+  hr: { title: "Human Resources", subtitle: "Unit311" },
   strategy: { title: "Strategy", subtitle: "Internal Operations" },
   whiteboard: { title: "Whiteboard", subtitle: "Internal Operations" },
   competitors: { title: "Competitors", subtitle: "Internal Operations" },
@@ -239,8 +239,8 @@ export const internalViewTitles: Record<
   "recent-missions": { title: "Recent Missions", subtitle: "Internal Operations" },
   webodm: { title: "WebODM Processing", subtitle: "Internal Operations" },
   messaging: { title: "Messaging", subtitle: "Internal Operations" },
-  social: { title: "Social", subtitle: "BCN Drone Center" },
-  settings: { title: "Settings", subtitle: "BCN Drone Center" },
+  social: { title: "Social", subtitle: "Unit311" },
+  settings: { title: "Settings", subtitle: "Unit311" },
   calendar: { title: "Calendar", subtitle: "Internal Operations" },
   "info-email": { title: "Email", subtitle: "Internal Operations" },
   files: { title: "File Explorer", subtitle: "Internal Operations" },
@@ -253,8 +253,8 @@ export const internalViewTitles: Record<
   telemetry: { title: "Live Telemetry", subtitle: "Internal Operations" },
   "media-example": { title: "Media Example", subtitle: "Internal Operations" },
   "design-mockups": { title: "Design Concepts", subtitle: "Internal Operations" },
-  sector: { title: "Sector Intelligence", subtitle: "BCN Drone Center" },
-  training: { title: "Training Programmes", subtitle: "BCN Drone Center" },
+  sector: { title: "Sector Intelligence", subtitle: "Unit311" },
+  training: { title: "Training Programmes", subtitle: "Unit311" },
   logistics: { title: "Logistics", subtitle: "Package tracking" },
 };
 

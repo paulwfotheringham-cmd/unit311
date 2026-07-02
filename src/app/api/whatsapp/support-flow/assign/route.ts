@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       await sendMessage({
         operatorId: "system",
-        operatorName: "BCN Support",
+        operatorName: "Unit311 Support",
         username: "system",
         content: `${assigneeLabel} assigned to ${ticket.id}.`,
         room: SUPPORT_CHANNEL_ROOM,

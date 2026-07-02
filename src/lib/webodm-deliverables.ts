@@ -7,7 +7,7 @@ export type WebODMDeliverableCatalogItem = {
   fileType: string;
 };
 
-/** Deliverables exposed in the Aerial Intelligence portal (subset of WebODM assets). */
+/** Deliverables exposed in the Start Your Business portal (subset of WebODM assets). */
 export const AERIAL_INTELLIGENCE_DELIVERABLES: WebODMDeliverableCatalogItem[] = [
   {
     asset: "orthophoto.tif",

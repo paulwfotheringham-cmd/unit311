@@ -100,7 +100,7 @@ const SEO_KEYWORDS = [
   { keyword: "aerial inspection catalonia", position: 7, change: -1, volume: "880" },
   { keyword: "matrice 4t training spain", position: 11, change: 3, volume: "640" },
   { keyword: "orthomosaic drone services", position: 15, change: 0, volume: "520" },
-  { keyword: "bcn drone center", position: 1, change: 0, volume: "390" },
+  { keyword: "unit311", position: 1, change: 0, volume: "390" },
   { keyword: "thermal drone inspection port", position: 19, change: 4, volume: "310" },
 ] as const;
 
@@ -145,7 +145,7 @@ function SeoRankingsPanel() {
           </div>
           <div>
             <h3 className="text-base font-semibold text-white sm:text-lg">SEO rankings</h3>
-            <p className="text-xs text-white/50">Google positions · barcelonadronecenter.com</p>
+            <p className="text-xs text-white/50">Google positions · unit311.com</p>
           </div>
         </div>
       </div>

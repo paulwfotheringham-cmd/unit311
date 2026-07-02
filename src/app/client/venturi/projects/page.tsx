@@ -4,7 +4,7 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import Test1Dashboard from "@/components/dashboard/Test1Dashboard";
 
 export const metadata: Metadata = {
-  title: "Venturi Aeronautical — Project X | BCN Drone Center",
+  title: "Venturi Aeronautical — Project X | Unit311",
   description:
     "Project intelligence dashboard for Venturi Aeronautical — site analytics, earthworks progress, aerial intelligence, and stakeholder reporting.",
   robots: { index: false, follow: false },

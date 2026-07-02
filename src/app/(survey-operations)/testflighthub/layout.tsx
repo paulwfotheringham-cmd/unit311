@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Survey Operations Dashboard | DroneCatalyst",
+  title: "Survey Operations Dashboard | Unit311",
   description:
     "Drone surveying operations dashboard with live FlightHub telemetry, fleet status, and mission overview.",
   robots: { index: false, follow: false },

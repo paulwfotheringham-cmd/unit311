@@ -340,10 +340,10 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
           <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 backdrop-blur-xl">
             <div className="flex items-center gap-2">
               <Hash className="h-4 w-4 text-sky-300" />
-              <h2 className="text-sm font-semibold text-white">DroneCatalyst channels</h2>
+              <h2 className="text-sm font-semibold text-white">Unit311 channels</h2>
             </div>
             <p className="mt-2 text-sm text-white/55">
-              Shared channels created by the DroneCatalyst team appear here. Reply in real time when
+              Shared channels created by the Unit311 team appear here. Reply in real time when
               a channel is available.
             </p>
             {unreadTotal > 0 && (
@@ -361,7 +361,7 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
               </div>
             ) : channels.length === 0 ? (
               <p className="text-sm text-white/50">
-                No shared channels yet. DroneCatalyst will create one when collaboration starts.
+                No shared channels yet. Unit311 will create one when collaboration starts.
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -430,7 +430,7 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
             <>
               <div className="border-b border-white/10 px-5 py-4">
                 <h2 className="text-lg font-semibold text-white">{activeChannel.name}</h2>
-                <p className="text-xs text-white/45">Shared with DroneCatalyst operations</p>
+                <p className="text-xs text-white/45">Shared with Unit311 operations</p>
               </div>
 
               {error && (

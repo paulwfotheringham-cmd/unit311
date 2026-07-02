@@ -10,23 +10,23 @@ export const ZOHO_SMTP_PORT = Number(process.env.ZOHO_SMTP_PORT ?? 465);
 const ACCOUNT_DEFINITIONS: readonly EmailAccount[] = [
   {
     id: "info",
-    email: "info@barcelonadronecenter.com",
-    name: "BCN Shared Inbox",
+    email: "hello@unit311.com",
+    name: "Unit311 Shared Inbox",
   },
   {
     id: "paul",
-    email: "paul.fotheringham@barcelonadronecenter.com",
-    name: "BCN Paul",
+    email: "paul.fotheringham@unit311.com",
+    name: "Unit311 Admin",
   },
   {
     id: "dc-info",
-    email: "info@dronecatalyst.com",
-    name: "Drone Catalyst Inbox",
+    email: "info@unit311.com",
+    name: "Unit311 Inbox",
   },
   {
     id: "dc-paul",
-    email: "paul@dronecatalyst.com",
-    name: "Drone Catalyst Paul",
+    email: "paul@unit311.com",
+    name: "Unit311 Paul",
   },
 ];
 
@@ -89,11 +89,11 @@ export async function getAccountCredentials(
   if (!credentials) {
     throw new Error(
       id === "info"
-        ? "Zoho BCN info mailbox is not configured. Set ZOHO_INFO_PASSWORD on the server or save credentials in the Email settings panel."
+        ? "Zoho Unit311 info mailbox is not configured. Set ZOHO_INFO_PASSWORD on the server or save credentials in the Email settings panel."
         : id === "dc-info"
-          ? "Drone Catalyst info mailbox is not configured. Set ZOHO_DC_INFO_PASSWORD on the server or save credentials in the Email settings panel."
+          ? "Unit311 info mailbox is not configured. Set ZOHO_DC_INFO_PASSWORD on the server or save credentials in the Email settings panel."
           : id === "dc-paul"
-            ? "Drone Catalyst paul mailbox is not configured. Set ZOHO_DC_PAUL_PASSWORD on the server or save credentials in the Email settings panel."
+            ? "Unit311 paul mailbox is not configured. Set ZOHO_DC_PAUL_PASSWORD on the server or save credentials in the Email settings panel."
             : "Zoho paul mailbox is not configured. Set ZOHO_PAUL_PASSWORD on the server or save credentials in the Email settings panel.",
     );
   }

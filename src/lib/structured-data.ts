@@ -1,4 +1,4 @@
-import { CONTACT, LOGO_PATH, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./site";
+import { CONTACT, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./site";
 
 export function organizationJsonLd() {
   return {
@@ -6,18 +6,18 @@ export function organizationJsonLd() {
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}${LOGO_PATH}`,
+    logo: `${SITE_URL}/images/homepage-mockup-reference.png`,
     description: SITE_DESCRIPTION,
     email: CONTACT.email,
     telephone: CONTACT.phone,
     areaServed: ["Spain", "Europe", "International"],
     sameAs: [],
     knowsAbout: [
-      "Aerial Intelligence",
-      "Drone Inspection",
-      "Surveying",
-      "Infrastructure Monitoring",
-      "Commercial Cinematography",
+      "Business Operations",
+      "Company Setup",
+      "Project Management",
+      "Finance & Reporting",
+      "Client Delivery",
     ],
   };
 }

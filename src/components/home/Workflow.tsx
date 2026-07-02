@@ -70,7 +70,7 @@ export default function Workflow() {
       <div className="relative mx-auto max-w-[1280px] px-8">
         <div className="text-center">
           <h2 className="text-[34px] font-bold leading-tight tracking-[-0.01em] text-white">
-            The Drone Catalyst Workflow
+            The Unit311 Workflow
           </h2>
           <p className="mt-[10px] text-[16px] text-white/55">
             From capture to actionable intelligence.

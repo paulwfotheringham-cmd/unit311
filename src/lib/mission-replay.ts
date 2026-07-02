@@ -13,7 +13,7 @@ export const MISSION_REPLAY_SCENES = [
   { id: "takeoff", label: "Drone takeoff", caption: "Construction site launch" },
   { id: "grid", label: "Autonomous grid flight", caption: "Surveying roads, stockpiles and buildings" },
   { id: "capture", label: "Nadir imagery capture", caption: "Overlapping photo sequence" },
-  { id: "upload", label: "Cloud upload", caption: "Images syncing to DroneCatalyst" },
+  { id: "upload", label: "Cloud upload", caption: "Images syncing to Unit311" },
   { id: "processing", label: "Photogrammetry processing", caption: "Structure-from-motion pipeline" },
   { id: "ortho", label: "Orthomosaic", caption: "Georeferenced site mosaic" },
   { id: "model3d", label: "Textured 3D model", caption: "Mesh reconstruction" },

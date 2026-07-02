@@ -47,9 +47,9 @@ export default function MissionIntelBar({ mission, className }: MissionIntelBarP
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
         Mission intelligence
       </p>
-      <h2 className="mt-1 text-lg font-semibold text-white">Aerial Intelligence Workspace</h2>
+      <h2 className="mt-1 text-lg font-semibold text-white">Start Your Business Workspace</h2>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/50">
-        Interactive survey outputs rendered directly in DroneCatalyst — orthomosaic, elevation,
+        Interactive survey outputs rendered directly in Unit311 — orthomosaic, elevation,
         3D mesh, and processing report in one operational workspace.
       </p>
 

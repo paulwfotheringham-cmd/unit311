@@ -51,7 +51,7 @@ export const VENTURI_PROJECTS = [
     progress: 54,
     status: "In flight test",
     summary:
-      "Structured R&D programme for avionics integration, redundancy testing, and progressive envelope expansion at the BCN UAS test site.",
+      "Structured R&D programme for avionics integration, redundancy testing, and progressive envelope expansion at the Unit311 operations hub.",
     milestones: [
       "Avionics bench validation — complete",
       "Tethered hover tests — complete",

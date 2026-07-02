@@ -23,7 +23,7 @@ export const venturiProject = {
 export const venturiProjectBrief = {
   title: "PROGRAMME BRIEF",
   intro:
-    "Project X is Venturi Aeronautical's electric VTOL development programme at BCN Drone Center, comprising:",
+    "Project X is Venturi Aeronautical's electric VTOL development programme at Unit311, comprising:",
   items: [
     "Market feasibility & corridor analysis",
     "R&D flight test & payload integration",

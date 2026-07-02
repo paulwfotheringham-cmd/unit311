@@ -366,7 +366,7 @@ export default function InfoEmailWorkspace() {
     setError(null);
     setSuccessMessage(null);
 
-    const signature = `\n\n— ${replyAsUser.fullName}\nBCN Drone Center`;
+    const signature = `\n\n— ${replyAsUser.fullName}\nUnit311`;
     const html = `<p>${replyBody.trim().replace(/\n/g, "<br/>")}</p><p>${signature.replace(/\n/g, "<br/>")}</p>`;
 
     try {
@@ -417,7 +417,7 @@ export default function InfoEmailWorkspace() {
     setError(null);
     setSuccessMessage(null);
 
-    const signature = `\n\n— ${replyAsUser.fullName}\nBCN Drone Center`;
+    const signature = `\n\n— ${replyAsUser.fullName}\nUnit311`;
     const html = `<p>${composeBody.trim().replace(/\n/g, "<br/>")}</p><p>${signature.replace(/\n/g, "<br/>")}</p>`;
 
     try {
@@ -480,10 +480,10 @@ export default function InfoEmailWorkspace() {
                 >
                   {accounts.length === 0 ? (
                     <>
-                      <option value="dc-info">info@dronecatalyst.com</option>
-                      <option value="dc-paul">paul@dronecatalyst.com</option>
-                      <option value="info">info@barcelonadronecenter.com</option>
-                      <option value="paul">paul.fotheringham@barcelonadronecenter.com</option>
+                      <option value="dc-info">info@unit311.com</option>
+                      <option value="dc-paul">paul@unit311.com</option>
+                      <option value="info">hello@unit311.com</option>
+                      <option value="paul">paul.fotheringham@unit311.com</option>
                     </>
                   ) : (
                     accounts.map((account) => (

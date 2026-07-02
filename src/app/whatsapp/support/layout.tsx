@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "BCN Support · WhatsApp",
+  title: "Unit311 Support · WhatsApp",
   description: "Client WhatsApp support ticket intake preview",
 };
 

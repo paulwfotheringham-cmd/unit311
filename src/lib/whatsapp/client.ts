@@ -22,7 +22,7 @@ export function isWhatsAppConfigured() {
 
 export function formatSupportTicketOpenedMessage(ticketId: string, organisation: string, name: string) {
   return [
-    "BCN Support ticket opened",
+    "Unit311 Support ticket opened",
     `ID: ${ticketId}`,
     `Client: ${organisation}`,
     `Contact: ${name}`,
@@ -64,7 +64,7 @@ export function formatSupportTicketAssignedMessage(assigneeLabel: string) {
 
 export function formatWhatsAppReceiveHelpMessage(siteUrl: string) {
   return [
-    "BCN Support intake",
+    "Unit311 Support intake",
     "Typing to CallMeBot does not reach our server.",
     "Message your TextMeBot-linked support number instead, or open:",
     `${siteUrl}/whatsapp/support`,

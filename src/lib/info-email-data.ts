@@ -1,4 +1,4 @@
-export const INFO_EMAIL_ADDRESS = "info@barcelonadronecenter.com";
+export const INFO_EMAIL_ADDRESS = "hello@unit311.com";
 export const INFO_EMAIL_PROVIDER = "Egg Mail";
 
 export type InfoEmailThreadStatus = "unread" | "open" | "replied" | "closed";

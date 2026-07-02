@@ -18,7 +18,7 @@ export function isWhatsAppConfigured() {
 
 export function formatNewEmailWhatsAppMessage(fromName: string, subject: string) {
   return [
-    "New email to info@barcelonadronecenter.com",
+    "New email to hello@unit311.com",
     `From: ${fromName.trim() || "Unknown"}`,
     `Subject: ${subject.trim() || "(No subject)"}`,
   ].join("\n");

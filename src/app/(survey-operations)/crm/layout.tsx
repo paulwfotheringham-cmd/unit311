@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "CRM | DroneCatalyst",
+  title: "CRM | Unit311",
   description: "Internal CRM for tracking leads, pipeline status, and next actions.",
   robots: { index: false, follow: false },
 };

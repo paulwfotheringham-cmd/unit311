@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 import VenturiClientDashboard from "@/components/client-platform/VenturiClientDashboard";
 
 export const metadata: Metadata = {
-  title: "Venturi Aeronautical — Intelligence Platform | BCN Drone Center",
+  title: "Venturi Aeronautical — Intelligence Platform | Unit311",
   description:
     "Customised client intelligence platform for Venturi Aeronautical — feasibility, R&D, regulatory compliance, certification, and test site operations.",
   robots: { index: false, follow: false },

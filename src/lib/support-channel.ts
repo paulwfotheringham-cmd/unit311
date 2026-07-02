@@ -29,7 +29,7 @@ export async function postTicketToSupportChannel(ticket: SupportTicket) {
 export async function postAssignmentPromptToSupportChannel(ticketId: string) {
   return sendMessage({
     operatorId: "system",
-    operatorName: "BCN Support",
+    operatorName: "Unit311 Support",
     username: "system",
     content: `What user do you want to assign? (${ticketId})`,
     room: SUPPORT_CHANNEL_ROOM,

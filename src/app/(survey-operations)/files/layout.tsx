@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Internal Files | DroneCatalyst",
+  title: "Internal Files | Unit311",
   description: "Internal document repository for survey operations files and deliverables.",
   robots: { index: false, follow: false },
 };

@@ -188,7 +188,7 @@ export function slugifyChannelName(name: string) {
 
 export function generateCallLink(type: "voice" | "video") {
   const id = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
-  return `https://barcelonadronecenter.vercel.app/meet/${type}/${id}`;
+  return `https://unit311.vercel.app/meet/${type}/${id}`;
 }
 
 export function buildScheduledCallDateTime(date: string, time: string) {

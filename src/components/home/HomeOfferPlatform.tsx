@@ -7,36 +7,36 @@ const CONSTRUCTION_BG = "/images/construction-bg.jpg";
 
 const OFFERS = [
   {
-    title: "Surveying & Geospatial Intelligence",
-    tagline: "Measure. Map. Monitor.",
-    href: "/surveying",
+    title: "Company Setup & Compliance",
+    tagline: "Register. Structure. Comply.",
+    href: "/contact",
     bullets: [
-      "Stockpile & Volume Analytics",
-      "Construction Surveying",
-      "Infrastructure Surveying",
-      "Construction Progress Intelligence",
+      "Entity formation & governance",
+      "Regulatory onboarding",
+      "Policy & documentation packs",
+      "Operator certification support",
     ],
   },
   {
-    title: "Inspection & Asset Intelligence",
-    tagline: "Inspect. Assess. Report.",
-    href: "/inspection",
+    title: "Operations & Delivery",
+    tagline: "Plan. Execute. Deliver.",
+    href: "/internaldashboard",
     bullets: [
-      "Building & Roof Inspections",
-      "Energy Asset Inspections",
-      "Industrial Asset Inspections",
-      "Infrastructure Inspections",
+      "Projects & client workspaces",
+      "Files, CRM & messaging",
+      "Logistics & office locations",
+      "Support & ticketing",
     ],
   },
   {
-    title: "Premium Media & Broadcast",
-    tagline: "Capture. Create. Communicate.",
-    href: "/commercial-imaging",
+    title: "Finance & Growth",
+    tagline: "Track. Report. Scale.",
+    href: "/contact",
     bullets: [
-      "Commercial & Brand Productions",
-      "Sports & Live Events",
-      "Maritime & Yachting",
-      "Production Support",
+      "Expenses & financial controls",
+      "Executive reporting",
+      "Strategy & pipeline tracking",
+      "Stakeholder-ready dashboards",
     ],
   },
 ] as const;
@@ -109,7 +109,7 @@ export default function HomeOfferPlatform() {
       </div>
 
       <div className="relative mx-auto max-w-[1760px] px-5 sm:px-8 lg:px-10">
-        <SectionTitle centered>What We Can Offer</SectionTitle>
+        <SectionTitle centered>Everything to launch</SectionTitle>
 
         <div className="mx-auto mt-10 grid w-full max-w-[1150px] grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-5 lg:max-w-[1225px] lg:gap-6">
           {OFFERS.map((item, i) => (
@@ -158,11 +158,11 @@ export default function HomeOfferPlatform() {
         </div>
 
         <div id="platform" className="mt-16 scroll-mt-28 sm:mt-20 lg:mt-24">
-          <SectionTitle centered>Intelligence Platform</SectionTitle>
+          <SectionTitle centered>Unit311 Workspace</SectionTitle>
 
           <div className="mt-10 w-full">
             <p className="mx-auto mb-4 max-w-2xl text-center text-sm text-white/50">
-              Hover any panel to explore the live operations workspace — maps, analytics, flight path, and FPV.
+              Hover any panel to explore the centralised workspace — projects, finance, files, logistics, and client delivery in one place.
             </p>
             <GeospatialDashboard className="w-full" />
           </div>

@@ -23,7 +23,7 @@ function DashboardFooter() {
       <div className="flex items-center gap-2.5 text-xs text-white/40">
         <TrendingUp className="h-4 w-4 shrink-0" />
         <span className="leading-relaxed">
-          Drone Catalyst Enterprise · {PLATFORM_STATS.classification}
+          Unit311 Enterprise · {PLATFORM_STATS.classification}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-white/35 sm:gap-4">

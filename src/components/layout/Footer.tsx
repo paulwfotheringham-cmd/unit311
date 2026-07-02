@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT } from "@/lib/site";
+import { CONTACT, SITE_HERO_LINE } from "@/lib/site";
 import Logo from "./Logo";
 
 export default function Footer() {
@@ -10,19 +10,19 @@ export default function Footer() {
           <div>
             <Logo height={48} />
             <p className="mt-[14px] text-[13px] font-medium text-[#1a2b4a]/65">
-              From Drone to Intelligence.
+              {SITE_HERO_LINE}
             </p>
             <span className="mt-[12px] block h-[3px] w-[36px] bg-[#2563eb]" aria-hidden />
           </div>
 
           <div>
             <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#1a2b4a]">
-              Services
+              Solutions
             </h3>
             <ul className="mt-[16px] space-y-[10px]">
               <li>
                 <Link href="/#services" className="text-[13px] text-[#1a2b4a]/65 hover:text-[#1a2b4a]">
-                  Services
+                  What we offer
                 </Link>
               </li>
               <li>
@@ -44,7 +44,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <span className="text-[13px] text-[#1a2b4a]/65">Terms and Conditions</span>
+                <Link href="/login" className="text-[13px] text-[#1a2b4a]/65 hover:text-[#1a2b4a]">
+                  Sign in
+                </Link>
               </li>
             </ul>
           </div>
@@ -99,7 +101,7 @@ export default function Footer() {
 
         <div className="mt-[48px] border-t border-black/[0.08] pt-[24px] text-center">
           <p className="text-[12px] text-[#1a2b4a]/50">
-            © 2026 Drone Catalyst. All rights reserved.
+            © {new Date().getFullYear()} Unit311. All rights reserved.
           </p>
         </div>
       </div>

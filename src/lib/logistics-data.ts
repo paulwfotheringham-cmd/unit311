@@ -8,7 +8,7 @@ export type LogisticsStatus =
   | "Customs hold"
   | "Scheduled";
 
-export type LogisticsCarrier = "FedEx" | "DHL" | "UPS" | "BCN Courier" | "Royal Mail";
+export type LogisticsCarrier = "FedEx" | "DHL" | "UPS" | "Unit311 Courier" | "Royal Mail";
 
 export type LogisticsShipment = {
   id: string;
@@ -57,7 +57,7 @@ export const LOGISTICS_MOCK_SHIPMENTS: LogisticsShipment[] = [
     origin: "Barcelona HQ, Spain",
     destination: "Oxford Heritage Survey Ltd, London, UK",
     recipient: "James Whitfield",
-    sender: "BCN Drone Center — Logistics",
+    sender: "Unit311 — Logistics",
     sentBy: "Elena Morales",
     contents: "Matrice 4T gimbal calibration kit + spare propellers",
     weightKg: 8.4,
@@ -75,7 +75,7 @@ export const LOGISTICS_MOCK_SHIPMENTS: LogisticsShipment[] = [
     eta: "2026-06-18T11:30:00.000Z",
     origin: "DJI Enterprise — Rotterdam, NL",
     destination: "Barcelona HQ, Spain",
-    recipient: "BCN Drone Center — Receiving",
+    recipient: "Unit311 — Receiving",
     sender: "DJI Enterprise EU",
     sentBy: "Warehouse dispatch",
     contents: "TB65 intelligent flight battery × 4",
@@ -93,7 +93,7 @@ export const LOGISTICS_MOCK_SHIPMENTS: LogisticsShipment[] = [
     origin: "Porto Operations, Portugal",
     destination: "Douro Maritime Logistics, Matosinhos",
     recipient: "Rui Ferreira",
-    sender: "BCN Drone Center — Porto",
+    sender: "Unit311 — Porto",
     sentBy: "Ana Ribeiro",
     contents: "Processed orthomosaic USB drive + survey report",
     weightKg: 0.6,
@@ -103,13 +103,13 @@ export const LOGISTICS_MOCK_SHIPMENTS: LogisticsShipment[] = [
     trackingNumber: "BCN-CR-88421",
     direction: "inbound",
     status: "In transit",
-    carrier: "BCN Courier",
+    carrier: "Unit311 Courier",
     carrierTrackingUrl: "https://www.fedex.com/fedextrack/",
     sentAt: "2026-06-17T11:20:00.000Z",
     eta: "2026-06-17T17:00:00.000Z",
     origin: "Oxford Studio, UK",
     destination: "Barcelona HQ, Spain",
-    recipient: "BCN Drone Center — R&D",
+    recipient: "Unit311 — R&D",
     sender: "Oxford Heritage Survey Ltd",
     sentBy: "James Whitfield",
     contents: "Returned RTK base antenna for bench test",
@@ -127,7 +127,7 @@ export const LOGISTICS_MOCK_SHIPMENTS: LogisticsShipment[] = [
     origin: "Barcelona HQ, Spain",
     destination: "Venturi Aeronautical, Barcelona",
     recipient: "Eduard Gómez",
-    sender: "BCN Drone Center — Logistics",
+    sender: "Unit311 — Logistics",
     sentBy: "Paul Fotheringham",
     contents: "Signed NDA originals + compliance binder",
     weightKg: 1.1,
@@ -143,7 +143,7 @@ export const LOGISTICS_MOCK_SHIPMENTS: LogisticsShipment[] = [
     eta: "2026-06-18T09:00:00.000Z",
     origin: "Perth WA, Australia",
     destination: "Barcelona HQ, Spain",
-    recipient: "BCN Drone Center — Import desk",
+    recipient: "Unit311 — Import desk",
     sender: "Westport Logistics Hub",
     sentBy: "Marcus Chen",
     contents: "Thermal camera module — RMA return",

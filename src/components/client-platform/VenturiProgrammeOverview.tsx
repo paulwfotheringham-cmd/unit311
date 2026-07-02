@@ -71,7 +71,7 @@ export default function VenturiProgrammeOverview() {
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
           Customised workspace for {VENTURI_CLIENT.contact} — electric VTOL development programme
           spanning feasibility, R&D flight testing, regulatory compliance, certification support,
-          and managed test site operations at BCN Drone Center.
+          and managed test site operations at Unit311.
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[

@@ -114,7 +114,7 @@ export default function LogisticsWorkspace() {
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white">Package tracking</h2>
             <p className="mt-2 text-sm text-white/55">
-              Mock inbound and outbound shipments across BCN hubs — carrier links and live route
+              Mock inbound and outbound shipments across Unit311 hubs — carrier links and live route
               preview.
             </p>
           </div>

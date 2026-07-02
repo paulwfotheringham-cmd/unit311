@@ -9,7 +9,7 @@ type PageMeta = {
 
 export function createPageMetadata({ title, description, path }: PageMeta): Metadata {
   const url = `${SITE_URL}${path}`;
-  const fullTitle = path === "/" ? `${SITE_NAME} | Aerial Intelligence` : `${title} | ${SITE_NAME}`;
+  const fullTitle = path === "/" ? `${SITE_NAME} | Start Your Business` : `${title} | ${SITE_NAME}`;
 
   return {
     title: fullTitle,
@@ -19,11 +19,11 @@ export function createPageMetadata({ title, description, path }: PageMeta): Meta
       canonical: url,
     },
     keywords: [
-      "DroneCatalyst",
-      "aerial intelligence",
-      "drone inspection Spain",
-      "drone surveying Spain",
-      "commercial drone services",
+      "Unit311",
+      "start your business",
+      "business operations platform",
+      "company setup",
+      "founder workspace",
     ],
     openGraph: {
       type: "website",

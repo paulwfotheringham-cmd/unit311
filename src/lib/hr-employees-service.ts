@@ -79,7 +79,7 @@ export async function createHrEmployee(
       .insert({
         id,
         full_name: input.fullName.trim(),
-        email: input.email?.trim() || `${id}@barcelonadronecenter.com`,
+        email: input.email?.trim() || `${id}@unit311.com`,
         phone: input.phone?.trim() || "",
         date_joined: input.dateJoined ?? blank.dateJoined,
         location: input.location?.trim() || blank.location,
