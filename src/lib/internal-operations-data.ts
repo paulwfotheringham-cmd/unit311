@@ -187,7 +187,6 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
   {
     label: "Tools",
     items: [
-      { label: "Testing", icon: "FlaskConical", view: "testing" as const },
       {
         label: "Users",
         icon: "Users",
