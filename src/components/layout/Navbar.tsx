@@ -35,7 +35,7 @@ export default function Navbar() {
     pathname?.startsWith("/telemetry") ||
     pathname?.startsWith("/whatsapp/");
 
-  if (isDashboard) {
+  if (isDashboard || isLoginPage) {
     return null;
   }
 
