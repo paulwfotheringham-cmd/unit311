@@ -108,7 +108,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/login"
-                className="hidden h-[36px] items-center rounded-md bg-[#0b2d63] px-[16px] text-[14px] font-semibold text-white hover:bg-[#082652] lg:inline-flex"
+                className="inline-flex h-9 items-center rounded-md bg-[#0b2d63] px-3 text-[13px] font-semibold text-white hover:bg-[#082652] sm:h-[36px] sm:px-[16px] sm:text-[14px]"
               >
                 Login
               </Link>
