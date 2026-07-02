@@ -87,7 +87,7 @@ export default function WhoWeWorkWith() {
         <div className="flex items-center justify-center gap-5 sm:gap-6">
           <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
           <p className="whitespace-nowrap text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
-            Who we help start and scale
+            Who we help accelerate and scale
           </p>
           <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
         </div>

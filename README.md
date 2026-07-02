@@ -1,6 +1,6 @@
 # Unit311
 
-Centralised platform to **start and run your business** — company setup, operations, finance, logistics, and client delivery in one workspace.
+Centralised platform to **accelerate and run your business** — company setup, operations, finance, logistics, and client delivery in one workspace.
 
 - **Production:** https://unit311.vercel.app
 - **Workspace:** https://unit311.vercel.app/internaldashboard

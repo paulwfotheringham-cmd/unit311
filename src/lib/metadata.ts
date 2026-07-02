@@ -9,7 +9,7 @@ type PageMeta = {
 
 export function createPageMetadata({ title, description, path }: PageMeta): Metadata {
   const url = `${SITE_URL}${path}`;
-  const fullTitle = path === "/" ? `${SITE_NAME} | Start Your Business` : `${title} | ${SITE_NAME}`;
+  const fullTitle = path === "/" ? `${SITE_NAME} | Accelerate Your Business` : `${title} | ${SITE_NAME}`;
 
   return {
     title: fullTitle,
@@ -20,7 +20,7 @@ export function createPageMetadata({ title, description, path }: PageMeta): Meta
     },
     keywords: [
       "Unit311",
-      "start your business",
+      "accelerate your business",
       "business operations platform",
       "company setup",
       "founder workspace",

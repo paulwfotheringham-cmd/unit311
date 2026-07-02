@@ -23,7 +23,7 @@ export default function HomeHero() {
           </p>
 
           <h1 className="text-[2rem] font-bold leading-[0.95] tracking-[-0.03em] text-white sm:text-[2.75rem] lg:text-[3.35rem] xl:text-[3.75rem]">
-            <span className="mb-3 block sm:mb-4">START YOUR</span>
+            <span className="mb-3 block sm:mb-4">ACCELERATE YOUR</span>
             <span className="block">BUSINESS</span>
           </h1>
 
@@ -39,18 +39,12 @@ export default function HomeHero() {
             {SITE_DESCRIPTION}
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-8">
             <Link
               href="/contact"
               className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-[#0b2d63] transition-colors hover:bg-white/90"
             >
               Get Started
-            </Link>
-            <Link
-              href="/internaldashboard"
-              className="inline-flex h-12 items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-6 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/[0.08]"
-            >
-              Open Workspace
             </Link>
           </div>
         </div>

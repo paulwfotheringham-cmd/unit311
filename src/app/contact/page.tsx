@@ -7,7 +7,7 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Contact",
   description:
-    "Contact Unit311 to start your business, set up operations, or access the centralised workspace. We respond within one business day.",
+    "Contact Unit311 to accelerate your business, set up operations, or access the centralised workspace. We respond within one business day.",
   path: "/contact",
 });
 

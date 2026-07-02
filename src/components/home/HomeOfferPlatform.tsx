@@ -5,68 +5,58 @@ import GeospatialDashboard from "./GeospatialDashboard";
 
 const CONSTRUCTION_BG = "/images/construction-bg.jpg";
 
-const OFFERS = [
+const MODULES = [
   {
-    title: "Company Setup & Compliance",
-    tagline: "Register. Structure. Comply.",
-    href: "/contact",
-    bullets: [
-      "Entity formation & governance",
-      "Regulatory onboarding",
-      "Policy & documentation packs",
-      "Operator certification support",
-    ],
+    title: "Client",
+    description: "Client accounts, contacts, and delivery workspaces.",
+    href: "/internaldashboard?view=clients",
   },
   {
-    title: "Operations & Delivery",
-    tagline: "Plan. Execute. Deliver.",
-    href: "/internaldashboard",
-    bullets: [
-      "Projects & client workspaces",
-      "Files, CRM & messaging",
-      "Logistics & office locations",
-      "Support & ticketing",
-    ],
+    title: "CRM",
+    description: "Leads, pipeline, connections, and relationship tracking.",
+    href: "/internaldashboard?view=crm",
   },
   {
-    title: "Finance & Growth",
-    tagline: "Track. Report. Scale.",
-    href: "/contact",
-    bullets: [
-      "Expenses & financial controls",
-      "Executive reporting",
-      "Strategy & pipeline tracking",
-      "Stakeholder-ready dashboards",
-    ],
+    title: "Project Management",
+    description: "Projects, milestones, schedules, and delivery control.",
+    href: "/internaldashboard?view=projects",
+  },
+  {
+    title: "Financials / Integration",
+    description: "Expenses, ledgers, reporting, and finance integrations.",
+    href: "/internaldashboard?view=financials",
+  },
+  {
+    title: "HR",
+    description: "People records, roles, onboarding, and team operations.",
+    href: "/internaldashboard?view=hr",
+  },
+  {
+    title: "Inventory / Asset Mgmt / Logistics",
+    description: "Stock, assets, shipments, and movement across locations.",
+    href: "/internaldashboard?view=logistics",
+  },
+  {
+    title: "Data Repository",
+    description: "Central files, folders, internal and client document stores.",
+    href: "/internaldashboard?view=files",
+  },
+  {
+    title: "Email",
+    description: "Shared inboxes, threads, replies, and notification flows.",
+    href: "/internaldashboard?view=info-email",
+  },
+  {
+    title: "Messaging",
+    description: "Internal channels, client messaging, and live collaboration.",
+    href: "/internaldashboard?view=messaging",
+  },
+  {
+    title: "Social Media",
+    description: "Social presence, campaigns, and audience engagement.",
+    href: "/internaldashboard?view=social",
   },
 ] as const;
-
-function ServiceIcon({ index }: { index: number }) {
-  const cls = "h-[30px] w-[30px] stroke-white sm:h-[32px] sm:w-[32px]";
-  if (index === 0) {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={cls}>
-        <path d="M3 6l6-3 6 3v12l-6 3-6-3V6z" />
-        <path d="M9 3v18M15 6v12" />
-      </svg>
-    );
-  }
-  if (index === 1) {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={cls}>
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-        <rect x="9" y="3" width="6" height="4" rx="1" />
-        <path d="M9 12h6M9 16h4" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={cls}>
-      <path d="M4 7h3l2-3h6l2 3h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
-      <circle cx="12" cy="13" r="3" />
-    </svg>
-  );
-}
 
 function SectionTitle({
   children,
@@ -83,7 +73,7 @@ function SectionTitle({
         className={`h-px bg-[#3b82f6] ${centered ? "w-[80px] sm:w-[140px]" : "w-12 sm:w-20"}`}
         aria-hidden
       />
-      <p className="text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
+      <p className="text-center text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
         {children}
       </p>
       <span
@@ -109,51 +99,33 @@ export default function HomeOfferPlatform() {
       </div>
 
       <div className="relative mx-auto max-w-[1760px] px-5 sm:px-8 lg:px-10">
-        <SectionTitle centered>Everything to launch</SectionTitle>
+        <SectionTitle centered>What every new business needs</SectionTitle>
 
-        <div className="mx-auto mt-10 grid w-full max-w-[1150px] grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-5 lg:max-w-[1225px] lg:gap-6">
-          {OFFERS.map((item, i) => (
-            <div
+        <p className="mx-auto mt-5 max-w-3xl text-center text-[15px] leading-relaxed text-white/60 sm:text-[17px]">
+          Unit311 brings the core operating stack into one workspace — from first client to finance,
+          files, email, messaging, and social.
+        </p>
+
+        <div className="mx-auto mt-10 grid w-full max-w-[1400px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {MODULES.map((item, index) => (
+            <Link
               key={item.title}
-              className="mx-auto flex w-full max-w-[375px] min-h-[360px] flex-col rounded-xl bg-white px-5 py-6 text-center shadow-[0_4px_24px_rgba(11,45,99,0.12)] sm:min-h-[380px] sm:px-6 sm:py-7"
+              href={item.href}
+              className="group flex min-h-[220px] flex-col rounded-xl bg-white px-5 py-6 text-left shadow-[0_4px_24px_rgba(11,45,99,0.12)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(11,45,99,0.16)] sm:min-h-[240px] sm:px-6 sm:py-7"
             >
-              <div className="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2563eb] sm:h-14 sm:w-14">
-                <ServiceIcon index={i} />
-              </div>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#2563eb] text-sm font-bold text-white">
+                {index + 1}
+              </span>
               <h3 className="mt-4 text-[17px] font-bold leading-snug text-[#1a2b4a] sm:text-[18px]">
                 {item.title}
               </h3>
-              <Link
-                href={item.href}
-                className="mt-2.5 inline-block text-[15px] font-semibold leading-snug text-[#2563eb] sm:text-[16px]"
-              >
-                {item.tagline}
-              </Link>
-              <ul className="mt-4 flex-1 space-y-2.5">
-                {item.bullets.map((bullet) => (
-                  <li
-                    key={bullet}
-                    className="flex items-start justify-center gap-2 text-[15px] leading-snug text-[#1a2b4a]/75 sm:text-[16px]"
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#2563eb]"
-                      aria-hidden
-                    >
-                      <path
-                        d="M3 8.5l3 3 7-7"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <p className="mt-3 flex-1 text-[14px] leading-relaxed text-[#1a2b4a]/72 sm:text-[15px]">
+                {item.description}
+              </p>
+              <span className="mt-4 text-sm font-semibold text-[#2563eb] group-hover:underline">
+                Explore module
+              </span>
+            </Link>
           ))}
         </div>
 
@@ -162,7 +134,8 @@ export default function HomeOfferPlatform() {
 
           <div className="mt-10 w-full">
             <p className="mx-auto mb-4 max-w-2xl text-center text-sm text-white/50">
-              Hover any panel to explore the centralised workspace — projects, finance, files, logistics, and client delivery in one place.
+              Hover any panel to explore the centralised workspace — clients, CRM, projects, finance,
+              HR, logistics, files, email, messaging, and social in one place.
             </p>
             <GeospatialDashboard className="w-full" />
           </div>

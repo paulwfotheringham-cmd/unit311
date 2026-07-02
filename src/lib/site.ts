@@ -9,10 +9,10 @@ export const SITE_URL =
       : DEFAULT_SITE_URL);
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Unit311";
-export const SITE_TAGLINE = "The centralised platform to start and run your business.";
+export const SITE_TAGLINE = "The centralised platform to accelerate and run your business.";
 export const SITE_DESCRIPTION =
-  "Unit311 gives founders and operators one workspace for company setup, compliance, projects, finance, logistics, and client delivery — from day one.";
-export const SITE_HERO_LINE = "Start your business. Run it in one place.";
+  "Unit311 gives every new business the essentials in one place — client management, CRM, projects, financials, HR, inventory and logistics, data repository, email, messaging, and social media.";
+export const SITE_HERO_LINE = "Accelerate your business. Run it in one place.";
 
 export const CONTACT = {
   email: "hello@unit311.com",
@@ -30,7 +30,7 @@ export const NAV_LINKS = [
 ] as const;
 
 export const SEO_KEYWORDS = [
-  "start your business",
+  "accelerate your business",
   "business operations platform",
   "company setup",
   "founder workspace",
