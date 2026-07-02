@@ -66,7 +66,6 @@ const CORE_VIEWS = new Set<InternalOperationsView>([
   "financials",
   "hr",
   "assets",
-  "fleet",
   "logistics",
   "files-internal",
   "info-email",

@@ -127,7 +127,6 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
       { label: "Representatives", icon: "Handshake", view: "representatives" as const },
       { label: "Office Locations", icon: "MapPin", view: "office-locations" as const },
       { label: "Projects", icon: "FolderKanban", view: "projects" as const },
-      { label: "Recent Missions", icon: "History", view: "recent-missions" as const },
       {
         label: "Financials",
         icon: "Wallet",
@@ -143,10 +142,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
   },
   {
     label: "Inventory Management",
-    items: [
-      { label: "Assets", icon: "Package", view: "assets" as const },
-      { label: "Fleet", icon: "Plane", view: "fleet" as const },
-    ],
+    items: [{ label: "Assets", icon: "Package", view: "assets" as const }],
   },
   {
     label: "Business Productivity",
@@ -192,8 +188,6 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
     label: "Tools",
     items: [
       { label: "Testing", icon: "FlaskConical", view: "testing" as const },
-      { label: "WebODM", icon: "Layers", view: "webodm" as const },
-      { label: "Live Telemetry", icon: "Radio", view: "telemetry" as const },
       {
         label: "Users",
         icon: "Users",
