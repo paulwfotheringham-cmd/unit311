@@ -58,12 +58,6 @@ function IndustryIcon({ type }: { type: (typeof INDUSTRIES)[number]["icon"] }) {
           <path d="M3 18h18l-2-6H5l-2 6zM12 6V3M8 6l4-3 4 3" />
         </svg>
       );
-    case "recycle":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
-          <path d="M7 19l-3-5h6l-3 5M17 5l3 5h-6l3-5M12 3v6M9 12h6" />
-        </svg>
-      );
     case "anchor":
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
