@@ -22,7 +22,11 @@ Copy `.env.example` to `.env.local` and set Supabase credentials plus any integr
 
 ## Deploy
 
-This project is linked to the Vercel project `unit311`:
+This project is linked to the Vercel project `unit311` and GitHub repo `paulwfotheringham-cmd/unit311`.
+
+**Production URL:** https://unit311.vercel.app
+
+Pushes to `main` deploy automatically via Vercel Git integration. Manual deploy:
 
 ```bash
 npx vercel link --project unit311
