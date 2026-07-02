@@ -418,7 +418,7 @@ export default function SurveyOperationsSidebar({
 
       <nav
         className={cn(
-          "min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-4 lg:px-2.5",
+          "min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-2.5",
           isInternalCompact ? "pt-2.5 lg:pt-3" : "pt-4 lg:px-3 lg:pt-5",
         )}
       >

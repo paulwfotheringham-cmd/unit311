@@ -178,11 +178,11 @@ export default function InternalOperationsDashboard({
       <div
         className={
           activeView === "home"
-            ? "relative mx-auto w-full max-w-6xl px-3 py-2 sm:px-4 md:px-5 lg:px-6 lg:py-3 xl:max-w-7xl"
-            : "relative mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 md:px-6 lg:px-8 lg:py-4 xl:max-w-[90rem]"
+            ? "relative mx-auto w-full min-w-0 max-w-6xl px-1 py-1 sm:px-2 md:px-4 lg:px-6 lg:py-3 xl:max-w-7xl"
+            : "relative mx-auto w-full min-w-0 max-w-7xl px-1 py-2 sm:px-2 md:px-4 lg:px-6 lg:py-4 xl:max-w-[90rem]"
         }
       >
-        <div className={activeView === "home" ? "relative" : "relative space-y-6"}>
+        <div className={activeView === "home" ? "relative min-w-0" : "relative min-w-0 space-y-4 sm:space-y-6"}>
           {activeView === "home" && <InternalDashboardHome />}
 
           {activeView === "design-mockups" && (

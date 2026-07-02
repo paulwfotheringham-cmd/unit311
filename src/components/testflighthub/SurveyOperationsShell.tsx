@@ -75,7 +75,7 @@ export default function SurveyOperationsShell({
       : subtitle;
 
   return (
-    <div className="flex h-full min-h-0 w-full">
+    <div className="flex h-full min-h-0 w-full min-w-0">
       {mobileNavOpen && (
         <button
           type="button"
@@ -106,8 +106,8 @@ export default function SurveyOperationsShell({
           />
         )}
 
-        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#07111F]/80 px-3 backdrop-blur-xl sm:px-4 md:px-5 lg:h-16 lg:px-8">
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-xl sm:px-4 md:px-5 lg:h-16 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
               className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 md:hidden"
@@ -127,7 +127,7 @@ export default function SurveyOperationsShell({
           </div>
         </header>
 
-      <div className="safe-area-pb safe-area-px relative z-10 min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+      <div className="safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]">
         {children}
       </div>
       </div>

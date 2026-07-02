@@ -49,7 +49,7 @@ export default function Unit311LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-[#020617] px-4 py-12">
+    <div className="safe-area-px safe-area-pb relative flex min-h-dvh w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[#020617] px-4 py-6 sm:px-6 sm:py-10">
       <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
@@ -59,21 +59,21 @@ export default function Unit311LoginPage() {
         }}
       />
 
-      <div className="relative w-full max-w-md space-y-8">
+      <div className="relative w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
-          <div className="mx-auto inline-flex rounded-xl bg-white px-5 py-3.5 shadow-lg shadow-blue-950/30">
-            <Logo height={40} href={undefined} />
+          <div className="mx-auto inline-flex rounded-xl bg-white px-4 py-3 shadow-lg shadow-blue-950/30 sm:px-5 sm:py-3.5">
+            <Logo height={38} href={undefined} />
           </div>
-          <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          <h1 className="mt-5 text-xl font-semibold tracking-tight text-white sm:mt-6 sm:text-2xl md:text-3xl">
             Sign in
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-white/55">
+          <p className="mt-2 px-2 text-sm leading-relaxed text-white/55">
             Access your {SITE_NAME} workspace.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] p-6 shadow-xl shadow-black/30 backdrop-blur-sm sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] p-5 shadow-xl shadow-black/30 backdrop-blur-sm sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div>
               <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-white/80">
                 Username
@@ -86,7 +86,7 @@ export default function Unit311LoginPage() {
                 required
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
                 placeholder="Enter username"
               />
             </div>
@@ -103,7 +103,7 @@ export default function Unit311LoginPage() {
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
                 placeholder="Enter password"
               />
             </div>
@@ -117,7 +117,7 @@ export default function Unit311LoginPage() {
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[#0b2d63] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#082652] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-12 w-full touch-manipulation items-center justify-center rounded-md bg-[#0b2d63] px-4 text-base font-semibold text-white transition-colors hover:bg-[#082652] disabled:cursor-not-allowed disabled:opacity-70 sm:h-11 sm:text-sm"
             >
               {busy ? "Signing in…" : "Sign in"}
             </button>
@@ -125,7 +125,7 @@ export default function Unit311LoginPage() {
             <p className="text-center text-sm">
               <button
                 type="button"
-                className="font-medium text-sky-400/80 underline-offset-2 hover:text-sky-300 hover:underline"
+                className="touch-manipulation font-medium text-sky-400/80 underline-offset-2 hover:text-sky-300 hover:underline"
               >
                 Reset password
               </button>
@@ -134,7 +134,7 @@ export default function Unit311LoginPage() {
         </div>
       </div>
 
-      <p className="relative mt-10 text-center text-xs text-white/35">
+      <p className="relative mt-8 text-center text-xs text-white/35 sm:mt-10">
         © {new Date().getFullYear()} {SITE_NAME}
       </p>
     </div>

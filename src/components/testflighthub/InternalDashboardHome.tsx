@@ -106,7 +106,7 @@ export default function InternalDashboardHome() {
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
           <SectionPanel title="This week">
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-y-3 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {thisWeekSchedule.map((day) => (
                 <div key={day.day} className="min-w-0">
                   <p className="text-[11px] font-medium text-white/65">{day.day}</p>
@@ -183,7 +183,7 @@ export default function InternalDashboardHome() {
         </div>
 
         <SectionPanel title="Projects in progress">
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[28rem] border-collapse text-left">
               <thead>
                 <tr className="border-b border-white/[0.06] text-[9px] font-medium uppercase tracking-[0.12em] text-white/35">
@@ -225,6 +225,31 @@ export default function InternalDashboardHome() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="space-y-2.5 sm:hidden">
+            {projectsInProgress.map((project) => (
+              <div
+                key={`${project.id}-mobile`}
+                className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 text-[13px] font-medium leading-snug text-white/85">
+                    {project.project}
+                  </p>
+                  <span className="shrink-0 text-[11px] tabular-nums text-white/45">
+                    {project.progress}%
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-white/40">{project.client}</p>
+                <div className="mt-2 font-mono text-[10px] tracking-tight text-white/35">
+                  {progressBar(project.progress)}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/45">
+                  <span>{project.status}</span>
+                  <span>{project.lastUpdate}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </SectionPanel>
       </div>
