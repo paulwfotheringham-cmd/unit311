@@ -50,12 +50,12 @@ export default function Navbar() {
             : "sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl"
         }
       >
-        <div className="mx-auto flex h-24 max-w-[1400px] items-center px-6 sm:px-8 lg:grid lg:h-28 lg:grid-cols-[1fr_auto_1fr] lg:px-10">
+        <div className="mx-auto flex h-32 max-w-[1400px] items-center px-6 sm:px-8 lg:grid lg:h-44 lg:grid-cols-[1fr_auto_1fr] lg:px-10">
           <div className="flex w-full items-center justify-between lg:contents">
             {/* Logo */}
-            <div className="flex items-center justify-start overflow-hidden">
+            <div className="flex items-center justify-start overflow-visible">
               <Logo
-                height={isDarkNav ? 112 : 64}
+                height={isDarkNav ? 224 : 128}
                 onDark={isDarkNav}
                 className={isDarkNav ? "origin-left scale-[1.35] drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]" : undefined}
               />
