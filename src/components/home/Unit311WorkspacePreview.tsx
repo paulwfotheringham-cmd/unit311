@@ -88,12 +88,14 @@ function SidebarButton({
   icon,
   active,
   indented = false,
+  compact = false,
   onClick,
 }: {
   label: string;
   icon?: string;
   active: boolean;
   indented?: boolean;
+  compact?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -101,8 +103,9 @@ function SidebarButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] transition-colors",
-        indented ? "pl-6" : "",
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
+        compact ? "text-[10px]" : "text-[11px]",
+        indented ? (compact ? "pl-4" : "pl-6") : "",
         active
           ? "bg-sky-500/15 text-sky-100 ring-1 ring-sky-400/20"
           : "text-white/55 hover:bg-white/[0.04] hover:text-white/80",
@@ -159,13 +162,13 @@ export default function Unit311WorkspacePreview({
       <div
         className={cn(
           "flex flex-col lg:flex-row",
-          compact ? "min-h-[320px] lg:min-h-[360px]" : "min-h-[640px] lg:min-h-[720px]",
+          compact ? "min-h-[400px] lg:min-h-[450px]" : "min-h-[640px] lg:min-h-[720px]",
         )}
       >
         <aside
           className={cn(
             "w-full shrink-0 border-b border-white/10 bg-[#0a0f18]/95 lg:border-b-0 lg:border-r",
-            compact ? "lg:w-[110px]" : "lg:w-[220px]",
+            compact ? "lg:w-[165px]" : "lg:w-[220px]",
           )}
         >
           <div className="border-b border-white/10 px-3 py-3">
@@ -179,7 +182,7 @@ export default function Unit311WorkspacePreview({
           <nav
             className={cn(
               "overflow-y-auto px-2 py-3 lg:py-4",
-              compact ? "max-h-[140px] lg:max-h-none" : "max-h-[280px] lg:max-h-none",
+              compact ? "max-h-[175px] lg:max-h-none" : "max-h-[280px] lg:max-h-none",
             )}
             aria-label="Workspace demo navigation"
           >
@@ -198,6 +201,7 @@ export default function Unit311WorkspacePreview({
                           label={item.label}
                           icon={item.icon}
                           active={activeView === item.view}
+                          compact={compact}
                           onClick={() => setActiveView(item.view!)}
                         />
                       ) : (
@@ -214,6 +218,7 @@ export default function Unit311WorkspacePreview({
                             label={child.label}
                             active={activeView === childView}
                             indented
+                            compact={compact}
                             onClick={() => setActiveView(childView)}
                           />
                         );
