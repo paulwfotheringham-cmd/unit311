@@ -175,21 +175,20 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
         connections?: CrmConnection[];
         error?: string;
         source?: string;
-        warning?: string;
       }>(response);
 
-      const next = data.connections ?? [];
-      if (!response.ok && next.length === 0) {
+      if (!response.ok) {
         throw new Error(data.error ?? "Failed to load connections");
       }
 
-      setConnections(next.length > 0 ? next : createInitialConnections());
-      setUseLocalFallback(data.source === "local" || next.length === 0);
-      setError(data.warning ?? null);
+      const resolved = data.connections ?? createInitialConnections();
+      setConnections(resolved);
+      setUseLocalFallback(data.source === "local");
+      setError(null);
       setSelectedId((current) => {
         if (current === "__draft__") return current;
-        if (current && next.some((entry) => entry.id === current)) return current;
-        return next[0]?.id ?? null;
+        if (current && resolved.some((entry) => entry.id === current)) return current;
+        return resolved[0]?.id ?? null;
       });
     } catch (loadError) {
       const fallback = createInitialConnections();
@@ -293,8 +292,13 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
           }),
         });
 
-        const data = await readApiJson<{ connection?: CrmConnection; error?: string }>(response);
+        const data = await readApiJson<{
+          connection?: CrmConnection;
+          error?: string;
+          source?: string;
+        }>(response);
         if (!response.ok || !data.connection) throw new Error(data.error ?? "Failed to save contact");
+        if (data.source === "local") setUseLocalFallback(true);
 
         setConnections((current) =>
           [...current, data.connection!].sort((a, b) => a.name.localeCompare(b.name)),
@@ -321,8 +325,13 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
         }),
       });
 
-      const data = await readApiJson<{ connection?: CrmConnection; error?: string }>(response);
+      const data = await readApiJson<{
+        connection?: CrmConnection;
+        error?: string;
+        source?: string;
+      }>(response);
       if (!response.ok || !data.connection) throw new Error(data.error ?? "Failed to save");
+      if (data.source === "local") setUseLocalFallback(true);
 
       setConnections((current) =>
         current.map((entry) => (entry.id === data.connection!.id ? data.connection! : entry)),
@@ -462,7 +471,7 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
 
       {useLocalFallback && (
         <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200/90">
-          Using local connection directory
+          Using built-in connection directory (Supabase CRM table not provisioned yet).
         </div>
       )}
 
@@ -475,12 +484,6 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
       {error && (
         <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
-          {error.includes("crm_connections") && (
-            <p className="mt-1 text-xs text-red-200/70">
-              Run <span className="font-mono">supabase/migrations/020_create_crm_connections.sql</span>{" "}
-              in Supabase SQL Editor.
-            </p>
-          )}
         </div>
       )}
 

@@ -1,37 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { createConnection, listConnections } from "@/lib/crm-connections-service";
-import { createInitialConnections } from "@/lib/connections-seed-data";
-import { isSupabaseConfigured } from "@/lib/supabase/server";
+import {
+  createConnectionWithSource,
+  listConnectionsWithSource,
+} from "@/lib/crm-connections-service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ connections: createInitialConnections(), source: "local" });
-  }
-
   try {
-    const connections = await listConnections();
-    if (connections.length === 0) {
-      return NextResponse.json({ connections: createInitialConnections(), source: "local" });
-    }
-    return NextResponse.json({ connections });
+    const { connections, source } = await listConnectionsWithSource();
+    return NextResponse.json({ connections, source });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load connections";
-    return NextResponse.json({
-      connections: createInitialConnections(),
-      source: "local",
-      warning: message,
-    });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
-  }
-
   try {
     const body = (await request.json()) as {
       name?: string;
@@ -47,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    const connection = await createConnection({
+    const { connection, source } = await createConnectionWithSource({
       name: body.name,
       role: body.role,
       specialties: body.specialties,
@@ -57,7 +43,7 @@ export async function POST(request: NextRequest) {
       country: body.country,
     });
 
-    return NextResponse.json({ connection });
+    return NextResponse.json({ connection, source });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create connection";
     return NextResponse.json({ error: message }, { status: 500 });

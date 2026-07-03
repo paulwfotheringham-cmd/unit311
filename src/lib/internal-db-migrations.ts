@@ -8,6 +8,8 @@ export const COMPETITORS_AFRICA_MIGRATION_PATH =
   "supabase/migrations/025_competitors_africa_regions.sql";
 export const SUPPORT_TICKETS_MIGRATION_PATH =
   "supabase/migrations/026_create_support_tickets.sql";
+export const CRM_CONNECTIONS_MIGRATION_PATH =
+  "supabase/migrations/020_create_crm_connections.sql";
 export const HR_EMPLOYEES_MIGRATION_PATH =
   "supabase/migrations/024_create_hr_employees.sql";
 export const HR_EMPLOYEES_EXTENDED_MIGRATION_PATH =
@@ -432,6 +434,56 @@ export async function withSupportTicketsTable<T>(operation: () => Promise<T>): P
   }
 
   throw new Error("Failed to access support tickets table.");
+}
+
+export async function ensureCrmConnectionsTable(): Promise<boolean> {
+  const exists = await tableExistsViaManagementApi("crm_connections");
+  if (exists === true) {
+    await reloadPostgrestSchema();
+    return true;
+  }
+
+  const dbUrl = getDatabaseUrl();
+  if (dbUrl) {
+    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+
+    try {
+      await client.connect();
+      if (await tableExists(client, "crm_connections")) {
+        await reloadPostgrestSchema();
+        return true;
+      }
+      await applyMigration(client, CRM_CONNECTIONS_MIGRATION_PATH);
+      await reloadPostgrestSchema();
+      return true;
+    } finally {
+      await client.end().catch(() => undefined);
+    }
+  }
+
+  if (exists === false) {
+    const applied = await applyMigrationViaManagementApi(CRM_CONNECTIONS_MIGRATION_PATH);
+    if (applied) await reloadPostgrestSchema();
+    return applied;
+  }
+
+  return false;
+}
+
+export async function withCrmConnectionsTable<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isMissingTableError(error, "crm_connections")) throw error;
+      await ensureCrmConnectionsTable();
+      await reloadPostgrestSchema();
+      if (attempt === 4) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+    }
+  }
+
+  throw new Error("Failed to access CRM connections table.");
 }
 
 async function applyHrEmployeesMigrations(client: ClientBase) {
