@@ -1,5 +1,7 @@
 const INDUSTRIES = [
   { label: "Founders & Startups", icon: "building" },
+  { label: "MedTech", icon: "medtech" },
+  { label: "Space & Aerospace", icon: "space" },
   { label: "Professional Services", icon: "megaphone" },
   { label: "Construction & Infrastructure", icon: "bridge" },
   { label: "Logistics & Trade", icon: "ship" },
@@ -8,7 +10,6 @@ const INDUSTRIES = [
   { label: "Manufacturing", icon: "factory" },
   { label: "Energy & Utilities", icon: "bolt" },
   { label: "Retail & Hospitality", icon: "trophy" },
-  { label: "Franchise Operators", icon: "pickaxe" },
   { label: "International Expansion", icon: "anchor" },
 ] as const;
 
@@ -19,6 +20,21 @@ function IndustryIcon({ type }: { type: (typeof INDUSTRIES)[number]["icon"] }) {
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
           <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+        </svg>
+      );
+    case "medtech":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
+          <path d="M12 5v14M5 12h14" />
+          <rect x="4" y="4" width="16" height="16" rx="3" />
+        </svg>
+      );
+    case "space":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
+          <path d="M4.5 16.5c3-6 8.5-10.5 15-12-1.5 6.5-6 12-15 12z" />
+          <path d="M12 12l3 3" />
+          <circle cx="17" cy="7" r="1.5" fill="currentColor" stroke="none" />
         </svg>
       );
     case "bridge":
@@ -44,12 +60,6 @@ function IndustryIcon({ type }: { type: (typeof INDUSTRIES)[number]["icon"] }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
           <path d="M4 7h3l2-3h6l2 3h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
           <circle cx="12" cy="13" r="3" />
-        </svg>
-      );
-    case "pickaxe":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" className={cls}>
-          <path d="M14 4l6 6M8 20l8-8M4 8l4 4M10 14L6 18" />
         </svg>
       );
     case "ship":
@@ -92,19 +102,14 @@ export default function WhoWeWorkWith() {
           <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
         </div>
 
+        <p className="mx-auto mt-6 max-w-3xl text-center text-[15px] leading-relaxed text-white/60 sm:text-[17px]">
+          Unit311 Central supports any type of business — from first-time founders to established operators.
+          These are just a few examples of the sectors we work with.
+        </p>
+
         <div className="mt-14 sm:mt-16">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-5 lg:gap-x-8 lg:gap-y-14">
-            {INDUSTRIES.slice(0, 5).map((item) => (
-              <div key={item.label} className="flex flex-col items-center text-center">
-                <IndustryIcon type={item.icon} />
-                <p className="mt-5 text-[14px] font-normal leading-[1.4] text-white/90 sm:text-[15px]">
-                  {item.label}
-                </p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:mt-14 lg:grid-cols-6 lg:gap-x-8 lg:gap-y-14">
-            {INDUSTRIES.slice(5).map((item) => (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-14">
+            {INDUSTRIES.map((item) => (
               <div key={item.label} className="flex flex-col items-center text-center">
                 <IndustryIcon type={item.icon} />
                 <p className="mt-5 text-[14px] font-normal leading-[1.4] text-white/90 sm:text-[15px]">

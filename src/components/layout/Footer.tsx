@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="mx-auto max-w-[1280px] px-8 pb-[32px] pt-[56px]">
         <div className="grid gap-[48px] md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <Logo height={48} />
+            <Logo height={96} className="origin-left scale-[1.35]" />
             <p className="mt-[14px] text-[13px] font-medium text-[#1a2b4a]/65">
               {SITE_HERO_LINE}
             </p>
@@ -21,8 +21,8 @@ export default function Footer() {
             </h3>
             <ul className="mt-[16px] space-y-[10px]">
               <li>
-                <Link href="/#services" className="text-[13px] text-[#1a2b4a]/65 hover:text-[#1a2b4a]">
-                  What we offer
+                <Link href="/" className="text-[13px] text-[#1a2b4a]/65 hover:text-[#1a2b4a]">
+                  Home
                 </Link>
               </li>
               <li>

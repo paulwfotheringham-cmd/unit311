@@ -126,7 +126,13 @@ function resolveDemoView(
   return fallback;
 }
 
-export default function Unit311WorkspacePreview({ className }: { className?: string }) {
+export default function Unit311WorkspacePreview({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const [activeView, setActiveView] = useState<InternalOperationsView>("home");
 
   return (
@@ -136,15 +142,32 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
         className,
       )}
     >
-      <div className="flex items-center gap-2 border-b border-white/10 bg-[#0a1628] px-4 py-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        <p className="ml-2 text-[11px] text-white/45">unit311central.com/internaldashboard</p>
+      <div
+        className={cn(
+          "flex items-center gap-2 border-b border-white/10 bg-[#0a1628]",
+          compact ? "px-3 py-2" : "px-4 py-3",
+        )}
+      >
+        <span className={cn("rounded-full bg-[#ff5f57]", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
+        <span className={cn("rounded-full bg-[#febc2e]", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
+        <span className={cn("rounded-full bg-[#28c840]", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
+        <p className={cn("ml-2 text-white/45", compact ? "text-[9px]" : "text-[11px]")}>
+          unit311central.com/internaldashboard
+        </p>
       </div>
 
-      <div className="flex min-h-[640px] flex-col lg:min-h-[720px] lg:flex-row">
-        <aside className="w-full shrink-0 border-b border-white/10 bg-[#0a0f18]/95 lg:w-[220px] lg:border-b-0 lg:border-r">
+      <div
+        className={cn(
+          "flex flex-col lg:flex-row",
+          compact ? "min-h-[320px] lg:min-h-[360px]" : "min-h-[640px] lg:min-h-[720px]",
+        )}
+      >
+        <aside
+          className={cn(
+            "w-full shrink-0 border-b border-white/10 bg-[#0a0f18]/95 lg:border-b-0 lg:border-r",
+            compact ? "lg:w-[110px]" : "lg:w-[220px]",
+          )}
+        >
           <div className="border-b border-white/10 px-3 py-3">
             <div className="rounded-lg bg-white px-2.5 py-1.5">
               <span className="text-[13px] font-bold tracking-[-0.02em] text-[#1a2b4a]">
@@ -154,7 +177,10 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
           </div>
 
           <nav
-            className="max-h-[280px] overflow-y-auto px-2 py-3 lg:max-h-none lg:py-4"
+            className={cn(
+              "overflow-y-auto px-2 py-3 lg:py-4",
+              compact ? "max-h-[140px] lg:max-h-none" : "max-h-[280px] lg:max-h-none",
+            )}
             aria-label="Workspace demo navigation"
           >
             {PREVIEW_SECTIONS.map((section) => (
@@ -201,7 +227,7 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
         </aside>
 
         <div className="min-w-0 flex-1 bg-[#020617]/80">
-          <WorkspaceDemoPanel view={activeView} />
+          <WorkspaceDemoPanel view={activeView} compact={compact} />
         </div>
       </div>
     </div>

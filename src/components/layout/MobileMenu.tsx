@@ -10,7 +10,7 @@ type MobileMenuProps = {
 };
 
 const NAV = [
-  { href: "/#services", label: "Services", hash: "services" },
+  { href: "/", label: "Home", hash: null },
   { href: "/#platform", label: "Platform", hash: "platform" },
   { href: "/#how-it-works", label: "How it works", hash: "how-it-works" },
   { href: "/#pricing", label: "Pricing", hash: "pricing" },
@@ -40,7 +40,7 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
         className="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col border-l border-border bg-surface p-6 shadow-2xl"
       >
         <div className="mb-8 flex items-center justify-between">
-          <Logo height={40} />
+          <Logo height={56} className="scale-125 origin-left" />
           <button
             type="button"
             aria-label="Close menu"
@@ -61,6 +61,10 @@ export default function MobileMenu({ open, onClose }: MobileMenuProps) {
                   if (pathname === "/" && link.hash) {
                     event.preventDefault();
                     scrollToSection(link.hash);
+                  }
+                  if (pathname === "/" && link.href === "/") {
+                    event.preventDefault();
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }
                   onClose();
                 }}

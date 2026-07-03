@@ -7,7 +7,7 @@ import Logo from "./Logo";
 import MobileMenu from "./MobileMenu";
 
 const NAV = [
-  { href: "/#services", label: "Solutions", hash: "services", chevron: true },
+  { href: "/", label: "Home", hash: null, chevron: false },
   { href: "/#platform", label: "Platform", hash: "platform", chevron: false },
   { href: "/#how-it-works", label: "How it works", hash: "how-it-works", chevron: false },
   { href: "/#pricing", label: "Pricing", hash: "pricing", chevron: false },
@@ -53,16 +53,12 @@ export default function Navbar() {
         <div className="mx-auto flex h-24 max-w-[1400px] items-center px-6 sm:px-8 lg:grid lg:h-28 lg:grid-cols-[1fr_auto_1fr] lg:px-10">
           <div className="flex w-full items-center justify-between lg:contents">
             {/* Logo */}
-            <div className="flex items-center justify-start">
-              <div
-                className={
-                  isDarkNav
-                    ? "rounded-2xl bg-white/95 px-3 py-2 shadow-[0_8px_28px_rgba(0,0,0,0.28)] sm:px-4 sm:py-2.5"
-                    : undefined
-                }
-              >
-                <Logo height={isDarkNav ? 72 : 52} onDark={isDarkNav} />
-              </div>
+            <div className="flex items-center justify-start overflow-hidden">
+              <Logo
+                height={isDarkNav ? 112 : 64}
+                onDark={isDarkNav}
+                className={isDarkNav ? "origin-left scale-[1.35] drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]" : undefined}
+              />
             </div>
 
             {/* Centered navigation */}
@@ -78,6 +74,10 @@ export default function Navbar() {
                     if (pathname === "/" && link.hash) {
                       event.preventDefault();
                       scrollToSection(link.hash);
+                    }
+                    if (pathname === "/" && link.href === "/") {
+                      event.preventDefault();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                     }
                   }}
                   className={`inline-flex items-center gap-1 whitespace-nowrap text-[14px] font-medium ${

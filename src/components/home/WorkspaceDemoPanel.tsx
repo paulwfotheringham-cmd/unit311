@@ -292,24 +292,49 @@ function DemoBody({ view }: { view: InternalOperationsView }) {
   );
 }
 
-export default function WorkspaceDemoPanel({ view }: { view: InternalOperationsView }) {
+export default function WorkspaceDemoPanel({
+  view,
+  compact = false,
+}: {
+  view: InternalOperationsView;
+  compact?: boolean;
+}) {
   const meta = internalViewTitles[view];
 
   return (
     <div className="min-w-0">
-      <div className="border-b border-white/10 px-4 py-4 sm:px-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#60a5fa]">
+      <div
+        className={cn(
+          "border-b border-white/10",
+          compact ? "px-3 py-2.5" : "px-4 py-4 sm:px-6",
+        )}
+      >
+        <p
+          className={cn(
+            "font-semibold uppercase tracking-[0.18em] text-[#60a5fa]",
+            compact ? "text-[8px]" : "text-[10px]",
+          )}
+        >
           {meta.subtitle}
         </p>
-        <h3 className="mt-1 text-lg font-semibold tracking-tight text-white sm:text-xl">{meta.title}</h3>
-        <p className="mt-1 text-xs text-white/45">
-          Interactive preview — explore modules from the sidebar without leaving this page.
-        </p>
+        <h3
+          className={cn(
+            "mt-1 font-semibold tracking-tight text-white",
+            compact ? "text-sm" : "text-lg sm:text-xl",
+          )}
+        >
+          {meta.title}
+        </h3>
+        {!compact ? (
+          <p className="mt-1 text-xs text-white/45">
+            Interactive preview — explore modules from the sidebar without leaving this page.
+          </p>
+        ) : null}
       </div>
 
-      <div className="overflow-x-auto p-3 sm:p-4">
+      <div className={cn("overflow-x-auto", compact ? "p-2" : "p-3 sm:p-4")}>
         <DemoBody view={view} />
-        <DemoCta />
+        {!compact ? <DemoCta /> : null}
       </div>
     </div>
   );

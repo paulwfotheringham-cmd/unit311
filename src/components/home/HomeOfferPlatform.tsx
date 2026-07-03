@@ -137,8 +137,10 @@ export default function HomeOfferPlatform() {
               Click any module in the sidebar to preview how Unit311 Central organises clients, projects,
               finance, files, email, and operations — without signing in.
             </p>
-            <div className="rounded-[28px] border border-white/12 bg-gradient-to-b from-white/[0.14] to-white/[0.06] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.35)] sm:p-4 lg:rounded-[32px] lg:p-6">
-              <Unit311WorkspacePreview className="w-full" />
+            <div className="rounded-[28px] border border-white/12 bg-gradient-to-b from-white/[0.14] to-white/[0.06] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.35)] sm:p-4 lg:rounded-[32px] lg:p-5">
+              <div className="mx-auto w-full max-w-3xl">
+                <Unit311WorkspacePreview className="w-full" compact />
+              </div>
             </div>
           </div>
         </div>

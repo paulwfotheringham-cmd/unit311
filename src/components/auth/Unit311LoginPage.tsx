@@ -80,17 +80,17 @@ export default function Unit311LoginPage({
 
       <div className="relative w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
-          <div className="mx-auto inline-flex justify-center">
-            <Logo height={52} href={undefined} />
+          <div className="mx-auto inline-flex justify-center overflow-hidden">
+            <Logo height={120} href={undefined} className="origin-center scale-[1.5] drop-shadow-[0_8px_32px_rgba(0,0,0,0.4)]" />
           </div>
-          <h1 className="mt-5 text-xl font-semibold tracking-tight text-white sm:mt-6 sm:text-2xl md:text-3xl">
+          <h1 className="mt-6 text-xl font-semibold tracking-tight text-white sm:mt-8 sm:text-2xl md:text-3xl">
             Sign in
           </h1>
-          <p className="mt-2 px-2 text-sm leading-relaxed text-white/55">
-            {isCentral
-              ? "Internal operations workspace for senior managers, board, and admin."
-              : `Access your ${SITE_NAME} workspace.`}
-          </p>
+          {!isCentral ? (
+            <p className="mt-2 px-2 text-sm leading-relaxed text-white/55">
+              Access your {SITE_NAME} workspace.
+            </p>
+          ) : null}
         </div>
 
         <div className="rounded-2xl border border-white/[0.12] bg-[#07111f]/72 p-5 shadow-xl shadow-black/40 backdrop-blur-md sm:p-8">

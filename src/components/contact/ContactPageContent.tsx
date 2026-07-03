@@ -1,6 +1,10 @@
-import HeroVideoBackground from "@/components/home/HeroVideoBackground";
+import Image from "next/image";
+import Link from "next/link";
+
 import ContactForm from "@/components/ui/ContactForm";
 import type { ReactNode } from "react";
+
+const CONTACT_BACKGROUND = "/images/hero-survey-background.png";
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
@@ -16,17 +20,25 @@ function SectionTitle({ children }: { children: ReactNode }) {
 
 export default function ContactPageContent() {
   return (
-    <section className="relative overflow-x-hidden bg-[#020617]">
-      <HeroVideoBackground />
-
-      <div
-        className="pointer-events-none absolute inset-0 z-[1]"
-        aria-hidden
-        style={{
-          background:
-            "linear-gradient(to right, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.38) 42%, rgba(0, 0, 0, 0.12) 68%, transparent 82%)",
-        }}
-      />
+    <section className="relative min-h-screen overflow-x-hidden bg-[#020617]">
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <Image
+          src={CONTACT_BACKGROUND}
+          alt=""
+          fill
+          priority
+          className="object-cover object-center opacity-40"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-[#020617]/82" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(2, 6, 23, 0.5) 0%, rgba(2, 6, 23, 0.88) 100%)",
+          }}
+        />
+      </div>
 
       <div className="relative z-10 mx-auto max-w-[1400px] px-5 pb-20 pt-24 sm:px-8 sm:pb-24 sm:pt-[104px] lg:px-10 lg:pb-28 lg:pt-[120px]">
         <SectionTitle>Get in Touch</SectionTitle>
@@ -35,7 +47,7 @@ export default function ContactPageContent() {
           Tell us about your business idea, launch timeline, and what you need from the Unit311 workspace.
         </p>
 
-        <div className="mx-auto mt-12 w-full max-w-xl">
+        <div className="mx-auto mt-12 w-full max-w-xl rounded-2xl border border-white/10 bg-[#07111f]/75 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur-md sm:p-8">
           <ContactForm variant="marketing" />
         </div>
       </div>
