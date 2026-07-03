@@ -176,7 +176,7 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
           </div>
 
           <div className="overflow-x-auto p-3 sm:p-4">
-            <InternalDashboardHome />
+            <InternalDashboardHome showCustomize={false} />
           </div>
         </div>
       </div>
