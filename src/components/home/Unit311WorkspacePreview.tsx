@@ -46,7 +46,6 @@ const iconMap: Record<string, LucideIcon> = {
   Handshake,
   MapPin,
   FolderKanban,
-  History,
   Wallet,
   Briefcase,
   Package,
