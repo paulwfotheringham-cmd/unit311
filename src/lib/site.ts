@@ -1,5 +1,8 @@
 const DEFAULT_SITE_URL = "https://unit311.vercel.app";
 
+export const CENTRAL_SITE_URL = "https://unit311central.com";
+export const CENTRAL_SITE_NAME = "Unit311 Central";
+
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL

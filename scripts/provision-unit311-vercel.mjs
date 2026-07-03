@@ -103,4 +103,5 @@ console.log("Restoring barcelonadronecenter project link…");
 run("npx vercel link --project barcelonadronecenter --yes");
 
 console.log("\nUnit311 production URL: https://unit311.vercel.app");
-console.log("Internal dashboard: https://unit311.vercel.app/internaldashboard");
+console.log("Unit311 Central: https://unit311central.com/login");
+console.log("Internal dashboard: https://unit311central.com/internaldashboard");

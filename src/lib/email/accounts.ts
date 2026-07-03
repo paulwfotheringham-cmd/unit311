@@ -36,20 +36,22 @@ export function getAccountDefinition(id: EmailAccountId): EmailAccount {
   };
 }
 
+function isPlainEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function resolveAccountEmailFromEnv(id: EmailAccountId): string | null {
-  if (id === "info") {
-    return (
-      process.env.ZOHO_INFO_EMAIL?.trim() ||
-      process.env.ZOHO_EMAIL?.trim() ||
-      null
-    );
+  const candidates =
+    id === "info"
+      ? [process.env.ZOHO_INFO_EMAIL, process.env.ZOHO_EMAIL]
+      : [process.env.ZOHO_PAUL_EMAIL, process.env.ZOHO_EMAIL];
+
+  for (const raw of candidates) {
+    const value = raw?.trim();
+    if (value && isPlainEmail(value)) return value;
   }
 
-  return (
-    process.env.ZOHO_PAUL_EMAIL?.trim() ||
-    process.env.ZOHO_EMAIL?.trim() ||
-    null
-  );
+  return null;
 }
 
 export async function getAccountCredentials(

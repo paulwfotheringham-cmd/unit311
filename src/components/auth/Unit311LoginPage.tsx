@@ -15,8 +15,14 @@ async function readApiJson<T>(response: Response): Promise<T> {
   }
 }
 
-export default function Unit311LoginPage() {
+export default function Unit311LoginPage({
+  variant = "default",
+}: {
+  variant?: "default" | "central";
+}) {
   const router = useRouter();
+  const isCentral = variant === "central";
+  const workspaceName = isCentral ? "Unit311 Central" : SITE_NAME;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +74,9 @@ export default function Unit311LoginPage() {
             Sign in
           </h1>
           <p className="mt-2 px-2 text-sm leading-relaxed text-white/55">
-            Access your {SITE_NAME} workspace.
+            {isCentral
+              ? "Internal operations workspace for senior managers, board, and admin."
+              : `Access your ${SITE_NAME} workspace.`}
           </p>
         </div>
 
@@ -135,7 +143,10 @@ export default function Unit311LoginPage() {
       </div>
 
       <p className="relative mt-8 text-center text-xs text-white/35 sm:mt-10">
-        © {new Date().getFullYear()} {SITE_NAME}
+        © {new Date().getFullYear()} {workspaceName}
+        {isCentral ? (
+          <span className="mt-1 block text-[10px] text-white/25">unit311central.com</span>
+        ) : null}
       </p>
     </div>
   );
