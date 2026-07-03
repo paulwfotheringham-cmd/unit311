@@ -19,6 +19,11 @@ import { ChevronDown, Inbox, Loader2, Mail, MessageCircle, Paperclip, PenSquare,
 const operators = createInitialUsers();
 const REFRESH_INTERVAL_MS = 30_000;
 
+const DEFAULT_MAILBOXES: EmailAccountOption[] = [
+  { id: "info", email: "info@dronecatalyst.com", name: "Shared Inbox", configured: false },
+  { id: "paul", email: "paul@dronecatalyst.com", name: "Paul", configured: false },
+];
+
 type EmailAccountOption = EmailAccount & { configured?: boolean };
 
 type WhatsAppStatus = {
@@ -145,6 +150,7 @@ export default function InfoEmailWorkspace() {
         setSelectedAccountId(merged[0].id);
       }
     } catch (loadError) {
+      setAccounts(DEFAULT_MAILBOXES);
       setError(loadError instanceof Error ? loadError.message : "Failed to load mailboxes");
     } finally {
       setAccountsLoading(false);
@@ -685,9 +691,9 @@ export default function InfoEmailWorkspace() {
         <section className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 sm:px-5">
           <h3 className="text-sm font-semibold text-amber-100">Connect {mailboxEmail}</h3>
           <p className="mt-1 text-sm text-amber-100/80">
-            This workspace reads the shared Drone Catalyst mailboxes (info@ and paul@). Enter the
-            Zoho app-specific password for the selected mailbox. Credentials are stored securely on
-            the server and never sent back to the browser.
+            Enter the Zoho app-specific password for {mailboxEmail}. Credentials are stored on
+            the server (Supabase when available, otherwise secure session memory) and never sent
+            back to the browser.
           </p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">

@@ -84,8 +84,8 @@ function formatWebsiteHref(website: string) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function serviceBadgeInitial(category: ServiceCategory) {
-  return SERVICE_CATEGORY_LABELS[category].slice(0, 1).toUpperCase();
+function serviceBadgeLabel(category: ServiceCategory) {
+  return SERVICE_CATEGORY_LABELS[category];
 }
 
 function serviceBadgeClass(category: ServiceCategory) {
@@ -524,13 +524,13 @@ export default function CompetitorsWorkspace() {
                                   title={SERVICE_CATEGORY_LABELS[category]}
                                   onClick={() => toggleDraftCategory(category)}
                                   className={cn(
-                                    "inline-flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-semibold uppercase transition-colors",
+                                    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.04em] transition-colors",
                                     selected
                                       ? serviceBadgeClass(category)
                                       : "border-white/10 bg-white/[0.03] text-white/40 hover:border-white/20",
                                   )}
                                 >
-                                  {serviceBadgeInitial(category)}
+                                  {serviceBadgeLabel(category)}
                                 </button>
                               );
                             })}
@@ -542,20 +542,20 @@ export default function CompetitorsWorkspace() {
                                 key={category}
                                 title={SERVICE_CATEGORY_LABELS[category]}
                                 className={cn(
-                                  "inline-flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-semibold uppercase",
+                                  "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.04em]",
                                   serviceBadgeClass(category),
                                 )}
                               >
-                                {serviceBadgeInitial(category)}
+                                {serviceBadgeLabel(category)}
                               </span>
                             ))}
                           </div>
                         ) : (
                           <span
                             title="Other"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/10 text-[11px] font-semibold uppercase text-amber-200"
+                            className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-amber-200"
                           >
-                            O
+                            Other
                           </span>
                         )}
                       </td>

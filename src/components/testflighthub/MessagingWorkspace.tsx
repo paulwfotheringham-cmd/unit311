@@ -206,8 +206,17 @@ export default function MessagingWorkspace() {
     });
     const data = await readApiJson<{ channels?: MessageChannel[]; error?: string }>(response);
     if (!response.ok) throw new Error(data.error ?? "Failed to load channels");
-    setChannels(data.channels ?? []);
-    return data.channels ?? [];
+
+    const loaded = data.channels ?? [];
+    setChannels((current) => {
+      const byRoom = new Map<string, MessageChannel>();
+      for (const channel of current) byRoom.set(channel.room, channel);
+      for (const channel of loaded) byRoom.set(channel.room, channel);
+      return Array.from(byRoom.values()).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+    });
+    return loaded;
   }, []);
 
   const markRead = useCallback(async (room: string, operatorId: string) => {
@@ -248,6 +257,10 @@ export default function MessagingWorkspace() {
     if (storedOperator && operatorsById.has(storedOperator)) {
       setJoinedOperatorId(storedOperator);
       setPendingOperatorId(storedOperator);
+    } else if (operators[0]) {
+      setJoinedOperatorId(operators[0].id);
+      setPendingOperatorId(operators[0].id);
+      window.localStorage.setItem(MESSAGING_STORAGE_KEY, operators[0].id);
     }
     if (storedChannel) setActiveRoom(storedChannel);
   }, [operatorsById]);
@@ -309,7 +322,7 @@ export default function MessagingWorkspace() {
           error?: string;
         }>(configResponse);
 
-        if (!configResponse.ok || !config.supabaseUrl || !config.supabaseAnonKey) {
+        if (!configResponse.ok || !config.configured || !config.supabaseUrl || !config.supabaseAnonKey) {
           throw new Error(config.error ?? "Realtime is not configured");
         }
 
@@ -557,7 +570,16 @@ export default function MessagingWorkspace() {
       const data = await readApiJson<{ channel?: MessageChannel; error?: string }>(response);
       if (!response.ok || !data.channel) throw new Error(data.error ?? "Failed to create channel");
 
-      await loadChannels(joinedOperator.id);
+      setChannels((current) => {
+        const exists = current.some((channel) => channel.room === data.channel!.room);
+        if (exists) {
+          return current.map((channel) =>
+            channel.room === data.channel!.room ? data.channel! : channel,
+          );
+        }
+        return [...current, data.channel!].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      await loadChannels(joinedOperator.id).catch(() => undefined);
       setNewChannelName("");
       setNewChannelDescription("");
       setNewChannelPrivate(false);

@@ -6,10 +6,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { configured: false, error: "Supabase is not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({
+      configured: false,
+      supabaseUrl: null,
+      supabaseAnonKey: null,
+    });
   }
 
   return NextResponse.json({

@@ -178,7 +178,7 @@ export default function InternalOperationsDashboard({
       <div
         className={
           activeView === "home"
-            ? "relative mx-auto w-full min-w-0 max-w-6xl px-1 py-1 sm:px-2 md:px-4 lg:px-6 lg:py-3 xl:max-w-7xl"
+            ? "relative mx-auto w-full min-w-0 px-1 py-1 sm:px-2 md:px-4 lg:px-6 lg:py-3 xl:max-w-[100rem]"
             : "relative mx-auto w-full min-w-0 max-w-7xl px-1 py-2 sm:px-2 md:px-4 lg:px-6 lg:py-4 xl:max-w-[90rem]"
         }
       >

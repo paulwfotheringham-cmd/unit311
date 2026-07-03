@@ -149,6 +149,7 @@ function ProjectCard({
 export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
   const searchParams = useSearchParams();
   const clientFilterId = searchParams.get("clientId");
+  const projectFilterId = searchParams.get("projectId");
   const filteredClient = useMemo(
     () => clients.find((client) => client.id === clientFilterId) ?? null,
     [clients, clientFilterId],
@@ -207,6 +208,12 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
   useEffect(() => {
     void loadProjects();
   }, [loadProjects]);
+
+  useEffect(() => {
+    if (!projectFilterId || loading) return;
+    const match = projects.find((project) => project.id === projectFilterId);
+    if (match) setSelectedProjectId(match.id);
+  }, [loading, projectFilterId, projects]);
 
   function handleClientChange(clientId: string) {
     const client = clients.find((item) => item.id === clientId);

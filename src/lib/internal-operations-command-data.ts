@@ -34,7 +34,45 @@ export type ProjectInProgress = {
   progress: number;
   status: string;
   lastUpdate: string;
+  projectHref?: string;
 };
+
+export type RevenuePeriodPoint = {
+  label: string;
+  actual?: number;
+  forecast?: number;
+};
+
+export type SupportOutstandingPoint = {
+  week: string;
+  outstanding: number;
+  resolved: number;
+};
+
+export const executiveRevenueSummary = {
+  pastMonth: { label: "Past month", value: 186_000, change: "+12.4%" },
+  pastQuarter: { label: "Past quarter", value: 486_000, change: "+9.8%" },
+  expectedMonth: { label: "Expected next month", value: 198_000, change: "+6.5%" },
+  expectedQuarter: { label: "Expected next quarter", value: 620_000, change: "+11.2%" },
+} as const;
+
+export const revenueTrendData: RevenuePeriodPoint[] = [
+  { label: "Apr", actual: 138 },
+  { label: "May", actual: 162 },
+  { label: "Jun", actual: 186 },
+  { label: "Jul", forecast: 198 },
+  { label: "Aug", forecast: 205 },
+  { label: "Sep", forecast: 217 },
+];
+
+export const supportOutstandingTrend: SupportOutstandingPoint[] = [
+  { week: "19 May", outstanding: 8, resolved: 5 },
+  { week: "26 May", outstanding: 11, resolved: 6 },
+  { week: "2 Jun", outstanding: 9, resolved: 8 },
+  { week: "9 Jun", outstanding: 7, resolved: 7 },
+  { week: "16 Jun", outstanding: 6, resolved: 9 },
+  { week: "23 Jun", outstanding: 5, resolved: 4 },
+];
 
 export const actionRequiredItems: ActionItem[] = [
   {
@@ -142,6 +180,7 @@ export const projectsInProgress: ProjectInProgress[] = [
     progress: 82,
     status: "Processing",
     lastUpdate: "2 hours ago",
+    projectHref: "?view=projects&projectId=project-1",
   },
   {
     id: "project-2",
@@ -150,6 +189,7 @@ export const projectsInProgress: ProjectInProgress[] = [
     progress: 54,
     status: "Field capture",
     lastUpdate: "Yesterday",
+    projectHref: "?view=projects&projectId=project-2",
   },
   {
     id: "project-3",
@@ -158,6 +198,7 @@ export const projectsInProgress: ProjectInProgress[] = [
     progress: 91,
     status: "QA review",
     lastUpdate: "Today",
+    projectHref: "?view=projects&projectId=project-3",
   },
 ];
 
