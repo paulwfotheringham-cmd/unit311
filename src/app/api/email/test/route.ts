@@ -21,16 +21,23 @@ export async function GET(request: NextRequest) {
     }
 
     const smtp = await verifyMailboxTransport(account);
-    const messages = await fetchMailboxMessages(account, 1);
+
+    let imap: { ok: boolean; account: string; messageCountSample?: number; error?: string };
+    try {
+      const messages = await fetchMailboxMessages(account, 1);
+      imap = { ok: true, account, messageCountSample: messages.length };
+    } catch (imapError) {
+      imap = {
+        ok: false,
+        account,
+        error: imapError instanceof Error ? imapError.message : "IMAP connection failed.",
+      };
+    }
 
     return NextResponse.json({
-      ok: true,
+      ok: smtp.ok,
       smtp,
-      imap: {
-        ok: true,
-        account,
-        messageCountSample: messages.length,
-      },
+      imap,
     });
   } catch (error) {
     return emailErrorResponse(error, "Email connection test failed.");

@@ -4,7 +4,6 @@
  * Password is read from UNIT311_ZOHO_PASSWORD — never commit credentials.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,23 +17,17 @@ if (!password) {
 }
 
 function vercelEnvAdd(name, value, environment = "production") {
-  const tmp = join(root, ".unit311-zoho-env-tmp");
-  writeFileSync(tmp, value, "utf8");
-  try {
-    const result = spawnSync(
-      "cmd",
-      ["/c", `type "${tmp}" | npx vercel env add ${name} ${environment} --force --yes`],
-      { cwd: root, encoding: "utf8", shell: false },
-    );
-    const combined = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-    if (result.status !== 0 && !/already exists/i.test(combined)) {
-      console.error(`Failed to set ${name}:`, combined);
-      process.exit(1);
-    }
-    console.log(`${name}: set`);
-  } finally {
-    if (existsSync(tmp)) unlinkSync(tmp);
+  const result = spawnSync(
+    "npx",
+    ["vercel", "env", "add", name, environment, "--value", value, "--force", "--yes"],
+    { cwd: root, encoding: "utf8", shell: true },
+  );
+  const combined = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (result.status !== 0 && !/already exists/i.test(combined)) {
+    console.error(`Failed to set ${name}:`, combined);
+    process.exit(1);
   }
+  console.log(`${name}: set`);
 }
 
 console.log("Linking unit311 project…");
@@ -58,10 +51,14 @@ for (const [name, value] of targets) {
 }
 
 console.log("Redeploying unit311 production…");
-spawnSync("npx", ["vercel", "--prod", "--yes"], {
+const deploy = spawnSync("npx", ["vercel", "--prod", "--yes"], {
   cwd: root,
   stdio: "inherit",
   shell: true,
 });
+
+if (deploy.status !== 0) {
+  process.exit(deploy.status ?? 1);
+}
 
 console.log("Done. Mailbox: info@unit311central.com");
