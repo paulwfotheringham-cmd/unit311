@@ -134,8 +134,7 @@ export default function HomeOfferPlatform() {
 
           <div className="mt-10 w-full">
             <p className="mx-auto mb-4 max-w-2xl text-center text-sm text-white/50">
-              Click any module in the sidebar to preview how Unit311 Central organises clients, projects,
-              finance, files, email, and operations — without signing in.
+              Click any module in the sidebar to preview how Unit311 Central platform works
             </p>
             <div className="mx-auto w-full max-w-full px-1 sm:px-0 md:max-w-[92%] lg:max-w-[1200px]">
               <div className="overflow-hidden rounded-[28px] border border-white/12 bg-gradient-to-b from-white/[0.14] to-white/[0.06] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.35)] sm:p-4 lg:rounded-[32px]">
