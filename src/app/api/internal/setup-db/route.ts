@@ -3,8 +3,10 @@ import { Client } from "pg";
 
 import {
   COMPETITORS_MIGRATION_PATH,
+  FOUNDER_SESSION_BOOKINGS_MIGRATION_PATH,
   WHITEBOARD_MIGRATION_PATH,
   ensureCompetitorsTable,
+  ensureFounderSessionBookingsTable,
   ensureWhiteboardTable,
 } from "@/lib/internal-db-migrations";
 
@@ -54,10 +56,11 @@ export async function GET() {
     await client.connect();
     const competitors = await tableExists(client, "competitors");
     const whiteboard = await tableExists(client, "internal_whiteboard");
+    const founderSessionBookings = await tableExists(client, "founder_session_bookings");
 
     return NextResponse.json({
       ready: true,
-      tables: { competitors, whiteboard },
+      tables: { competitors, whiteboard, founderSessionBookings },
       canRunSetup: Boolean(process.env.INTERNAL_FILES_SETUP_SECRET),
     });
   } catch (error) {
@@ -105,13 +108,24 @@ export async function POST(request: NextRequest) {
       applied.push("internal_whiteboard");
     }
 
+    if (await tableExists(client, "founder_session_bookings")) {
+      skipped.push("founder_session_bookings");
+    } else {
+      await ensureFounderSessionBookingsTable();
+      applied.push("founder_session_bookings");
+    }
+
     await client.end().catch(() => undefined);
 
     return NextResponse.json({
       ok: true,
       applied,
       skipped,
-      migrations: [COMPETITORS_MIGRATION_PATH, WHITEBOARD_MIGRATION_PATH],
+      migrations: [
+        COMPETITORS_MIGRATION_PATH,
+        WHITEBOARD_MIGRATION_PATH,
+        FOUNDER_SESSION_BOOKINGS_MIGRATION_PATH,
+      ],
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Migration failed";

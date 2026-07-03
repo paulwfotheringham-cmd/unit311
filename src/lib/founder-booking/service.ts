@@ -15,7 +15,7 @@ import {
   londonLocalToUtcIso,
   type FounderSessionSlot,
 } from "@/lib/founder-booking/slots";
-import { ensureFounderSessionBookingsTable } from "@/lib/internal-db-migrations";
+import { withFounderSessionBookingsTable } from "@/lib/internal-db-migrations";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export type FounderSessionBooking = {
@@ -73,17 +73,18 @@ function mapBooking(row: DbFounderSessionBooking): FounderSessionBooking {
 }
 
 async function listBookedStartsAt(fromIso: string, toIso: string) {
-  await ensureFounderSessionBookingsTable();
-  const supabase = requireSupabase();
+  return withFounderSessionBookingsTable(async () => {
+    const supabase = requireSupabase();
 
-  const { data, error } = await supabase
-    .from("founder_session_bookings")
-    .select("starts_at")
-    .gte("starts_at", fromIso)
-    .lte("starts_at", toIso);
+    const { data, error } = await supabase
+      .from("founder_session_bookings")
+      .select("starts_at")
+      .gte("starts_at", fromIso)
+      .lte("starts_at", toIso);
 
-  if (error) throw new Error(error.message);
-  return new Set((data ?? []).map((row) => row.starts_at as string));
+    if (error) throw new Error(error.message);
+    return new Set((data ?? []).map((row) => row.starts_at as string));
+  });
 }
 
 async function listCalendarStartsAt(fromIso: string, toIso: string) {
@@ -123,8 +124,6 @@ export async function createFounderSessionBooking(input: {
   email: string;
   startsAt: string;
 }) {
-  await ensureFounderSessionBookingsTable();
-
   const name = input.name.trim();
   const organization = input.organization.trim();
   const email = input.email.trim().toLowerCase();
@@ -165,25 +164,30 @@ export async function createFounderSessionBooking(input: {
   });
 
   const supabase = requireSupabase();
-  const { data, error } = await supabase
-    .from("founder_session_bookings")
-    .insert({
-      name,
-      organization,
-      email,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      video_link: videoLink,
-      calendar_event_id: calendarEvent.id,
-    })
-    .select("*")
-    .single();
+  const { data } = await withFounderSessionBookingsTable(async () => {
+    const result = await supabase
+      .from("founder_session_bookings")
+      .insert({
+        name,
+        organization,
+        email,
+        starts_at: startsAt,
+        ends_at: endsAt,
+        video_link: videoLink,
+        calendar_event_id: calendarEvent.id,
+      })
+      .select("*")
+      .single();
 
-  if (error) {
-    throw new Error(error.message.includes("founder_session_bookings_starts_at_uidx")
-      ? "That time slot was just booked. Please choose another."
-      : error.message);
-  }
+    if (result.error) {
+      throw new Error(
+        result.error.message.includes("founder_session_bookings_starts_at_uidx")
+          ? "That time slot was just booked. Please choose another."
+          : result.error.message,
+      );
+    }
+    return result;
+  });
 
   const booking = mapBooking(data as DbFounderSessionBooking);
   const emailInput = {
@@ -215,13 +219,15 @@ export async function createFounderSessionBooking(input: {
   ]);
 
   const sentAt = new Date().toISOString();
-  await supabase
-    .from("founder_session_bookings")
-    .update({
-      confirmation_sent_at: sentAt,
-      internal_notification_sent_at: sentAt,
-    })
-    .eq("id", booking.id);
+  await withFounderSessionBookingsTable(async () =>
+    supabase
+      .from("founder_session_bookings")
+      .update({
+        confirmation_sent_at: sentAt,
+        internal_notification_sent_at: sentAt,
+      })
+      .eq("id", booking.id),
+  );
 
   return {
     booking: {
@@ -238,60 +244,61 @@ export async function createFounderSessionBooking(input: {
 }
 
 export async function sendDueFounderSessionReminders() {
-  await ensureFounderSessionBookingsTable();
-  const supabase = requireSupabase();
+  return withFounderSessionBookingsTable(async () => {
+    const supabase = requireSupabase();
 
-  const tomorrowProbe = new Date(Date.now() + 25 * 60 * 60 * 1000);
-  const tomorrowKey = londonDateKey(tomorrowProbe);
-  const fromIso = londonLocalToUtcIso(tomorrowKey, 0, 0);
-  const dayAfterProbe = new Date(new Date(fromIso).getTime() + 25 * 60 * 60 * 1000);
-  const dayAfterKey = londonDateKey(dayAfterProbe);
-  const toIso = londonLocalToUtcIso(dayAfterKey, 0, 0);
+    const tomorrowProbe = new Date(Date.now() + 25 * 60 * 60 * 1000);
+    const tomorrowKey = londonDateKey(tomorrowProbe);
+    const fromIso = londonLocalToUtcIso(tomorrowKey, 0, 0);
+    const dayAfterProbe = new Date(new Date(fromIso).getTime() + 25 * 60 * 60 * 1000);
+    const dayAfterKey = londonDateKey(dayAfterProbe);
+    const toIso = londonLocalToUtcIso(dayAfterKey, 0, 0);
 
-  const { data, error } = await supabase
-    .from("founder_session_bookings")
-    .select("*")
-    .is("reminder_sent_at", null)
-    .gte("starts_at", fromIso)
-    .lt("starts_at", toIso);
+    const { data, error } = await supabase
+      .from("founder_session_bookings")
+      .select("*")
+      .is("reminder_sent_at", null)
+      .gte("starts_at", fromIso)
+      .lt("starts_at", toIso);
 
-  if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message);
 
-  const bookings = (data as DbFounderSessionBooking[]).map(mapBooking);
-  const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+    const bookings = (data as DbFounderSessionBooking[]).map(mapBooking);
+    const results: Array<{ id: string; ok: boolean; error?: string }> = [];
 
-  for (const booking of bookings) {
-    try {
-      const reminder = buildFounderReminderEmail({
-        name: booking.name,
-        organization: booking.organization,
-        email: booking.email,
-        startsAt: booking.startsAt,
-        videoLink: booking.videoLink,
-      });
+    for (const booking of bookings) {
+      try {
+        const reminder = buildFounderReminderEmail({
+          name: booking.name,
+          organization: booking.organization,
+          email: booking.email,
+          startsAt: booking.startsAt,
+          videoLink: booking.videoLink,
+        });
 
-      await sendMailboxEmail({
-        account: "info",
-        to: booking.email,
-        subject: reminder.subject,
-        html: reminder.html,
-        text: reminder.text,
-      });
+        await sendMailboxEmail({
+          account: "info",
+          to: booking.email,
+          subject: reminder.subject,
+          html: reminder.html,
+          text: reminder.text,
+        });
 
-      await supabase
-        .from("founder_session_bookings")
-        .update({ reminder_sent_at: new Date().toISOString() })
-        .eq("id", booking.id);
+        await supabase
+          .from("founder_session_bookings")
+          .update({ reminder_sent_at: new Date().toISOString() })
+          .eq("id", booking.id);
 
-      results.push({ id: booking.id, ok: true });
-    } catch (reminderError) {
-      results.push({
-        id: booking.id,
-        ok: false,
-        error: reminderError instanceof Error ? reminderError.message : "Reminder failed",
-      });
+        results.push({ id: booking.id, ok: true });
+      } catch (reminderError) {
+        results.push({
+          id: booking.id,
+          ok: false,
+          error: reminderError instanceof Error ? reminderError.message : "Reminder failed",
+        });
+      }
     }
-  }
 
-  return { processed: results.length, results };
+    return { processed: results.length, results };
+  });
 }

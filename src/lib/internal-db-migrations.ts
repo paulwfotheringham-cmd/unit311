@@ -907,3 +907,26 @@ export async function ensureFounderSessionBookingsTable(): Promise<boolean> {
 
   return false;
 }
+
+export async function withFounderSessionBookingsTable<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isMissingTableError(error, "founder_session_bookings")) throw error;
+      const applied = await ensureFounderSessionBookingsTable();
+      await reloadPostgrestSchema();
+      if (!applied && attempt === 4) {
+        throw new Error(
+          "Founder session bookings table is not available. Set SUPABASE_DB_URL or SUPABASE_ACCESS_TOKEN on the server.",
+        );
+      }
+      if (attempt === 4) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+    }
+  }
+
+  throw new Error("Failed to access founder_session_bookings table.");
+}
