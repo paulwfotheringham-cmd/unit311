@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HeroVideoBackground from "./HeroVideoBackground";
+import HomeBrandWordmark from "./HomeBrandWordmark";
 import { SITE_DESCRIPTION, SITE_HERO_LINE, SITE_TAGLINE } from "@/lib/site";
 
 export default function HomeHero() {
@@ -15,6 +16,14 @@ export default function HomeHero() {
             "linear-gradient(to right, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.45) 45%, rgba(0, 0, 0, 0.18) 70%, transparent 88%)",
         }}
       />
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
+        <div className="mx-auto flex h-24 max-w-[1400px] items-center px-5 sm:px-8 lg:h-28 lg:px-10">
+          <div className="pointer-events-auto w-full max-w-[640px]">
+            <HomeBrandWordmark />
+          </div>
+        </div>
+      </div>
 
       <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-5 pb-16 pt-24 sm:px-8 sm:pb-20 sm:pt-[104px] lg:items-center lg:px-10 lg:pb-24 lg:pt-[120px]">
         <div className="relative max-w-[640px]">

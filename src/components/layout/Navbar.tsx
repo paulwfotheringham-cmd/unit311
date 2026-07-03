@@ -24,12 +24,12 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const isLoginPage = pathname === "/login" || pathname === "/clientlogin";
-  const isHomePage = pathname === "/";
+  const isHomePage = pathname === "/" || pathname === null;
   const isContactPage = pathname === "/contact";
   const isBookPage = pathname === "/book";
   const isDarkNav = isHomePage || isContactPage || isBookPage || isLoginPage;
   const isHeroOverlayNav = isHomePage;
-  const useWordmark = isHomePage || isContactPage || isBookPage;
+  const useWordmark = isContactPage || isBookPage;
   const isDashboard =
     pathname?.startsWith("/test1") ||
     pathname?.startsWith("/client/") ||
@@ -63,27 +63,28 @@ export default function Navbar() {
           }`}
         >
           <div className="flex w-full items-center justify-between lg:contents">
-            {/* Logo */}
+            {/* Logo — homepage brand lives in HomeHero for alignment */}
             <div
               className={`flex items-center justify-start overflow-visible ${
                 isHomePage ? "w-full max-w-[640px] lg:w-auto" : ""
               }`}
             >
-              <Logo
-                height={useWordmark ? 72 : isDarkNav ? 224 : 128}
-                onDark={isDarkNav}
-                wordmark={useWordmark}
-                heroAlign={isHomePage}
-                className={
-                  useWordmark
-                    ? isHomePage
-                      ? "block text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
-                      : "block drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
-                    : isDarkNav
-                      ? "origin-left scale-[1.35] drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
-                      : undefined
-                }
-              />
+              {!isHomePage ? (
+                <Logo
+                  height={useWordmark ? 72 : isDarkNav ? 224 : 128}
+                  onDark={isDarkNav}
+                  wordmark={useWordmark}
+                  className={
+                    useWordmark
+                      ? "block drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
+                      : isDarkNav
+                        ? "origin-left scale-[1.35] drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)]"
+                        : undefined
+                  }
+                />
+              ) : (
+                <span className="sr-only">Unit311 Central</span>
+              )}
             </div>
 
             {/* Centered navigation */}
