@@ -95,15 +95,16 @@ export default function ContactForm({ variant = "default" }: ContactFormProps) {
         </div>
 
         <div>
-          <label htmlFor="service" className={labelClass}>
-            Service
+          <label htmlFor="subject" className={labelClass}>
+            Subject
           </label>
-          <select id="service" name="service" className={fieldClass}>
-            <option value="inspection">Inspection</option>
-            <option value="surveying">Surveying</option>
-            <option value="commercial-imaging">Commercial Imaging</option>
-            <option value="other">Other</option>
-          </select>
+          <input
+            id="subject"
+            name="subject"
+            type="text"
+            className={fieldClass}
+            placeholder="What is your enquiry about?"
+          />
         </div>
 
         <div>
