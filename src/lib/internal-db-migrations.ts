@@ -26,6 +26,8 @@ export const INTERNAL_CLIENTS_FILES_FOLDER_MIGRATION_PATH =
   "supabase/migrations/038_internal_clients_files_folder.sql";
 export const FOUNDER_SESSION_BOOKINGS_MIGRATION_PATH =
   "supabase/migrations/039_founder_session_bookings.sql";
+export const PLATFORM_PASSWORD_RESET_TOKENS_MIGRATION_PATH =
+  "supabase/migrations/040_platform_password_reset_tokens.sql";
 export const PLATFORM_USERS_LAST_LOGIN_MIGRATION_PATH =
   "supabase/migrations/036_platform_users_last_login.sql";
 export const WHITEBOARD_MIGRATION_PATH = "supabase/migrations/008_create_internal_whiteboard.sql";
@@ -929,4 +931,61 @@ export async function withFounderSessionBookingsTable<T>(
   }
 
   throw new Error("Failed to access founder_session_bookings table.");
+}
+
+export async function ensurePlatformPasswordResetTokensTable(): Promise<boolean> {
+  const exists = await tableExistsViaManagementApi("platform_password_reset_tokens");
+  if (exists === true) {
+    await reloadPostgrestSchema();
+    return true;
+  }
+
+  const dbUrl = getDatabaseUrl();
+  if (dbUrl) {
+    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+
+    try {
+      await client.connect();
+      if (await tableExists(client, "platform_password_reset_tokens")) {
+        await reloadPostgrestSchema();
+        return true;
+      }
+      await applyMigration(client, PLATFORM_PASSWORD_RESET_TOKENS_MIGRATION_PATH);
+      await reloadPostgrestSchema();
+      return true;
+    } finally {
+      await client.end().catch(() => undefined);
+    }
+  }
+
+  if (exists === false) {
+    const applied = await applyMigrationViaManagementApi(PLATFORM_PASSWORD_RESET_TOKENS_MIGRATION_PATH);
+    if (applied) await reloadPostgrestSchema();
+    return applied;
+  }
+
+  return false;
+}
+
+export async function withPlatformPasswordResetTokensTable<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isMissingTableError(error, "platform_password_reset_tokens")) throw error;
+      const applied = await ensurePlatformPasswordResetTokensTable();
+      await reloadPostgrestSchema();
+      if (!applied && attempt === 4) {
+        throw new Error(
+          "Password reset is temporarily unavailable. Please try again later or contact support.",
+        );
+      }
+      if (attempt === 4) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+    }
+  }
+
+  throw new Error("Failed to access platform_password_reset_tokens table.");
 }

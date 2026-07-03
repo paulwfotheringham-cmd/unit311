@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -150,12 +151,12 @@ export default function Unit311LoginPage({
             </button>
 
             <p className="text-center text-sm">
-              <button
-                type="button"
+              <Link
+                href="/resetpassword"
                 className="touch-manipulation font-medium text-sky-400/80 underline-offset-2 hover:text-sky-300 hover:underline"
               >
                 Reset password
-              </button>
+              </Link>
             </p>
           </form>
         </div>
