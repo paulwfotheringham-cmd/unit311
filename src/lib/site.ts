@@ -18,8 +18,8 @@ export const SITE_DESCRIPTION =
 export const SITE_HERO_LINE = "Accelerate your business. Run it in one place.";
 
 export const CONTACT = {
-  email: "hello@unit311.com",
-  infoEmail: "hello@unit311.com",
+  email: "info@unit311central.com",
+  infoEmail: "info@unit311central.com",
   linkedin: "https://www.linkedin.com/company/unit311",
   phone: "+34 938 000 000",
   whatsapp: "34938000000",
