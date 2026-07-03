@@ -1,10 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Logo from "@/components/layout/Logo";
 import { SITE_NAME } from "@/lib/site";
+
+const LOGIN_BACKGROUND = "/images/construction-bg.jpg";
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -55,15 +58,25 @@ export default function Unit311LoginPage({
   }
 
   return (
-    <div className="safe-area-px safe-area-pb relative flex min-h-dvh w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[#020617] px-4 py-6 sm:px-6 sm:py-10">
-      <div
-        className="pointer-events-none absolute inset-0"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 60% at 50% 0%, rgba(37, 99, 235, 0.18), transparent 65%), radial-gradient(ellipse 50% 40% at 80% 100%, rgba(14, 165, 233, 0.08), transparent 60%)",
-        }}
-      />
+    <div className="safe-area-px safe-area-pb relative flex min-h-dvh w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 sm:py-10">
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <Image
+          src={LOGIN_BACKGROUND}
+          alt=""
+          fill
+          priority
+          className="object-cover object-center grayscale"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-[#020617]/86" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.72) 55%, rgba(2, 6, 23, 0.92) 100%), radial-gradient(ellipse 70% 55% at 50% 0%, rgba(37, 99, 235, 0.14), transparent 68%)",
+          }}
+        />
+      </div>
 
       <div className="relative w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
@@ -80,7 +93,7 @@ export default function Unit311LoginPage({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] p-5 shadow-xl shadow-black/30 backdrop-blur-sm sm:p-8">
+        <div className="rounded-2xl border border-white/[0.12] bg-[#07111f]/72 p-5 shadow-xl shadow-black/40 backdrop-blur-md sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div>
               <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-white/80">
