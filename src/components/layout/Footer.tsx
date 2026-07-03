@@ -7,8 +7,8 @@ export default function Footer() {
     <footer className="bg-white text-[#1a2b4a]">
       <div className="mx-auto max-w-[1280px] px-8 pb-[32px] pt-[56px]">
         <div className="grid gap-[48px] md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <Logo height={96} className="origin-left scale-[1.35]" />
+          <div className="flex flex-col items-start text-left">
+            <Logo height={192} className="origin-left object-left" />
             <p className="mt-[14px] text-[13px] font-medium text-[#1a2b4a]/65">
               {SITE_HERO_LINE}
             </p>
