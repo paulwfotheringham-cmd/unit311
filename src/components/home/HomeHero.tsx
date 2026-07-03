@@ -19,7 +19,7 @@ export default function HomeHero() {
       <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-5 pb-16 pt-24 sm:px-8 sm:pb-20 sm:pt-[104px] lg:items-center lg:px-10 lg:pb-24 lg:pt-[120px]">
         <div className="relative max-w-[640px]">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/55 sm:text-sm">
-            Unit311
+            UNIT311 CENTRAL
           </p>
 
           <h1 className="text-[2rem] font-bold leading-[0.95] tracking-[-0.03em] text-white sm:text-[2.75rem] lg:text-[3.35rem] xl:text-[3.75rem]">

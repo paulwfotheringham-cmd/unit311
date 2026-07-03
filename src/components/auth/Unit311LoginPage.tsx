@@ -80,8 +80,8 @@ export default function Unit311LoginPage({
 
       <div className="relative w-full max-w-md space-y-6 sm:space-y-8">
         <div className="text-center">
-          <div className="mx-auto inline-flex rounded-xl bg-white px-4 py-3 shadow-lg shadow-blue-950/30 sm:px-5 sm:py-3.5">
-            <Logo height={38} href={undefined} />
+          <div className="mx-auto inline-flex justify-center">
+            <Logo height={52} href={undefined} />
           </div>
           <h1 className="mt-5 text-xl font-semibold tracking-tight text-white sm:mt-6 sm:text-2xl md:text-3xl">
             Sign in
