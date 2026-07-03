@@ -130,12 +130,12 @@ export default function HomeOfferPlatform() {
         </div>
 
         <div id="platform" className="mt-16 scroll-mt-28 sm:mt-20 lg:mt-24">
-          <SectionTitle centered>Unit311 Workspace</SectionTitle>
+          <SectionTitle centered>Unit311 Central Workspace</SectionTitle>
 
           <div className="mt-10 w-full">
             <p className="mx-auto mb-4 max-w-2xl text-center text-sm text-white/50">
-              The same workspace your team uses every day — sidebar modules plus the internal operations command
-              centre for actions, schedule, missions, and projects.
+              Click any module in the sidebar to preview how Unit311 Central organises clients, projects,
+              finance, files, email, and operations — without signing in.
             </p>
             <Unit311WorkspacePreview className="w-full" />
           </div>

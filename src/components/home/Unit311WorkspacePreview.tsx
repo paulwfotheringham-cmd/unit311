@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import InternalDashboardHome from "@/components/testflighthub/InternalDashboardHome";
+import { useState } from "react";
+
+import WorkspaceDemoPanel from "@/components/home/WorkspaceDemoPanel";
 import {
-  getInternalNavHref,
   internalSurveyNavSections,
+  type InternalNavChildItem,
   type InternalNavItem,
   type InternalOperationsView,
 } from "@/lib/internal-operations-data";
@@ -19,8 +20,9 @@ import {
   ContactRound,
   FolderKanban,
   FolderOpen,
+  GraduationCap,
   Handshake,
-  History,
+  Landmark,
   LayoutDashboard,
   LifeBuoy,
   Mail,
@@ -28,9 +30,11 @@ import {
   MessageSquare,
   Package,
   PenLine,
-  Plane,
+  Pickaxe,
+  Settings,
   Share2,
   Truck,
+  Users,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -46,7 +50,6 @@ const iconMap: Record<string, LucideIcon> = {
   Wallet,
   Briefcase,
   Package,
-  Plane,
   FolderOpen,
   CalendarDays,
   Truck,
@@ -57,21 +60,12 @@ const iconMap: Record<string, LucideIcon> = {
   Compass,
   Binoculars,
   PenLine,
+  Landmark,
+  Pickaxe,
+  GraduationCap,
+  Users,
+  Settings,
 };
-
-const CORE_VIEWS = new Set<InternalOperationsView>([
-  "clients",
-  "crm",
-  "projects",
-  "financials",
-  "hr",
-  "assets",
-  "logistics",
-  "files-internal",
-  "info-email",
-  "messaging",
-  "social",
-]);
 
 const PREVIEW_SECTIONS = internalSurveyNavSections.filter(
   (section) =>
@@ -79,7 +73,10 @@ const PREVIEW_SECTIONS = internalSurveyNavSections.filter(
     section.label === "Business Central" ||
     section.label === "Inventory Management" ||
     section.label === "Business Productivity" ||
-    section.label === "Strategy",
+    section.label === "Strategy" ||
+    section.label === "Training" ||
+    section.label === "Tools" ||
+    section.label === "Settings",
 );
 
 function NavIcon({ name }: { name: string }) {
@@ -87,36 +84,52 @@ function NavIcon({ name }: { name: string }) {
   return <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden />;
 }
 
-function SidebarLink({
-  item,
+function SidebarButton({
+  label,
+  icon,
+  active,
   indented = false,
+  onClick,
 }: {
-  item: InternalNavItem | { label: string; view?: InternalOperationsView };
+  label: string;
+  icon?: string;
+  active: boolean;
   indented?: boolean;
+  onClick: () => void;
 }) {
-  const view = "view" in item ? item.view : undefined;
-  const href = view ? getInternalNavHref(view) : "/internaldashboard";
-  const isCore = view ? CORE_VIEWS.has(view) : false;
-  const icon = "icon" in item ? item.icon : undefined;
-
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] transition-colors",
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] transition-colors",
         indented ? "pl-6" : "",
-        isCore
+        active
           ? "bg-sky-500/15 text-sky-100 ring-1 ring-sky-400/20"
           : "text-white/55 hover:bg-white/[0.04] hover:text-white/80",
       )}
     >
-      {icon ? <NavIcon name={icon} /> : <ChevronRight className="h-3 w-3 shrink-0 opacity-40" />}
-      <span className="truncate">{item.label}</span>
-    </Link>
+      {icon ? (
+        <NavIcon name={icon} />
+      ) : (
+        <ChevronRight className="h-3 w-3 shrink-0 opacity-40" aria-hidden />
+      )}
+      <span className="truncate">{label}</span>
+    </button>
   );
 }
 
+function resolveDemoView(
+  item: InternalNavItem | InternalNavChildItem,
+  fallback: InternalOperationsView,
+): InternalOperationsView {
+  if ("view" in item && item.view) return item.view;
+  return fallback;
+}
+
 export default function Unit311WorkspacePreview({ className }: { className?: string }) {
+  const [activeView, setActiveView] = useState<InternalOperationsView>("home");
+
   return (
     <div
       className={cn(
@@ -128,7 +141,7 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
         <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        <p className="ml-2 text-[11px] text-white/45">unit311.vercel.app/internaldashboard</p>
+        <p className="ml-2 text-[11px] text-white/45">unit311central.com/internaldashboard</p>
       </div>
 
       <div className="flex min-h-[640px] flex-col lg:min-h-[720px] lg:flex-row">
@@ -141,7 +154,10 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
             </div>
           </div>
 
-          <nav className="max-h-[280px] overflow-y-auto px-2 py-3 lg:max-h-none lg:py-4" aria-label="Workspace features">
+          <nav
+            className="max-h-[280px] overflow-y-auto px-2 py-3 lg:max-h-none lg:py-4"
+            aria-label="Workspace demo navigation"
+          >
             {PREVIEW_SECTIONS.map((section) => (
               <div key={section.label ?? "home"} className="mb-3 last:mb-0">
                 {section.label ? (
@@ -152,10 +168,31 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
                 <div className="space-y-0.5">
                   {section.items.map((item) => (
                     <div key={item.label}>
-                      <SidebarLink item={item} />
-                      {item.children?.map((child) => (
-                        <SidebarLink key={child.label} item={child} indented />
-                      ))}
+                      {item.view ? (
+                        <SidebarButton
+                          label={item.label}
+                          icon={item.icon}
+                          active={activeView === item.view}
+                          onClick={() => setActiveView(item.view!)}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] text-white/45">
+                          <NavIcon name={item.icon} />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                      )}
+                      {item.children?.map((child) => {
+                        const childView = resolveDemoView(child, "support");
+                        return (
+                          <SidebarButton
+                            key={child.label}
+                            label={child.label}
+                            active={activeView === childView}
+                            indented
+                            onClick={() => setActiveView(childView)}
+                          />
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
@@ -165,19 +202,7 @@ export default function Unit311WorkspacePreview({ className }: { className?: str
         </aside>
 
         <div className="min-w-0 flex-1 bg-[#020617]/80">
-          <div className="border-b border-white/10 px-4 py-4 sm:px-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Unit311</p>
-            <h3 className="mt-1 text-lg font-semibold tracking-tight text-white sm:text-xl">
-              Internal Operations
-            </h3>
-            <p className="mt-1 text-xs text-white/45">
-              Core modules highlighted — client, CRM, projects, finance, HR, inventory, files, email, messaging, and social.
-            </p>
-          </div>
-
-          <div className="overflow-x-auto p-3 sm:p-4">
-            <InternalDashboardHome showCustomize={false} />
-          </div>
+          <WorkspaceDemoPanel view={activeView} />
         </div>
       </div>
     </div>
