@@ -15,6 +15,7 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   Compass,
   ContactRound,
@@ -135,6 +136,39 @@ function NavIcon({ name }: { name: string }) {
   return <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} aria-hidden />;
 }
 
+function SidebarParentButton({
+  label,
+  icon,
+  expanded,
+  compact = false,
+  onToggle,
+}: {
+  label: string;
+  icon: string;
+  expanded: boolean;
+  compact?: boolean;
+  onToggle: () => void;
+}) {
+  const Chevron = expanded ? ChevronDown : ChevronRight;
+
+  return (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      onClick={onToggle}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
+        compact ? "text-[10px]" : "text-[11px]",
+        "text-white/55 hover:bg-white/[0.04] hover:text-white/80",
+      )}
+    >
+      <NavIcon name={icon} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <Chevron className="h-3 w-3 shrink-0 opacity-50" aria-hidden />
+    </button>
+  );
+}
+
 function SidebarButton({
   label,
   icon,
@@ -189,6 +223,11 @@ export default function Unit311WorkspacePreview({
   compact?: boolean;
 }) {
   const [activeView, setActiveView] = useState<InternalOperationsView>("home");
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+
+  function toggleParent(label: string) {
+    setExpandedParents((current) => ({ ...current, [label]: !current[label] }));
+  }
 
   return (
     <div
@@ -246,9 +285,21 @@ export default function Unit311WorkspacePreview({
                   </p>
                 ) : null}
                 <div className="space-y-0.5">
-                  {section.items.map((item) => (
+                  {section.items.map((item) => {
+                    const hasChildren = Boolean(item.children?.length);
+                    const isExpanded = expandedParents[item.label] ?? false;
+
+                    return (
                     <div key={item.label}>
-                      {item.view ? (
+                      {hasChildren ? (
+                        <SidebarParentButton
+                          label={item.label}
+                          icon={item.icon}
+                          expanded={isExpanded}
+                          compact={compact}
+                          onToggle={() => toggleParent(item.label)}
+                        />
+                      ) : item.view ? (
                         <SidebarButton
                           label={item.label}
                           icon={item.icon}
@@ -262,21 +313,27 @@ export default function Unit311WorkspacePreview({
                           <span className="truncate">{item.label}</span>
                         </div>
                       )}
-                      {item.children?.map((child) => {
-                        const childView = resolveDemoView(child, "support");
-                        return (
-                          <SidebarButton
-                            key={child.label}
-                            label={child.label}
-                            active={activeView === childView}
-                            indented
-                            compact={compact}
-                            onClick={() => setActiveView(childView)}
-                          />
-                        );
-                      })}
+                      {hasChildren && isExpanded
+                        ? item.children?.map((child) => {
+                            const childView = resolveDemoView(child, "support");
+                            return (
+                              <SidebarButton
+                                key={child.label}
+                                label={child.label}
+                                active={activeView === childView}
+                                indented
+                                compact={compact}
+                                onClick={() => {
+                                  setActiveView(childView);
+                                  setExpandedParents((current) => ({ ...current, [item.label]: true }));
+                                }}
+                              />
+                            );
+                          })
+                        : null}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
