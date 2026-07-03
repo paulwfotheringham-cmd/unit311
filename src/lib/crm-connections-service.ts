@@ -10,10 +10,7 @@ import {
   localListConnections,
   localUpdateConnection,
 } from "@/lib/connections-local-store";
-import {
-  ensureCrmConnectionsTable,
-  isMissingTableError,
-} from "@/lib/internal-db-migrations";
+import { isMissingTableError } from "@/lib/internal-db-migrations";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 type DbConnection = Parameters<typeof mapCrmConnection>[0];
@@ -130,16 +127,6 @@ function shouldUseLocalStore(error: unknown) {
   return isMissingTableError(error, "crm_connections");
 }
 
-async function trySupabaseOnce<T>(operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (!shouldUseLocalStore(error)) throw error;
-    await ensureCrmConnectionsTable();
-    return operation();
-  }
-}
-
 async function withSupabaseOrLocal<T>(
   supabaseOp: () => Promise<T>,
   localOp: () => T,
@@ -149,7 +136,7 @@ async function withSupabaseOrLocal<T>(
   }
 
   try {
-    const result = await trySupabaseOnce(supabaseOp);
+    const result = await supabaseOp();
     return { result, source: "supabase" };
   } catch (error) {
     if (shouldUseLocalStore(error)) {
