@@ -30,6 +30,16 @@ export default function Footer() {
                   Platform
                 </Link>
               </li>
+              <li>
+                <Link href="/#how-it-works" className="text-[13px] text-[#1a2b4a]/65 hover:text-[#1a2b4a]">
+                  How it works
+                </Link>
+              </li>
+              <li>
+                <Link href="/#pricing" className="text-[13px] text-[#1a2b4a]/65 hover:text-[#1a2b4a]">
+                  Pricing
+                </Link>
+              </li>
             </ul>
           </div>
 

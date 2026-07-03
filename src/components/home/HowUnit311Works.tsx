@@ -133,14 +133,13 @@ export default function HowUnit311Works() {
           ))}
         </div>
 
-        <div className="mt-12 flex justify-center sm:mt-14">
-          <Link
-            href="/contact"
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-[#2563eb] px-8 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition-colors hover:bg-[#1d4ed8]"
-          >
-            Book a Complimentary Founder Session
+        <p className="mt-10 text-center text-sm text-white/45">
+          <Link href="#pricing" className="font-medium text-[#93c5fd] transition-colors hover:text-[#bfdbfe]">
+            View pricing
           </Link>
-        </div>
+          <span className="text-white/30"> · </span>
+          then book your complimentary founder session below.
+        </p>
       </div>
     </section>
   );

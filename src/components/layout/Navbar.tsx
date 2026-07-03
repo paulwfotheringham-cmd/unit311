@@ -9,6 +9,8 @@ import MobileMenu from "./MobileMenu";
 const NAV = [
   { href: "/#services", label: "Solutions", hash: "services", chevron: true },
   { href: "/#platform", label: "Platform", hash: "platform", chevron: false },
+  { href: "/#how-it-works", label: "How it works", hash: "how-it-works", chevron: false },
+  { href: "/#pricing", label: "Pricing", hash: "pricing", chevron: false },
 ] as const;
 
 function scrollToSection(hash: string) {
@@ -58,7 +60,7 @@ export default function Navbar() {
             {/* Centered navigation */}
             <nav
               aria-label="Main navigation"
-              className="hidden items-center justify-center gap-12 lg:flex xl:gap-14"
+              className="hidden items-center justify-center gap-8 lg:flex xl:gap-10"
             >
               {NAV.map((link) => (
                 <Link

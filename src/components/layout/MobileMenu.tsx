@@ -12,6 +12,8 @@ type MobileMenuProps = {
 const NAV = [
   { href: "/#services", label: "Services", hash: "services" },
   { href: "/#platform", label: "Platform", hash: "platform" },
+  { href: "/#how-it-works", label: "How it works", hash: "how-it-works" },
+  { href: "/#pricing", label: "Pricing", hash: "pricing" },
 ] as const;
 
 function scrollToSection(hash: string) {
