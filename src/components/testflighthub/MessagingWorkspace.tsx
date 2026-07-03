@@ -156,8 +156,6 @@ export default function MessagingWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const joinedOperator = joinedOperatorId ? operatorsById.get(joinedOperatorId) : undefined;
-  const isAdmin = joinedOperator?.role === "Admin";
-  const showCreateChannelPanel = isAdmin || showCreateChannel;
   const activeChannel =
     channels.find((channel) => channel.room === activeRoom) ??
     ({
@@ -586,7 +584,7 @@ export default function MessagingWorkspace() {
       setNewChannelType("internal");
       setNewChannelClientKey(CLIENT_MESSAGING_OPTIONS[0]?.key ?? "venturi");
       setNewChannelMembers(operators.map((operator) => operator.id));
-      if (!isAdmin) setShowCreateChannel(false);
+      setShowCreateChannel(false);
       selectChannel(data.channel.room);
     } catch (createError) {
       const message =
@@ -944,24 +942,6 @@ export default function MessagingWorkspace() {
   }
 
   return (
-    <div className="space-y-4">
-      {isAdmin && (
-        <section className="rounded-2xl border border-violet-400/25 bg-violet-500/5 p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold text-white">Create channel</h2>
-              <p className="mt-1 text-xs text-white/50">
-                Admins can spin up internal or client channels from here.
-              </p>
-            </div>
-            {!joinedOperator && (
-              <p className="text-xs text-amber-200/80">Join as an operator to create channels.</p>
-            )}
-          </div>
-          <div className="mt-4">{renderCreateChannelForm({ idPrefix: "top" })}</div>
-        </section>
-      )}
-
     <ResponsiveMasterDetail
       showDetail={showChat}
       onBack={closeChat}
@@ -1014,30 +994,38 @@ export default function MessagingWorkspace() {
         </div>
 
         <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-violet-300" />
-              <h2 className="text-sm font-semibold text-white">Channels</h2>
-            </div>
-            <button
-              type="button"
-              disabled={!joinedOperator}
-              onClick={() => {
-                setShowCreateChannel((current) => {
-                  const next = !current;
-                  if (next) setCreateChannelError(null);
-                  return next;
-                });
-              }}
-              className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 px-2.5 text-xs font-medium text-white/70 transition-colors hover:bg-white/[0.06] disabled:opacity-40"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Create channel
-            </button>
+          <div className="flex items-center gap-2">
+            <Hash className="h-4 w-4 text-violet-300" />
+            <h2 className="text-sm font-semibold text-white">Channels</h2>
           </div>
 
-          {showCreateChannelPanel && joinedOperator && !isAdmin && (
-            renderCreateChannelForm({ idPrefix: "sidebar" })
+          <button
+            type="button"
+            disabled={!joinedOperator}
+            onClick={() => {
+              setShowCreateChannel((current) => {
+                const next = !current;
+                if (next) setCreateChannelError(null);
+                return next;
+              });
+            }}
+            className={cn(
+              "mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+              showCreateChannel
+                ? "border border-violet-400/35 bg-violet-500/15 text-violet-100"
+                : "bg-violet-600 text-white hover:bg-violet-500",
+            )}
+          >
+            <Plus className="h-4 w-4" />
+            {showCreateChannel ? "Hide create channel" : "Create channel"}
+          </button>
+
+          {showCreateChannel && joinedOperator && (
+            <div className="mt-3">{renderCreateChannelForm({ idPrefix: "sidebar" })}</div>
+          )}
+
+          {!joinedOperator && (
+            <p className="mt-2 text-xs text-white/40">Join as an operator above to create channels.</p>
           )}
 
           <div className="mt-4 space-y-4">
@@ -1454,6 +1442,5 @@ export default function MessagingWorkspace() {
       </section>
       }
     />
-    </div>
   );
 }
