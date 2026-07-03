@@ -134,11 +134,11 @@ export default function HowUnit311Works() {
         </div>
 
         <p className="mt-10 text-center text-sm text-white/45">
-          <Link href="#pricing" className="font-medium text-[#93c5fd] transition-colors hover:text-[#bfdbfe]">
-            View pricing
+          <Link href="/book" className="font-medium text-[#93c5fd] transition-colors hover:text-[#bfdbfe]">
+            Book a founder session
           </Link>
           <span className="text-white/30"> · </span>
-          then book your complimentary founder session below.
+          or view pricing below.
         </p>
       </div>
     </section>

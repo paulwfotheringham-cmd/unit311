@@ -186,9 +186,11 @@ export function slugifyChannelName(name: string) {
   return slug || "channel";
 }
 
+import { CENTRAL_SITE_URL } from "@/lib/app-domains";
+
 export function generateCallLink(type: "voice" | "video") {
   const id = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
-  return `https://unit311.vercel.app/meet/${type}/${id}`;
+  return `${CENTRAL_SITE_URL}/meet/${type}/${id}`;
 }
 
 export function buildScheduledCallDateTime(date: string, time: string) {

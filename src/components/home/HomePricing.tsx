@@ -3,12 +3,10 @@ import type { ReactNode } from "react";
 import { Check } from "lucide-react";
 
 const PLAN_FEATURES = [
-  "Complete Unit311 Business Operating System",
-  "Unlimited users",
-  "Standard platform configuration",
-  "Ongoing platform updates",
-  "Email support",
-  "Quarterly business review",
+  "Complete Unit311 Central solution",
+  "Up to 25 users (additional costs applied for more users)",
+  "Email and chat support",
+  "Additional customization can be offered (charges will apply)",
 ] as const;
 
 const PROFESSIONAL_SERVICES = [
@@ -100,7 +98,7 @@ export default function HomePricing() {
 
           <div className="mt-10 text-center">
             <Link
-              href="/contact"
+              href="/book"
               className="inline-flex h-12 w-full max-w-md items-center justify-center rounded-xl bg-[#2563eb] px-8 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition-colors hover:bg-[#1d4ed8] sm:w-auto"
             >
               Book a Complimentary Founder Session

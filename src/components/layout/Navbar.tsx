@@ -24,7 +24,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const isLoginPage = pathname === "/login" || pathname === "/clientlogin";
-  const isDarkNav = pathname === "/" || pathname === "/contact" || isLoginPage;
+  const isDarkNav = pathname === "/" || pathname === "/contact" || pathname === "/book" || isLoginPage;
   const isDashboard =
     pathname?.startsWith("/test1") ||
     pathname?.startsWith("/client/") ||
