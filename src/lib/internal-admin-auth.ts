@@ -5,12 +5,14 @@ import { getPlatformSession, type PlatformSession } from "@/lib/platform-session
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { normalizeUserRole } from "@/lib/user-management-data";
 import {
+  WorkspaceAccessError,
   requireCurrentWorkspace,
   type CurrentWorkspace,
 } from "@/lib/workspace-context";
 
 const AUTH_REQUIRED = "Authentication required.";
 const INSUFFICIENT_PRIVILEGES = "Insufficient privileges.";
+const WORKSPACE_ACCESS_DENIED = "Workspace access denied.";
 
 /**
  * Authenticated internal user with operator role Admin.
@@ -75,6 +77,14 @@ export async function requireInternalWorkspaceSession(): Promise<
     const workspace = await requireCurrentWorkspace();
     return { session, workspace };
   } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      return {
+        error: NextResponse.json(
+          { error: error.message || WORKSPACE_ACCESS_DENIED },
+          { status: error.status },
+        ),
+      };
+    }
     const message = error instanceof Error ? error.message : AUTH_REQUIRED;
     return { error: NextResponse.json({ error: message }, { status: 401 }) };
   }

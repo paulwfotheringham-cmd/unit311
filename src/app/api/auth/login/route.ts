@@ -160,6 +160,12 @@ export async function POST(request: NextRequest) {
     if (!result) {
       return NextResponse.json({ error: "Invalid username or password." }, { status: 401 });
     }
+    if ("forbidden" in result) {
+      return NextResponse.json(
+        { error: "You do not have access to this workspace." },
+        { status: 403 },
+      );
+    }
 
     try {
       await recordPlatformUserLogin(result.session.sub);

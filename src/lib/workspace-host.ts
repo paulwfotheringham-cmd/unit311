@@ -6,6 +6,9 @@ import {
   parseClientPlatformSubdomainSafe,
 } from "@/lib/app-domains";
 
+/** Canonical Internal Unit311 Central workspace slug. */
+export const INTERNAL_WORKSPACE_SLUG = "unit311";
+
 export type WorkspaceHostRecord = {
   id: string;
   name: string;

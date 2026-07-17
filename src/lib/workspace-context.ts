@@ -7,18 +7,26 @@ import {
   parseClientPlatformSubdomainSafe,
 } from "@/lib/app-domains";
 import { getPlatformSession, type PlatformSession } from "@/lib/platform-session";
+import { authorizeUserForWorkspace } from "@/lib/workspace-authorization";
 import {
+  INTERNAL_WORKSPACE_SLUG,
   findWorkspaceById,
   findWorkspaceBySlug,
   type WorkspaceHostRecord,
 } from "@/lib/workspace-host";
 
-/** Canonical Internal Unit311 Central workspace slug. */
-export const INTERNAL_WORKSPACE_SLUG = "unit311";
+export { INTERNAL_WORKSPACE_SLUG };
 
 /**
- * Runtime workspace tenancy context (Phase 1).
- * Modules must obtain workspace identity only through getCurrentWorkspace().
+ * Runtime workspace tenancy context (RC1-C07).
+ *
+ * Separation:
+ * - Identity: signed session (who the user is)
+ * - Membership: authorizeUserForWorkspace (shared authz service)
+ * - Active workspace: derived from the request host after authorization
+ *
+ * On customer subdomains the host is the tenant boundary.
+ * Session workspace fields are a claim cache, not tenancy authority.
  */
 export type CurrentWorkspace = {
   id: string;
@@ -27,9 +35,9 @@ export type CurrentWorkspace = {
 };
 
 export type WorkspaceContextSource =
-  | "session"
   | "host_slug"
   | "internal_default"
+  | "session_claim"
   | "none";
 
 export type WorkspaceContextDiagnostics = {
@@ -40,11 +48,24 @@ export type WorkspaceContextDiagnostics = {
     displayName: string;
     userType: string;
   } | null;
+  /** Last workspace claim embedded in the session cookie (not tenancy authority). */
   sessionWorkspace: CurrentWorkspace | null;
+  /** Host-derived active workspace after authorization. */
   resolvedWorkspace: CurrentWorkspace | null;
   source: WorkspaceContextSource;
   authenticated: boolean;
+  authorized: boolean;
 };
+
+export class WorkspaceAccessError extends Error {
+  readonly status: 401 | 403;
+
+  constructor(message: string, status: 401 | 403) {
+    super(message);
+    this.name = "WorkspaceAccessError";
+    this.status = status;
+  }
+}
 
 function toCurrentWorkspace(record: WorkspaceHostRecord): CurrentWorkspace {
   return {
@@ -54,7 +75,7 @@ function toCurrentWorkspace(record: WorkspaceHostRecord): CurrentWorkspace {
   };
 }
 
-function sessionWorkspace(session: PlatformSession | null): CurrentWorkspace | null {
+function sessionWorkspaceClaim(session: PlatformSession | null): CurrentWorkspace | null {
   if (!session?.workspaceId || !session.workspaceSlug || !session.workspaceName) {
     return null;
   }
@@ -66,9 +87,8 @@ function sessionWorkspace(session: PlatformSession | null): CurrentWorkspace | n
 }
 
 /**
- * Resolve a workspace binding for login / session creation.
- * Prefer explicit customer slug (return_to host), then the user's stored workspace_id,
- * then the Internal unit311 workspace when appropriate.
+ * Resolve a workspace record for login / session creation.
+ * Does not authorize — callers must use authorizeUserForWorkspace.
  */
 export async function resolveWorkspaceBinding(options?: {
   workspaceSlug?: string | null;
@@ -97,6 +117,7 @@ export async function resolveWorkspaceBinding(options?: {
 
 /**
  * Attach workspace fields onto a platform session (login / re-bind).
+ * These fields are an active-workspace claim cache, not membership proof.
  */
 export function withSessionWorkspace(
   session: PlatformSession,
@@ -120,14 +141,24 @@ export function withSessionWorkspace(
   };
 }
 
+async function authorizeActiveWorkspace(
+  session: PlatformSession,
+  workspace: CurrentWorkspace,
+): Promise<boolean> {
+  const decision = await authorizeUserForWorkspace(session.sub, workspace.id, {
+    workspace,
+    userTypeHint: session.userType,
+  });
+  return decision.allowed;
+}
+
 /**
  * ONLY supported way for modules/APIs to read the active workspace.
- * Request-scoped (React cache) so slug/DB lookup happens at most once per request.
+ * Request-scoped (React cache) so lookups happen at most once per request.
  *
- * Resolution order for authenticated requests:
- * 1. Workspace embedded in the signed session (set at login)
- * 2. Host customer slug → workspaces row (legacy sessions / diagnostics)
- * 3. Internal host → unit311 workspace
+ * Customer host: host workspace after identity + membership authorization.
+ * Internal host: unit311 after authorization.
+ * Apex / other: session claim only if the user is authorised for that workspace.
  */
 export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace | null> => {
   const snapshot = await getWorkspaceContextDiagnostics();
@@ -135,23 +166,29 @@ export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace | nu
 });
 
 export async function requireCurrentWorkspace(): Promise<CurrentWorkspace> {
-  const workspace = await getCurrentWorkspace();
-  if (!workspace) {
-    throw new Error("Workspace context is required.");
+  const snapshot = await getWorkspaceContextDiagnostics();
+  if (!snapshot.authenticated) {
+    throw new WorkspaceAccessError("Authentication required.", 401);
   }
-  return workspace;
+  if (!snapshot.resolvedWorkspace) {
+    throw new WorkspaceAccessError(
+      snapshot.sessionUser ? "Workspace access denied." : "Workspace context is required.",
+      snapshot.sessionUser ? 403 : 401,
+    );
+  }
+  return snapshot.resolvedWorkspace;
 }
 
 /**
- * Full diagnostics snapshot for Phase 1 verification.
- * Does not mutate session or filter any module data.
+ * Full diagnostics snapshot for tenancy verification.
+ * Does not mutate the session cookie (rebind happens in middleware / login).
  */
 export const getWorkspaceContextDiagnostics = cache(
   async (): Promise<WorkspaceContextDiagnostics> => {
     const requestHeaders = await headers();
     const host = getRequestHost({ headers: requestHeaders });
     const session = await getPlatformSession();
-    const fromSession = sessionWorkspace(session);
+    const fromSession = sessionWorkspaceClaim(session);
 
     const sessionUser = session
       ? {
@@ -162,17 +199,6 @@ export const getWorkspaceContextDiagnostics = cache(
         }
       : null;
 
-    if (fromSession) {
-      return {
-        host,
-        sessionUser,
-        sessionWorkspace: fromSession,
-        resolvedWorkspace: fromSession,
-        source: "session",
-        authenticated: true,
-      };
-    }
-
     if (!session) {
       return {
         host,
@@ -181,38 +207,78 @@ export const getWorkspaceContextDiagnostics = cache(
         resolvedWorkspace: null,
         source: "none",
         authenticated: false,
+        authorized: false,
       };
     }
 
-    // Authenticated but pre-Phase-1 session cookie: recover from host once.
     const customerSlug = parseClientPlatformSubdomainSafe(host);
     if (customerSlug) {
       const record = await findWorkspaceBySlug(customerSlug);
-      if (record) {
-        const workspace = toCurrentWorkspace(record);
+      if (!record) {
         return {
           host,
           sessionUser,
-          sessionWorkspace: null,
-          resolvedWorkspace: workspace,
-          source: "host_slug",
+          sessionWorkspace: fromSession,
+          resolvedWorkspace: null,
+          source: "none",
           authenticated: true,
+          authorized: false,
         };
       }
+
+      const workspace = toCurrentWorkspace(record);
+      const allowed = await authorizeActiveWorkspace(session, workspace);
+      return {
+        host,
+        sessionUser,
+        sessionWorkspace: fromSession,
+        resolvedWorkspace: allowed ? workspace : null,
+        source: allowed ? "host_slug" : "none",
+        authenticated: true,
+        authorized: allowed,
+      };
     }
 
     if (isInternalDomainHost(host)) {
       const internal = await findWorkspaceBySlug(INTERNAL_WORKSPACE_SLUG);
-      if (internal) {
+      if (!internal) {
         return {
           host,
           sessionUser,
-          sessionWorkspace: null,
-          resolvedWorkspace: toCurrentWorkspace(internal),
-          source: "internal_default",
+          sessionWorkspace: fromSession,
+          resolvedWorkspace: null,
+          source: "none",
           authenticated: true,
+          authorized: false,
         };
       }
+
+      const workspace = toCurrentWorkspace(internal);
+      const allowed = await authorizeActiveWorkspace(session, workspace);
+      return {
+        host,
+        sessionUser,
+        sessionWorkspace: fromSession,
+        resolvedWorkspace: allowed ? workspace : null,
+        source: allowed ? "internal_default" : "none",
+        authenticated: true,
+        authorized: allowed,
+      };
+    }
+
+    // Apex / non-tenant hosts: no host tenant boundary.
+    // Active workspace may follow the session claim when membership allows it.
+    if (fromSession) {
+      const allowed = await authorizeActiveWorkspace(session, fromSession);
+      return {
+        host,
+        sessionUser,
+        sessionWorkspace: fromSession,
+        resolvedWorkspace: allowed ? fromSession : null,
+        source: allowed ? "session_claim" : "none",
+        authenticated: true,
+        authorized: allowed,
+      };
     }
 
     return {
@@ -222,6 +288,7 @@ export const getWorkspaceContextDiagnostics = cache(
       resolvedWorkspace: null,
       source: "none",
       authenticated: true,
+      authorized: false,
     };
   },
 );

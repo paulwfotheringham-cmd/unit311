@@ -16,6 +16,11 @@ import {
   parseClientPlatformSubdomainSafe,
   parseValidWorkspaceReturnTo,
 } from "@/lib/app-domains";
+import {
+  applyCustomerHostRebindIfNeeded,
+  customerHostLoginRedirect,
+  evaluateCustomerHostSessionGate,
+} from "@/lib/workspace-host-session-gate";
 
 function withHostHeaders(
   request: NextRequest,
@@ -56,8 +61,12 @@ function rewriteTo(
  * Apex (public site): marketing + redirects old internal paths.
  * Internal host: rewrite onto /internaldashboard.
  * Customer hosts `{slug}.unit311central.com`: rewrite onto /ws/[slug] gateway.
+ *
+ * RC1-C07: on customer hosts, host is the tenant boundary. Valid sessions that
+ * are authorised for the host workspace are rebound automatically; invalid or
+ * unauthorised sessions are sent to login.
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const host = getRequestHost(request);
   const { pathname, search } = request.nextUrl;
   const normalizedHost = normalizeHost(host);
@@ -87,6 +96,8 @@ export function middleware(request: NextRequest) {
     }
 
     if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) {
+      // APIs enforce host-authoritative tenancy in workspace-context.
+      // Rebind on HTML navigations; APIs resolve active workspace from host + authz.
       return NextResponse.next({ request: { headers } });
     }
 
@@ -100,39 +111,54 @@ export function middleware(request: NextRequest) {
       );
     }
 
-    const hasSession = Boolean(request.cookies.get("dc_platform_session")?.value);
+    const requiresAuthenticatedApp =
+      pathname === "/dashboard" ||
+      pathname.startsWith("/dashboard/") ||
+      ((pathname === "/" || pathname === "") &&
+        Boolean(request.cookies.get("dc_platform_session")?.value));
 
-    // Signed-in users hitting the splash go straight into the workspace app.
-    if ((pathname === "/" || pathname === "") && hasSession) {
-      return redirectExternal(`${workspaceOrigin}/dashboard${search}`);
-    }
+    if (requiresAuthenticatedApp) {
+      const gate = await evaluateCustomerHostSessionGate(request, workspaceSlug);
 
-    // Real operations app (same shell as internal), public URL stays /dashboard.
-    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
-      if (!hasSession) {
-        const loginUrl = new URL(`${CENTRAL_SITE_URL}/login`);
-        loginUrl.searchParams.set("return_to", workspaceOrigin);
-        return redirectExternal(loginUrl.toString());
+      if (gate.status === "anonymous" || gate.status === "invalid") {
+        return customerHostLoginRedirect(workspaceOrigin);
       }
 
+      if (gate.status === "workspace_missing") {
+        const gatewayPath = `${WORKSPACE_HOST_ROUTE_PREFIX}/${encodeURIComponent(workspaceSlug)}`;
+        return rewriteTo(request, gatewayPath, headers, workspaceResponseHeaders);
+      }
+
+      if (gate.status === "forbidden") {
+        return customerHostLoginRedirect(workspaceOrigin);
+      }
+
+      // Signed-in users hitting the splash go straight into the workspace app.
+      if (pathname === "/" || pathname === "") {
+        const redirect = redirectExternal(`${workspaceOrigin}/dashboard${search}`);
+        return applyCustomerHostRebindIfNeeded({ request, response: redirect, gate });
+      }
+
+      let response: NextResponse;
       if (pathname === "/dashboard/executive-assistant") {
-        return rewriteTo(
+        response = rewriteTo(
           request,
           "/internaldashboard/executive-assistant",
           headers,
           workspaceResponseHeaders,
         );
-      }
-      if (pathname === "/dashboard/client-onboarding") {
-        return rewriteTo(
+      } else if (pathname === "/dashboard/client-onboarding") {
+        response = rewriteTo(
           request,
           "/internaldashboard/client-onboarding",
           headers,
           workspaceResponseHeaders,
         );
+      } else {
+        response = rewriteTo(request, "/internaldashboard", headers, workspaceResponseHeaders);
       }
 
-      return rewriteTo(request, "/internaldashboard", headers, workspaceResponseHeaders);
+      return applyCustomerHostRebindIfNeeded({ request, response, gate });
     }
 
     // Default: workspace gateway (sign-in landing). Avoid marketing homepage on customer hosts.

@@ -286,22 +286,63 @@ export function createSessionForUser(
   };
 }
 
+export type LoginPlatformUserResult =
+  | {
+      session: PlatformSession;
+      token: string;
+      redirectPath: string;
+    }
+  | { forbidden: true };
+
 export async function loginPlatformUser(
   username: string,
   password: string,
   options?: { workspaceSlug?: string | null },
-) {
+): Promise<LoginPlatformUserResult | null> {
   const user = await authenticatePlatformUser(username, password);
   if (!user) {
     return null;
   }
 
   const { resolveWorkspaceBinding } = await import("@/lib/workspace-context");
-  const workspace = await resolveWorkspaceBinding({
+  const { authorizeUserForWorkspace } = await import("@/lib/workspace-authorization");
+
+  let workspace = await resolveWorkspaceBinding({
     workspaceSlug: options?.workspaceSlug,
     userWorkspaceId: user.workspace_id ?? null,
     fallbackInternal: user.user_type === "internal",
   });
+
+  if (workspace) {
+    const decision = await authorizeUserForWorkspace(user.id, workspace.id, {
+      workspace,
+      userTypeHint: user.user_type,
+    });
+
+    if (!decision.allowed) {
+      // Explicit customer return_to host: never bind an unauthorised tenant.
+      if (options?.workspaceSlug) {
+        return { forbidden: true };
+      }
+
+      // No host return_to: fall back to the user's primary workspace when different.
+      const primary = user.workspace_id
+        ? await resolveWorkspaceBinding({
+            userWorkspaceId: user.workspace_id,
+            fallbackInternal: false,
+          })
+        : null;
+      if (primary && primary.id !== workspace.id) {
+        const primaryDecision = await authorizeUserForWorkspace(user.id, primary.id, {
+          workspace: primary,
+          userTypeHint: user.user_type,
+        });
+        workspace = primaryDecision.allowed ? primary : null;
+      } else {
+        workspace = null;
+      }
+    }
+  }
 
   const session = createSessionForUser(user, workspace);
   const subscriptionRedirect = await resolveSubscriptionRedirectForUser(user, {

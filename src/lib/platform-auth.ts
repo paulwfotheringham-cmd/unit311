@@ -12,7 +12,11 @@ export type PlatformSession = {
   userType: PlatformUserType;
   redirectPath: string;
   exp: number;
-  /** Active workspace tenancy (Phase 1) — set at login. */
+  /**
+   * Active workspace claim cache (RC1-C07).
+   * Identity is sub/username/userType; membership is authorizeUserForWorkspace;
+   * active workspace on customer hosts is derived from the request host after authz.
+   */
   workspaceId?: string;
   workspaceSlug?: string;
   workspaceName?: string;
