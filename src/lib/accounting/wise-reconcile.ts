@@ -73,7 +73,7 @@ export async function reconcileWiseIncomingPayments() {
           .join(" ");
         const reference = extractPaymentReference(haystack);
 
-        let invoice =
+        const invoice =
           (reference ? await getInvoiceByPaymentReference(reference) : null) ??
           findUniqueOpenInvoiceByAmount(openInvoices, tx.amount, balance.currency) ??
           findUniqueOpenInvoiceByCompany(openInvoices, haystack);

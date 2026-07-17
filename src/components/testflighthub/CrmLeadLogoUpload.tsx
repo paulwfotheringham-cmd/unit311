@@ -42,7 +42,7 @@ export default function CrmLeadLogoUpload({
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl: string | null = null;
+    const objectUrl: string | null = null;
 
     async function loadPreview() {
       if (!lead.companyLogoFileId) {

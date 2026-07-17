@@ -14,7 +14,7 @@ type DbCredential = {
 type MemoryCredential = { email: string; password: string };
 
 declare global {
-  // eslint-disable-next-line no-var
+  // Ambient `var` is required for globalThis augmentation.
   var __unit311EmailCredentials: Map<string, MemoryCredential> | undefined;
 }
 
