@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   createBlankTicketInput,
@@ -280,21 +280,25 @@ export default function SupportWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadTickets();
+    startTransition(() => {
+      void loadTickets();
+    });
   }, [loadTickets]);
 
   useEffect(() => {
-    if (!selectedTicketId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedTicketId) return;
-    const ticket = tickets.find((item) => item.id === selectedTicketId);
-    if (ticket) {
-      snapshottedIdRef.current = selectedTicketId;
-      setSavedSnapshot({ ...ticket });
-    }
+    startTransition(() => {
+      if (!selectedTicketId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedTicketId) return;
+      const ticket = tickets.find((item) => item.id === selectedTicketId);
+      if (ticket) {
+        snapshottedIdRef.current = selectedTicketId;
+        setSavedSnapshot({ ...ticket });
+      }
+    });
   }, [selectedTicketId, tickets]);
 
   async function saveTicket(ticket: SupportTicket) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import {
   Check,
   Clock3,
@@ -215,29 +215,41 @@ export default function Unit311DetailsWorkspace() {
   }, [loadDiagramIndex]);
 
   useEffect(() => {
-    void loadOverview();
+    startTransition(() => {
+      void loadOverview();
+    });
   }, [loadOverview]);
 
   useEffect(() => {
-    if (!selectedCategoryId) {
-      setDraft("");
-      setTaskDraft([]);
-      setDiagram(null);
-      return;
-    }
-    setDraft(contents[selectedCategoryId] ?? "");
-    setTaskDraft((tasksByCategory[selectedCategoryId] ?? []).map((task) => ({ ...task })));
+    startTransition(() => {
+      if (!selectedCategoryId) {
+        setDraft("");
+        setTaskDraft([]);
+        setDiagram(null);
+        return;
+      }
+      setDraft(contents[selectedCategoryId] ?? "");
+      setTaskDraft((tasksByCategory[selectedCategoryId] ?? []).map((task) => ({ ...task })));
+    });
   }, [contents, selectedCategoryId, tasksByCategory]);
 
   useEffect(() => {
     if (!selectedCategoryId) return;
     if (isArchitectureDiagramsHub) {
       if (sectionView !== "architecture" || !hubActiveDiagramSlug) return;
-      void loadDiagram(hubActiveDiagramSlug);
+      startTransition(() => {
+
+        void loadDiagram(hubActiveDiagramSlug);
+
+      });
       return;
     }
     if (sectionView === "documentation") return;
-    void loadDiagram(selectedCategoryId);
+    startTransition(() => {
+
+      void loadDiagram(selectedCategoryId);
+
+    });
   }, [
     hubActiveDiagramSlug,
     isArchitectureDiagramsHub,
@@ -248,7 +260,11 @@ export default function Unit311DetailsWorkspace() {
 
   useEffect(() => {
     if (!isArchitectureDiagramsHub) return;
-    void loadDiagramIndex();
+    startTransition(() => {
+
+      void loadDiagramIndex();
+
+    });
   }, [isArchitectureDiagramsHub, loadDiagramIndex]);
 
   const handleSelectCategory = useCallback((categoryId: string) => {

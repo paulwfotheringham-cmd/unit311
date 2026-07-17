@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import { useSearchParams } from "next/navigation";
 
 import type { ManagedClient } from "@/lib/client-management-data";
@@ -211,13 +211,19 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
   }, []);
 
   useEffect(() => {
-    void loadProjects();
+    startTransition(() => {
+      void loadProjects();
+    });
   }, [loadProjects]);
 
   useEffect(() => {
     if (!projectFilterId || loading) return;
     const match = projects.find((project) => project.id === projectFilterId);
-    if (match) setSelectedProjectId(match.id);
+    if (match) {
+      startTransition(() => {
+        setSelectedProjectId(match.id);
+      });
+    }
   }, [loading, projectFilterId, projects]);
 
   function handleClientChange(clientId: string) {

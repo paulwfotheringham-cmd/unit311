@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   STRATEGY_COLUMNS,
@@ -80,7 +80,9 @@ export default function StrategyWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadItems();
+    startTransition(() => {
+      void loadItems();
+    });
   }, [loadItems]);
 
   useEffect(() => {

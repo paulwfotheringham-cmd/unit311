@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, startTransition, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import {
   advanceTelemetry,
@@ -148,13 +148,15 @@ const FlightHubSandbox = forwardRef<FlightHubSandboxHandle, FlightHubSandboxProp
 
       const point = toLatLng(telemetry);
 
-      setFlightPath((currentPath) => {
-        const lastPoint = currentPath[currentPath.length - 1];
-        if (lastPoint && lastPoint[0] === point[0] && lastPoint[1] === point[1]) {
-          return currentPath;
-        }
+      startTransition(() => {
+        setFlightPath((currentPath) => {
+          const lastPoint = currentPath[currentPath.length - 1];
+          if (lastPoint && lastPoint[0] === point[0] && lastPoint[1] === point[1]) {
+            return currentPath;
+          }
 
-        return [...currentPath, point];
+          return [...currentPath, point];
+        });
       });
     }, [telemetry, isRunning]);
 

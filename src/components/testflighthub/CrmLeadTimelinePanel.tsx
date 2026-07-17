@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, startTransition } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 
 import {
@@ -66,7 +66,9 @@ export default function CrmLeadTimelinePanel({ leadId }: CrmLeadTimelinePanelPro
   }, [leadId]);
 
   useEffect(() => {
-    void load();
+    startTransition(() => {
+      void load();
+    });
   }, [load]);
 
   return (

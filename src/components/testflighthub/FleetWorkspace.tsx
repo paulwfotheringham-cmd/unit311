@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
   buildDefaultFleetAssignments,
@@ -30,14 +30,16 @@ export default function FleetWorkspace({
   );
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(FLEET_ASSIGNMENTS_STORAGE_KEY);
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as Record<string, string>;
-      setAssignments((current) => ({ ...current, ...parsed }));
-    } catch {
-      // ignore invalid storage
-    }
+    startTransition(() => {
+      try {
+        const stored = localStorage.getItem(FLEET_ASSIGNMENTS_STORAGE_KEY);
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as Record<string, string>;
+        setAssignments((current) => ({ ...current, ...parsed }));
+      } catch {
+        // ignore invalid storage
+      }
+    });
   }, []);
 
   function updateAssignment(droneId: string, userId: string) {

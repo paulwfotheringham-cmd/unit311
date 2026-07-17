@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -256,48 +256,62 @@ export default function InfoEmailWorkspace() {
   );
 
   useEffect(() => {
-    void loadWhatsAppStatus();
+    startTransition(() => {
+      void loadWhatsAppStatus();
+    });
   }, [loadWhatsAppStatus]);
 
   useEffect(() => {
-    void loadAccounts();
+    startTransition(() => {
+      void loadAccounts();
+    });
   }, [loadAccounts]);
 
   useEffect(() => {
-    void loadInbox();
+    startTransition(() => {
+      void loadInbox();
+    });
   }, [loadInbox]);
 
   useEffect(() => {
     const to = deepLinkComposeTo?.trim();
     if (!to) return;
-    setComposeOpen(true);
-    setComposeTo(to);
-    setComposeSubject((current) => current || "Re: Website enquiry");
-    openDetail();
+    startTransition(() => {
+      setComposeOpen(true);
+      setComposeTo(to);
+      setComposeSubject((current) => current || "Re: Website enquiry");
+      openDetail();
+    });
   }, [deepLinkComposeTo, openDetail]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      void loadInbox({ background: true });
+      startTransition(() => {
+        void loadInbox({ background: true });
+      });
     }, REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
   }, [loadInbox]);
 
   useEffect(() => {
-    setSelectedThreadId(null);
-    setReplyBody("");
-    closeDetail();
+    startTransition(() => {
+      setSelectedThreadId(null);
+      setReplyBody("");
+      closeDetail();
+    });
   }, [selectedAccountId, closeDetail]);
 
   useEffect(() => {
-    setSetupPassword("");
-    setComposeOpen(false);
-    setComposeTo("");
-    setComposeCc("");
-    setComposeSubject("");
-    setComposeBody("");
-    setSuccessMessage(null);
+    startTransition(() => {
+      setSetupPassword("");
+      setComposeOpen(false);
+      setComposeTo("");
+      setComposeCc("");
+      setComposeSubject("");
+      setComposeBody("");
+      setSuccessMessage(null);
+    });
   }, [selectedAccountId]);
 
   useEffect(() => {

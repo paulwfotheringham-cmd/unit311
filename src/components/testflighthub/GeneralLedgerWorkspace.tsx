@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -143,20 +143,26 @@ export default function GeneralLedgerWorkspace() {
   }, []);
 
   useEffect(() => {
-    void load();
+    startTransition(() => {
+      void load();
+    });
   }, [load]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    setJournalParam(params.get("journal"));
+    startTransition(() => {
+      setJournalParam(params.get("journal"));
+    });
   }, []);
 
   useEffect(() => {
     if (!journalParam) return;
-    setTab("journal");
-    setExpanded((current) => ({ ...current, [journalParam]: true }));
-    setSelectedJournalId(journalParam);
+    startTransition(() => {
+      setTab("journal");
+      setExpanded((current) => ({ ...current, [journalParam]: true }));
+      setSelectedJournalId(journalParam);
+    });
   }, [journalParam]);
 
   const sourceOptions = useMemo(() => {

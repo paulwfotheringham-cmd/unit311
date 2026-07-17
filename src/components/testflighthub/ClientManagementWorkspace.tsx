@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import type { ClientFinanceSummary } from "@/lib/accounting/client-finance";
 import {
@@ -176,28 +176,34 @@ export default function ClientManagementWorkspace({
   }, [syncClients]);
 
   useEffect(() => {
-    void loadClients();
+    startTransition(() => {
+      void loadClients();
+    });
   }, [loadClients]);
 
   useEffect(() => {
-    if (!selectedClientId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedClientId) return;
-    const client = clients.find((item) => item.id === selectedClientId);
-    if (client) {
-      snapshottedIdRef.current = selectedClientId;
-      setSavedSnapshot({ ...client });
-    }
+    startTransition(() => {
+      if (!selectedClientId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedClientId) return;
+      const client = clients.find((item) => item.id === selectedClientId);
+      if (client) {
+        snapshottedIdRef.current = selectedClientId;
+        setSavedSnapshot({ ...client });
+      }
+    });
   }, [selectedClientId, clients]);
 
   useEffect(() => {
     if (!selectedClient?.id) {
-      setFinanceSummary(null);
-      setFinanceError(null);
-      setFinanceLoading(false);
+      startTransition(() => {
+        setFinanceSummary(null);
+        setFinanceError(null);
+        setFinanceLoading(false);
+      });
       return;
     }
 
@@ -230,7 +236,9 @@ export default function ClientManagementWorkspace({
       }
     }
 
-    void loadFinanceSummary();
+    startTransition(() => {
+      void loadFinanceSummary();
+    });
     return () => {
       cancelled = true;
     };

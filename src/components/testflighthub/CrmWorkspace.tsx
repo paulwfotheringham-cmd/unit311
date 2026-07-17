@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -129,25 +129,31 @@ export default function CrmWorkspace({
   }, [statusFilter, searchParams, openDetail]);
 
   useEffect(() => {
-    void loadLeads();
+    startTransition(() => {
+      void loadLeads();
+    });
   }, [loadLeads]);
 
   useEffect(() => {
-    setDetailView("record");
+    startTransition(() => {
+      setDetailView("record");
+    });
   }, [selectedLeadId]);
 
   useEffect(() => {
-    if (!selectedLeadId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedLeadId) return;
-    const lead = leads.find((item) => item.id === selectedLeadId);
-    if (lead) {
-      snapshottedIdRef.current = selectedLeadId;
-      setSavedSnapshot({ ...lead });
-    }
+    startTransition(() => {
+      if (!selectedLeadId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedLeadId) return;
+      const lead = leads.find((item) => item.id === selectedLeadId);
+      if (lead) {
+        snapshottedIdRef.current = selectedLeadId;
+        setSavedSnapshot({ ...lead });
+      }
+    });
   }, [selectedLeadId, leads]);
 
   async function saveLead(lead: CrmLead) {

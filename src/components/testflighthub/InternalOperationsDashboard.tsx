@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import {
@@ -267,25 +267,27 @@ export default function InternalOperationsDashboard({
   useEffect(() => {
     const viewParam = searchParams.get("view");
     const nextView = readInitialView(searchParams, pathname, initialView);
-    if (viewParam && normalizeInternalOperationsView(viewParam) !== viewParam) {
-      setActiveView(nextView);
-      return;
-    }
-    if (isInternalOperationsView(viewParam)) {
-      setActiveView(viewParam);
-      return;
-    }
-    if (isClientOnboardingPath(pathname)) {
-      setActiveView("client-onboarding");
-      return;
-    }
-    if (isExecutiveAssistantPath(pathname)) {
-      setActiveView("executive-assistant");
-      return;
-    }
-    if (!viewParam) {
-      setActiveView(initialView ?? "home");
-    }
+    startTransition(() => {
+      if (viewParam && normalizeInternalOperationsView(viewParam) !== viewParam) {
+        setActiveView(nextView);
+        return;
+      }
+      if (isInternalOperationsView(viewParam)) {
+        setActiveView(viewParam);
+        return;
+      }
+      if (isClientOnboardingPath(pathname)) {
+        setActiveView("client-onboarding");
+        return;
+      }
+      if (isExecutiveAssistantPath(pathname)) {
+        setActiveView("executive-assistant");
+        return;
+      }
+      if (!viewParam) {
+        setActiveView(initialView ?? "home");
+      }
+    });
   }, [initialView, pathname, searchParams]);
 
   useEffect(() => {

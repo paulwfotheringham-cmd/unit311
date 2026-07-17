@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import {
   Download,
   Eye,
@@ -170,21 +170,25 @@ export default function SoftwareAssetRegisterWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadAssets();
+    startTransition(() => {
+      void loadAssets();
+    });
   }, [loadAssets]);
 
   useEffect(() => {
-    if (!selected) {
-      setSavedSnapshot(null);
-      snapshottedIdRef.current = null;
-      return;
-    }
-    if (snapshottedIdRef.current === selected.id) return;
-    snapshottedIdRef.current = selected.id;
-    setSavedSnapshot(selected);
-    setPasswordDraft("");
-    setRevealedPassword(null);
-    setShowPassword(false);
+    startTransition(() => {
+      if (!selected) {
+        setSavedSnapshot(null);
+        snapshottedIdRef.current = null;
+        return;
+      }
+      if (snapshottedIdRef.current === selected.id) return;
+      snapshottedIdRef.current = selected.id;
+      setSavedSnapshot(selected);
+      setPasswordDraft("");
+      setRevealedPassword(null);
+      setShowPassword(false);
+    });
   }, [selected]);
 
   const vendors = useMemo(

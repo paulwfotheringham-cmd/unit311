@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   fileTypeLabel,
@@ -222,17 +222,23 @@ export default function FileRepositoryWorkspace({
   }, [categoryFilter, folderId, query, resolvedRootLabel, scope, usesApi, usesExternalApi]);
 
   useEffect(() => {
-    setFolderId(initialFolderId);
+    startTransition(() => {
+      setFolderId(initialFolderId);
+    });
   }, [initialFolderId]);
 
   useEffect(() => {
-    void loadCategories().catch((loadError) => {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load categories");
+    startTransition(() => {
+      void loadCategories().catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load categories");
+      });
     });
   }, [loadCategories]);
 
   useEffect(() => {
-    void loadBrowse();
+    startTransition(() => {
+      void loadBrowse();
+    });
   }, [loadBrowse]);
 
   useEffect(() => {

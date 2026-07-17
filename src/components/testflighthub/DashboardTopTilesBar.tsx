@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
   loadViewTileLayout,
@@ -33,8 +33,10 @@ export default function DashboardTopTilesBar({
   const [customizeOpen, setCustomizeOpen] = useState(false);
 
   useEffect(() => {
-    setLayout(loadViewTileLayout(storageKey, defaultLayout));
-    setHydrated(true);
+    startTransition(() => {
+      setLayout(loadViewTileLayout(storageKey, defaultLayout));
+      setHydrated(true);
+    });
   }, [storageKey, defaultLayout]);
 
   useEffect(() => {

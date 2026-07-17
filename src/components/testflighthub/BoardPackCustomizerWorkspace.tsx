@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, startTransition } from "react";
 
 import {
   addSavedBoardPack,
@@ -66,8 +66,10 @@ export default function BoardPackCustomizerWorkspace() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setPages(loadBoardPackPages());
-    setSavedPacks(loadSavedBoardPacks());
+    startTransition(() => {
+      setPages(loadBoardPackPages());
+      setSavedPacks(loadSavedBoardPacks());
+    });
   }, []);
 
   useEffect(() => {
@@ -99,7 +101,9 @@ export default function BoardPackCustomizerWorkspace() {
 
   useEffect(() => {
     if (pages.length > 0 && !selectedPageId) {
-      setSelectedPageId(pages[0].id);
+      startTransition(() => {
+        setSelectedPageId(pages[0].id);
+      });
     }
   }, [pages, selectedPageId]);
 

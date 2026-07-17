@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -196,7 +196,9 @@ export default function SurveyOperationsSidebar({
       });
     });
     if (Object.keys(autoExpanded).length > 0) {
-      setExpandedParents((current) => ({ ...current, ...autoExpanded }));
+      startTransition(() => {
+        setExpandedParents((current) => ({ ...current, ...autoExpanded }));
+      });
     }
   }, [internalNavSections, resolvedActiveView, pathname, searchParams, internalBasePath]);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   buildOutstandingByPayableDate,
@@ -229,21 +229,25 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
   }, []);
 
   useEffect(() => {
-    void loadExpenses();
+    startTransition(() => {
+      void loadExpenses();
+    });
   }, [loadExpenses]);
 
   useEffect(() => {
-    if (!selectedId || selectedId === "__draft__") {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedId) return;
-    const entry = expenses.find((item) => item.id === selectedId);
-    if (entry) {
-      snapshottedIdRef.current = selectedId;
-      setSavedSnapshot({ ...entry });
-    }
+    startTransition(() => {
+      if (!selectedId || selectedId === "__draft__") {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedId) return;
+      const entry = expenses.find((item) => item.id === selectedId);
+      if (entry) {
+        snapshottedIdRef.current = selectedId;
+        setSavedSnapshot({ ...entry });
+      }
+    });
   }, [selectedId, expenses]);
 
   async function saveExpense(expense: FinancialExpense, isNew: boolean) {

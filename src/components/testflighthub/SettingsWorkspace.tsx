@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 
 import { internalSurveyNavSections } from "@/lib/internal-operations-data";
 import { createInitialUsers } from "@/lib/user-management-data";
@@ -445,9 +445,11 @@ export default function SettingsWorkspace() {
   useEffect(() => {
     if (defaultNavItems.length === 0) return;
     if (navCustom.order.length === 0) {
-      persistNavCustom({
-        ...navCustom,
-        order: defaultNavItems.map((item) => item.id),
+      startTransition(() => {
+        persistNavCustom({
+          ...navCustom,
+          order: defaultNavItems.map((item) => item.id),
+        });
       });
     }
   }, [defaultNavItems, navCustom, persistNavCustom]);

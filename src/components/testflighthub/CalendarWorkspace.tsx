@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 
 import {
   CALENDAR_EVENT_TYPE_OPTIONS,
@@ -296,7 +296,9 @@ export default function CalendarWorkspace({
   }, [rangeFrom, rangeTo]);
 
   useEffect(() => {
-    void loadEvents();
+    startTransition(() => {
+      void loadEvents();
+    });
   }, [loadEvents]);
 
   function goToPreviousPeriod() {

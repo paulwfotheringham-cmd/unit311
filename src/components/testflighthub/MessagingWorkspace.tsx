@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   buildScheduledCallDateTime,
@@ -175,7 +175,9 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
   }, []);
 
   useEffect(() => {
-    void loadInternalUsers();
+    startTransition(() => {
+      void loadInternalUsers();
+    });
   }, [loadInternalUsers]);
 
   const activeOperators = useMemo(
@@ -336,47 +338,51 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
 
     if (usersLoading) return;
 
-    if (activeOperators.length === 0) {
-      setJoinedOperatorId(null);
-      window.localStorage.removeItem(MESSAGING_STORAGE_KEY);
-      return;
-    }
+    startTransition(() => {
+      if (activeOperators.length === 0) {
+        setJoinedOperatorId(null);
+        window.localStorage.removeItem(MESSAGING_STORAGE_KEY);
+        return;
+      }
 
-    const validIds = new Set(activeOperators.map((operator) => operator.id));
-    const storedIsValid = Boolean(storedOperator && validIds.has(storedOperator));
-    const joinedIsValid = Boolean(joinedOperatorId && validIds.has(joinedOperatorId));
+      const validIds = new Set(activeOperators.map((operator) => operator.id));
+      const storedIsValid = Boolean(storedOperator && validIds.has(storedOperator));
+      const joinedIsValid = Boolean(joinedOperatorId && validIds.has(joinedOperatorId));
 
-    if (!joinedIsValid) {
-      setJoinedOperatorId(storedIsValid ? storedOperator : null);
-    }
+      if (!joinedIsValid) {
+        setJoinedOperatorId(storedIsValid ? storedOperator : null);
+      }
 
-    if (!storedIsValid && storedOperator) {
-      window.localStorage.removeItem(MESSAGING_STORAGE_KEY);
-    }
+      if (!storedIsValid && storedOperator) {
+        window.localStorage.removeItem(MESSAGING_STORAGE_KEY);
+      }
 
-    setPendingOperatorId((current) =>
-      current && validIds.has(current) ? current : activeOperators[0]!.id,
-    );
+      setPendingOperatorId((current) =>
+        current && validIds.has(current) ? current : activeOperators[0]!.id,
+      );
 
-    if (storedChannel) setActiveRoom(storedChannel);
+      if (storedChannel) setActiveRoom(storedChannel);
+    });
   }, [activeOperators, joinedOperatorId, usersLoading]);
 
   useEffect(() => {
     if (activeOperators.length === 0) return;
 
-    setPendingOperatorId((current) =>
-      current && activeOperators.some((operator) => operator.id === current)
-        ? current
-        : activeOperators[0]!.id,
-    );
-    setNewChannelMembers((current) => {
-      if (
-        current.length > 0 &&
-        current.every((id) => activeOperators.some((operator) => operator.id === id))
-      ) {
-        return current;
-      }
-      return activeOperators.map((operator) => operator.id);
+    startTransition(() => {
+      setPendingOperatorId((current) =>
+        current && activeOperators.some((operator) => operator.id === current)
+          ? current
+          : activeOperators[0]!.id,
+      );
+      setNewChannelMembers((current) => {
+        if (
+          current.length > 0 &&
+          current.every((id) => activeOperators.some((operator) => operator.id === id))
+        ) {
+          return current;
+        }
+        return activeOperators.map((operator) => operator.id);
+      });
     });
   }, [activeOperators]);
 
@@ -402,7 +408,9 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
       }
     }
 
-    void bootstrap();
+    startTransition(() => {
+      void bootstrap();
+    });
     return () => {
       cancelled = true;
     };
@@ -410,7 +418,9 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
 
   useEffect(() => {
     if (!joinedOperatorId) return;
-    void loadChannels(joinedOperatorId).catch(() => undefined);
+    startTransition(() => {
+      void loadChannels(joinedOperatorId).catch(() => undefined);
+    });
   }, [joinedOperatorId, loadChannels]);
 
   useEffect(() => {
@@ -554,8 +564,10 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
       }
     }
 
-    setRealtimeStatus("connecting");
-    void connectRealtime();
+    startTransition(() => {
+      setRealtimeStatus("connecting");
+      void connectRealtime();
+    });
 
     return () => {
       cancelled = true;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
   REPRESENTATIVE_STATUS_OPTIONS,
@@ -95,7 +95,9 @@ export default function RepresentativesWorkspace({
     : [];
 
   useEffect(() => {
-    setCustomTerritoryInput("");
+    startTransition(() => {
+      setCustomTerritoryInput("");
+    });
   }, [selectedRepresentativeId]);
 
   function updateRepresentative(updated: Representative) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import { Loader2 } from "lucide-react";
 
 import CrmLeadQuestionsPanel from "@/components/testflighthub/CrmLeadQuestionsPanel";
@@ -54,7 +54,9 @@ export default function CrmQuestionsTestWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadLeads();
+    startTransition(() => {
+      void loadLeads();
+    });
   }, [loadLeads]);
 
   return (

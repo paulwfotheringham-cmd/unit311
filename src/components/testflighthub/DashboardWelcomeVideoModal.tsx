@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import WorkspaceDemoLoopVideo from "@/components/home/WorkspaceDemoLoopVideo";
 import { X } from "lucide-react";
@@ -12,12 +12,14 @@ export default function DashboardWelcomeVideoModal() {
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   useEffect(() => {
-    try {
-      const dismissed = window.localStorage.getItem(STORAGE_KEY) === "1";
-      if (!dismissed) setOpen(true);
-    } catch {
-      setOpen(true);
-    }
+    startTransition(() => {
+      try {
+        const dismissed = window.localStorage.getItem(STORAGE_KEY) === "1";
+        if (!dismissed) setOpen(true);
+      } catch {
+        setOpen(true);
+      }
+    });
   }, []);
 
   function closeModal() {

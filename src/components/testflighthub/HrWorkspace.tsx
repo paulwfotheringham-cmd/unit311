@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   createBlankEmployeeInput,
@@ -434,21 +434,25 @@ export default function HrWorkspace({ mode = "employees" }: { mode?: "dashboard"
   }, []);
 
   useEffect(() => {
-    void loadEmployees();
+    startTransition(() => {
+      void loadEmployees();
+    });
   }, [loadEmployees]);
 
   useEffect(() => {
-    if (!selectedEmployeeId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedEmployeeId) return;
-    const employee = employees.find((item) => item.id === selectedEmployeeId);
-    if (employee) {
-      snapshottedIdRef.current = selectedEmployeeId;
-      setSavedSnapshot({ ...employee, documents: { ...employee.documents } });
-    }
+    startTransition(() => {
+      if (!selectedEmployeeId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedEmployeeId) return;
+      const employee = employees.find((item) => item.id === selectedEmployeeId);
+      if (employee) {
+        snapshottedIdRef.current = selectedEmployeeId;
+        setSavedSnapshot({ ...employee, documents: { ...employee.documents } });
+      }
+    });
   }, [selectedEmployeeId, employees]);
 
   async function saveEmployee(employee: HrEmployee) {

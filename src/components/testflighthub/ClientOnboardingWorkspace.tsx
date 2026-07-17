@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 
 import {
   CLIENT_ONBOARDING_STAGE_ORDER,
@@ -140,7 +140,9 @@ export default function ClientOnboardingWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadRecords();
+    startTransition(() => {
+      void loadRecords();
+    });
   }, [loadRecords]);
 
   const loadQuestionnaire = useCallback(async (recordId: string) => {
@@ -185,14 +187,16 @@ export default function ClientOnboardingWorkspace() {
   }, []);
 
   useEffect(() => {
-    setQuestionnaireSummary(null);
-    setPaymentReceipt(null);
-    if (selectedRecord?.questionnaireCompleteAt) {
-      void loadQuestionnaire(selectedRecord.id);
-    }
-    if (selectedRecord) {
-      void loadPaymentReceipt(selectedRecord.id);
-    }
+    startTransition(() => {
+      setQuestionnaireSummary(null);
+      setPaymentReceipt(null);
+      if (selectedRecord?.questionnaireCompleteAt) {
+        void loadQuestionnaire(selectedRecord.id);
+      }
+      if (selectedRecord) {
+        void loadPaymentReceipt(selectedRecord.id);
+      }
+    });
   }, [
     selectedRecord?.id,
     selectedRecord?.questionnaireCompleteAt,

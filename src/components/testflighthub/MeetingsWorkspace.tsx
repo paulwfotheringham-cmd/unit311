@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, startTransition } from "react";
 
 import {
   EXECUTIVE_MEETING_STATUSES,
@@ -75,7 +75,9 @@ export default function MeetingsWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadMeetings();
+    startTransition(() => {
+      void loadMeetings();
+    });
   }, [loadMeetings]);
 
   function handleStartMeeting(meeting: MeetingRow) {

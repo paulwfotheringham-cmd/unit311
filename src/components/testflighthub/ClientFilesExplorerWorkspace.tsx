@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 
 import type { ManagedClient } from "@/lib/client-management-data";
 import { clientStatusClass } from "@/lib/client-management-data";
@@ -54,7 +54,9 @@ export default function ClientFilesExplorerWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadClients();
+    startTransition(() => {
+      void loadClients();
+    });
   }, [loadClients]);
 
   const filteredClients = useMemo(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, startTransition } from "react";
 
 import TreasuryShell from "@/components/treasury/TreasuryShell";
 import type { WiseConnectionStatus } from "@/lib/wise-service";
@@ -41,7 +41,9 @@ export default function WiseWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadStatus("initial");
+    startTransition(() => {
+      void loadStatus("initial");
+    });
   }, [loadStatus]);
 
   return (

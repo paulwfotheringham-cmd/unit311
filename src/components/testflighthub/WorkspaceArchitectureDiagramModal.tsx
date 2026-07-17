@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  startTransition,
   useCallback,
   useEffect,
   useRef,
@@ -78,7 +79,9 @@ export default function WorkspaceArchitectureDiagramModal({ open, onClose }: Pro
 
   useEffect(() => {
     if (!open) return;
-    void loadDiagram(false);
+    startTransition(() => {
+      void loadDiagram(false);
+    });
   }, [open, loadDiagram]);
 
   useEffect(() => {

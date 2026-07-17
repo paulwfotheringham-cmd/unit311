@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -69,11 +69,13 @@ export default function SurveyOperationsDashboard({
 
   useEffect(() => {
     const viewParam = searchParams.get("view");
-    if (isSurveyOperationsView(viewParam)) {
-      setActiveView(viewParam);
-    } else if (!viewParam) {
-      setActiveView("dashboard");
-    }
+    startTransition(() => {
+      if (isSurveyOperationsView(viewParam)) {
+        setActiveView(viewParam);
+      } else if (!viewParam) {
+        setActiveView("dashboard");
+      }
+    });
   }, [searchParams]);
 
   useEffect(() => {

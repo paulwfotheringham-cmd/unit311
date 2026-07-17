@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import {
   ArrowLeft,
   FileType,
@@ -127,7 +127,9 @@ export default function CrmLeadQuestionsPanel({
   }, [leadId]);
 
   useEffect(() => {
-    void loadQuestionnaire();
+    startTransition(() => {
+      void loadQuestionnaire();
+    });
   }, [loadQuestionnaire]);
 
   const isDirty = useMemo(

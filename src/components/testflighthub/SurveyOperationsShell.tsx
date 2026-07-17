@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
@@ -54,8 +54,10 @@ export default function SurveyOperationsShell({
   });
 
   useEffect(() => {
-    setMobileNavOpen(false);
-    setAssistantOpen(false);
+    startTransition(() => {
+      setMobileNavOpen(false);
+      setAssistantOpen(false);
+    });
   }, [pathname, activeView]);
 
   useEffect(() => {

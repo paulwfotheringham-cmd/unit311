@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import Link from "next/link";
 import { Loader2, RefreshCw, Receipt } from "lucide-react";
 
@@ -57,7 +57,9 @@ export default function AccountsPayableWorkspace() {
   }, []);
 
   useEffect(() => {
-    void load();
+    startTransition(() => {
+      void load();
+    });
   }, [load]);
 
   const todayIso = new Date().toISOString().slice(0, 10);

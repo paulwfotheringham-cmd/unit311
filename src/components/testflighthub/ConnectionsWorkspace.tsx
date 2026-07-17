@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   createBlankConnectionInput,
@@ -203,7 +203,9 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
   }, []);
 
   useEffect(() => {
-    void loadConnections();
+    startTransition(() => {
+      void loadConnections();
+    });
   }, [loadConnections]);
 
   useEffect(() => {
@@ -211,21 +213,25 @@ export default function ConnectionsWorkspace({ onBackToCrm }: ConnectionsWorkspa
     if (selectedId && filteredConnections.some((connection) => connection.id === selectedId)) {
       return;
     }
-    setSelectedId(filteredConnections[0]?.id ?? null);
+    startTransition(() => {
+      setSelectedId(filteredConnections[0]?.id ?? null);
+    });
   }, [filteredConnections, selectedId]);
 
   useEffect(() => {
-    if (!selectedId || selectedId === "__draft__") {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedId) return;
-    const entry = connections.find((item) => item.id === selectedId);
-    if (entry) {
-      snapshottedIdRef.current = selectedId;
-      setSavedSnapshot({ ...entry });
-    }
+    startTransition(() => {
+      if (!selectedId || selectedId === "__draft__") {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedId) return;
+      const entry = connections.find((item) => item.id === selectedId);
+      if (entry) {
+        snapshottedIdRef.current = selectedId;
+        setSavedSnapshot({ ...entry });
+      }
+    });
   }, [selectedId, connections]);
 
   function saveConnectionLocally(connection: CrmConnection, isNew: boolean) {

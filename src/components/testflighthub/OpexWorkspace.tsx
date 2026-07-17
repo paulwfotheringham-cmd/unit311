@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
   createOpexLineItemId,
@@ -69,8 +69,10 @@ export default function OpexWorkspace() {
   const [newDraft, setNewDraft] = useState<OpexDraft>({ description: "", amountUsd: "" });
 
   useEffect(() => {
-    setItems(loadOpexLineItems());
-    setHydrated(true);
+    startTransition(() => {
+      setItems(loadOpexLineItems());
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
