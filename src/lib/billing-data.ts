@@ -28,21 +28,21 @@ export const BILLING_INVOICES: BillingInvoice[] = [
     number: "INV-1001",
     status: "paid",
     issuedAt: "2026-04-01",
-    amountUsd: 2985,
+    amountUsd: 2997,
   },
   {
     id: "inv-1002",
     number: "INV-1002",
     status: "paid",
     issuedAt: "2026-01-01",
-    amountUsd: 2985,
+    amountUsd: 2997,
   },
   {
     id: "inv-1003",
     number: "INV-1003",
     status: "awaiting",
     issuedAt: "2026-07-01",
-    amountUsd: 2985,
+    amountUsd: 2997,
   },
 ];
 

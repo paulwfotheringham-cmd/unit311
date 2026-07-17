@@ -4,9 +4,15 @@ import {
   type SupportTicket,
   type SupportTicketPriority,
 } from "@/lib/support-data";
+import {
+  resolveSupportWorkspaceId,
+  type SupportWorkspaceScope,
+} from "@/lib/support-workspace";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 type DbSupportTicket = Parameters<typeof mapSupportTicket>[0];
+
+export type { SupportWorkspaceScope };
 
 function requireSupportSupabase() {
   if (!isSupabaseConfigured()) {
@@ -39,6 +45,7 @@ function buildTicketPayload(input: Partial<SupportTicket>) {
   return payload;
 }
 
+/** Global sequence keeps SUP-XXX IDs unique across tenants (PK is id alone). */
 async function nextTicketId(): Promise<string> {
   const supabase = requireSupportSupabase();
   const { data, error } = await supabase
@@ -55,9 +62,17 @@ async function nextTicketId(): Promise<string> {
   return `SUP-${String(nextNumber).padStart(3, "0")}`;
 }
 
-export async function listSupportTickets(includeArchived = true): Promise<SupportTicket[]> {
+export async function listSupportTickets(
+  includeArchived = true,
+  scope?: SupportWorkspaceScope,
+): Promise<SupportTicket[]> {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
   const supabase = requireSupportSupabase();
-  let query = supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
+  let query = supabase
+    .from("support_tickets")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
 
   if (!includeArchived) {
     query = query.eq("archived", false);
@@ -70,7 +85,9 @@ export async function listSupportTickets(includeArchived = true): Promise<Suppor
 
 export async function createSupportTicket(
   input: Partial<SupportTicket> & { name: string },
+  scope?: SupportWorkspaceScope,
 ): Promise<SupportTicket> {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
   const supabase = requireSupportSupabase();
   const blank = createBlankTicketInput();
   const id = await nextTicketId();
@@ -79,6 +96,7 @@ export async function createSupportTicket(
     .from("support_tickets")
     .insert({
       id,
+      workspace_id: workspaceId,
       name: input.name.trim(),
       organisation: input.organisation?.trim() || "",
       priority: input.priority ?? blank.priority,
@@ -96,18 +114,39 @@ export async function createSupportTicket(
   return mapSupportTicket(data as DbSupportTicket);
 }
 
-export async function getSupportTicket(id: string): Promise<SupportTicket | null> {
+export async function getSupportTicket(
+  id: string,
+  scope?: SupportWorkspaceScope,
+): Promise<SupportTicket | null> {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
   const supabase = requireSupportSupabase();
-  const { data, error } = await supabase.from("support_tickets").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from("support_tickets")
+    .select("*")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
   return data ? mapSupportTicket(data as DbSupportTicket) : null;
 }
 
+export async function requireSupportTicketInWorkspace(
+  id: string,
+  scope?: SupportWorkspaceScope,
+): Promise<SupportTicket> {
+  const ticket = await getSupportTicket(id, scope);
+  if (!ticket) throw new Error("Ticket not found.");
+  return ticket;
+}
+
 export async function updateSupportTicket(
   id: string,
   patch: Partial<SupportTicket>,
+  scope?: SupportWorkspaceScope,
 ): Promise<SupportTicket> {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
+  await requireSupportTicketInWorkspace(id, { workspaceId });
   const supabase = requireSupportSupabase();
   const payload = buildTicketPayload(patch);
 
@@ -115,6 +154,7 @@ export async function updateSupportTicket(
     .from("support_tickets")
     .update(payload)
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .select("*")
     .single();
 
@@ -122,14 +162,24 @@ export async function updateSupportTicket(
   return mapSupportTicket(data as DbSupportTicket);
 }
 
-export async function deleteSupportTicket(id: string) {
+export async function deleteSupportTicket(id: string, scope?: SupportWorkspaceScope) {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
+  await requireSupportTicketInWorkspace(id, { workspaceId });
   const supabase = requireSupportSupabase();
-  const { error } = await supabase.from("support_tickets").delete().eq("id", id);
+  const { error } = await supabase
+    .from("support_tickets")
+    .delete()
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
   if (error) throw new Error(error.message);
 }
 
-export async function archiveSupportTicket(id: string, archived: boolean) {
-  return updateSupportTicket(id, { archived });
+export async function archiveSupportTicket(
+  id: string,
+  archived: boolean,
+  scope?: SupportWorkspaceScope,
+) {
+  return updateSupportTicket(id, { archived }, scope);
 }
 
 export type { SupportTicketPriority };

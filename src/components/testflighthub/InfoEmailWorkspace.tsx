@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import {
   formatEmailDate,
@@ -19,9 +20,14 @@ import { ChevronDown, Inbox, Loader2, Mail, MessageCircle, Paperclip, PenSquare,
 const operators = createInitialUsers();
 const REFRESH_INTERVAL_MS = 30_000;
 
+function normalizeEmailId(value: string | null | undefined) {
+  return (value ?? "").trim().replace(/^<|>$/g, "").toLowerCase();
+}
+
 const DEFAULT_MAILBOXES: EmailAccountOption[] = [
   { id: "info", email: "info@unit311central.com", name: "Shared Inbox", configured: false },
   { id: "paul", email: "paul@unit311central.com", name: "Paul", configured: false },
+  { id: "admin", email: "admin@unit311central.com", name: "Admin", configured: false },
 ];
 
 type EmailAccountOption = EmailAccount & { configured?: boolean };
@@ -70,9 +76,19 @@ function MessageBody({ message }: { message: EmailMessage }) {
 }
 
 export default function InfoEmailWorkspace() {
+  const searchParams = useSearchParams();
+  const deepLinkThreadId = searchParams.get("emailThreadId");
+  const deepLinkMessageId = searchParams.get("emailMessageId");
+  const deepLinkAccount = searchParams.get("emailAccount") as EmailAccountId | null;
+  const deepLinkComposeTo = searchParams.get("composeTo");
+
   const [accounts, setAccounts] = useState<EmailAccountOption[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(true);
-  const [selectedAccountId, setSelectedAccountId] = useState<EmailAccountId>("info");
+  const [selectedAccountId, setSelectedAccountId] = useState<EmailAccountId>(
+    deepLinkAccount === "info" || deepLinkAccount === "paul" || deepLinkAccount === "admin"
+      ? deepLinkAccount
+      : "info",
+  );
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,14 +151,12 @@ export default function InfoEmailWorkspace() {
       if (!accountsResponse.ok) throw new Error("Failed to load mailboxes");
 
       const status = statusResponse.ok
-        ? await readApiJson<{ info?: boolean; paul?: boolean }>(statusResponse)
+        ? await readApiJson<Partial<Record<EmailAccountId, boolean>>>(statusResponse)
         : null;
 
       const merged = data.map((account) => ({
         ...account,
-        configured:
-          account.configured ||
-          (account.id === "info" ? Boolean(status?.info) : Boolean(status?.paul)),
+        configured: account.configured || Boolean(status?.[account.id]),
       }));
 
       setAccounts(merged);
@@ -196,10 +210,32 @@ export default function InfoEmailWorkspace() {
         const messages = data as EmailMessage[];
         const nextThreads = groupMessagesIntoThreads(messages);
         setThreads(nextThreads);
+
+        const wantedThreadId = deepLinkThreadId?.trim();
+        const wantedMessageId = normalizeEmailId(deepLinkMessageId);
+        let deepLinkedId: string | null = null;
+
+        if (wantedThreadId) {
+          deepLinkedId = nextThreads.find((thread) => thread.id === wantedThreadId)?.id ?? null;
+        }
+        if (!deepLinkedId && wantedMessageId) {
+          deepLinkedId =
+            nextThreads.find((thread) =>
+              thread.messages.some((message) => {
+                const ids = [message.messageId, message.id, message.inReplyTo, ...message.references]
+                  .map(normalizeEmailId)
+                  .filter(Boolean);
+                return ids.includes(wantedMessageId);
+              }),
+            )?.id ?? null;
+        }
+
         setSelectedThreadId((current) => {
+          if (deepLinkedId) return deepLinkedId;
           if (current && nextThreads.some((thread) => thread.id === current)) return current;
           return nextThreads[0]?.id ?? null;
         });
+        if (deepLinkedId) openDetail();
       } catch (loadError) {
         const message =
           loadError instanceof Error ? loadError.message : "Failed to load inbox";
@@ -216,7 +252,7 @@ export default function InfoEmailWorkspace() {
         }
       }
     },
-    [accountsLoading, selectedAccountId, selectedAccountConfigured],
+    [accountsLoading, selectedAccountId, selectedAccountConfigured, deepLinkThreadId, deepLinkMessageId, openDetail],
   );
 
   useEffect(() => {
@@ -230,6 +266,15 @@ export default function InfoEmailWorkspace() {
   useEffect(() => {
     void loadInbox();
   }, [loadInbox]);
+
+  useEffect(() => {
+    const to = deepLinkComposeTo?.trim();
+    if (!to) return;
+    setComposeOpen(true);
+    setComposeTo(to);
+    setComposeSubject((current) => current || "Re: Website enquiry");
+    openDetail();
+  }, [deepLinkComposeTo, openDetail]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -374,11 +419,13 @@ export default function InfoEmailWorkspace() {
           messageId: replyTarget.id,
           html,
           text: `${replyBody.trim()}${signature}`,
+          repliedBy: replyAsUser.fullName,
           context: {
             to: replyTo,
             subject: selectedThread.subject,
             messageId: replyTarget.messageId,
             references: replyTarget.references,
+            threadId: selectedThread.id,
           },
         }),
       });
@@ -427,6 +474,7 @@ export default function InfoEmailWorkspace() {
           subject: composeSubject.trim(),
           html,
           text: `${composeBody.trim()}${signature}`,
+          repliedBy: replyAsUser.fullName,
         }),
       });
 
@@ -448,7 +496,6 @@ export default function InfoEmailWorkspace() {
   }
 
   const mailboxEmail = selectedAccount?.email ?? "Loading…";
-  const mailboxName = selectedAccount?.name ?? "Mailbox";
 
   return (
     <div className="space-y-4">
@@ -478,6 +525,7 @@ export default function InfoEmailWorkspace() {
                     <>
                       <option value="info">info@unit311central.com</option>
                       <option value="paul">paul@unit311central.com</option>
+                      <option value="admin">admin@unit311central.com</option>
                     </>
                   ) : (
                     accounts.map((account) => (
@@ -489,9 +537,6 @@ export default function InfoEmailWorkspace() {
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
               </div>
-              <p className="mt-1 text-xs text-white/45">
-                {mailboxName} · Unit311 Central shared inbox · Zoho Mail · visible to all operators
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -564,10 +609,6 @@ export default function InfoEmailWorkspace() {
           </div>
         </div>
       </div>
-
-      <p className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-100">
-        Uses the same Zoho credentials as Drone Catalyst production.
-      </p>
 
       {error && (
         <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">

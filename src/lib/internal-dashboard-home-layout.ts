@@ -60,8 +60,13 @@ export const DEFAULT_HOME_DASHBOARD_LAYOUT: HomeDashboardTileId[] = [
   "projects",
 ];
 
-const STORAGE_KEY = "unit311-home-dashboard-layout";
+const STORAGE_KEY_PREFIX = "unit311-home-dashboard-layout";
 const catalogIds = new Set(HOME_DASHBOARD_TILE_CATALOG.map((tile) => tile.id));
+
+function storageKeyForWorkspace(workspaceId: string) {
+  const id = workspaceId.trim();
+  return id ? `${STORAGE_KEY_PREFIX}:${id}` : STORAGE_KEY_PREFIX;
+}
 
 export function isHomeDashboardTileId(value: string): value is HomeDashboardTileId {
   return catalogIds.has(value as HomeDashboardTileId);
@@ -71,26 +76,33 @@ export function getHomeDashboardTileDefinition(id: HomeDashboardTileId) {
   return HOME_DASHBOARD_TILE_CATALOG.find((tile) => tile.id === id);
 }
 
-export function loadHomeDashboardLayout(): HomeDashboardTileId[] {
+export function loadHomeDashboardLayout(workspaceId?: string | null): HomeDashboardTileId[] {
   if (typeof window === "undefined") {
     return [...DEFAULT_HOME_DASHBOARD_LAYOUT];
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const key = storageKeyForWorkspace(workspaceId ?? "");
+    const raw = window.localStorage.getItem(key);
     if (!raw) return [...DEFAULT_HOME_DASHBOARD_LAYOUT];
 
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [...DEFAULT_HOME_DASHBOARD_LAYOUT];
 
-    const valid = parsed.filter((value): value is HomeDashboardTileId => isHomeDashboardTileId(value));
+    const valid = parsed.filter((value): value is HomeDashboardTileId =>
+      isHomeDashboardTileId(value),
+    );
     return valid.length > 0 ? valid : [...DEFAULT_HOME_DASHBOARD_LAYOUT];
   } catch {
     return [...DEFAULT_HOME_DASHBOARD_LAYOUT];
   }
 }
 
-export function saveHomeDashboardLayout(order: HomeDashboardTileId[]) {
+export function saveHomeDashboardLayout(
+  order: HomeDashboardTileId[],
+  workspaceId?: string | null,
+) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+  const key = storageKeyForWorkspace(workspaceId ?? "");
+  window.localStorage.setItem(key, JSON.stringify(order));
 }

@@ -4,13 +4,24 @@ import { parseAccountId } from "@/lib/email/accounts";
 import { emailErrorResponse } from "@/lib/email/api-utils";
 import { sendMailboxEmail } from "@/lib/email/smtp";
 import type { EmailAccountId } from "@/lib/email/types";
+import { requirePlatformSession } from "@/lib/platform-session";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+function authErrorStatus(message: string) {
+  return message.includes("Authentication required") || message.includes("Workspace context")
+    ? 401
+    : 500;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    await requirePlatformSession();
+    await requireCurrentWorkspace();
+
     const body = (await request.json()) as {
       account?: EmailAccountId;
       to?: string;
@@ -44,6 +55,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
+    if (error instanceof Error && authErrorStatus(error.message) === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
     return emailErrorResponse(error, "Failed to send email.");
   }
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { ClientFinanceSummary } from "@/lib/accounting/client-finance";
 import {
   CLIENT_CONTRACT_OPTIONS,
   CLIENT_INDUSTRY_OPTIONS,
@@ -12,9 +13,25 @@ import {
   clientStatusClass,
   type ManagedClient,
 } from "@/lib/client-management-data";
+import { isCrmLinkedClientNotes } from "@/lib/crm-lead-client-data";
+import { centralLoginUrl } from "@/lib/app-domains";
 import { useInternalOperationsBasePath } from "./InternalOperationsBasePathContext";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import {
+  buildClientDashboardCatalog,
+  CLIENTS_DASHBOARD_TILES,
+  DEFAULT_CLIENTS_TILE_LAYOUT,
+} from "@/lib/view-dashboard-tile-catalogs";
 import { cn } from "@/lib/utils";
 import { ExternalLink, FolderOpen, FolderPlus, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
+
+function formatFinanceMoney(amount: number, currency = "EUR") {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -26,8 +43,26 @@ async function readApiJson<T>(response: Response): Promise<T> {
   }
 }
 
+/** Whether the Confirm Activation (Test) controls should render. */
+function clientNeedsActivationConfirm(client: ManagedClient) {
+  if (client.accountStatus === "Pending Payment" || client.accountStatus === "Pending") {
+    return true;
+  }
+  // Defend against CRM saves that previously forced accountStatus to Active while
+  // payment onboarding was still incomplete.
+  if (client.onboardingStage === "awaiting_payment" && !client.paymentMatchedAt) {
+    return true;
+  }
+  if (client.subscriptionStatus === "pending_payment") {
+    return true;
+  }
+  return false;
+}
+
 type ClientManagementWorkspaceProps = {
   onClientsChange?: (clients: ManagedClient[]) => void;
+  /** Dashboard shows tiles/summary; directory shows the client explorer. */
+  mode?: "dashboard" | "directory";
 };
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -42,7 +77,13 @@ function inputClassName() {
   return "mt-1.5 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/50";
 }
 
-export default function ClientManagementWorkspace({ onClientsChange }: ClientManagementWorkspaceProps) {
+const CLIENT_EXPLORER_ROW_GRID =
+  "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4 sm:gap-y-0";
+
+export default function ClientManagementWorkspace({
+  onClientsChange,
+  mode = "directory",
+}: ClientManagementWorkspaceProps) {
   const basePath = useInternalOperationsBasePath();
   const [clients, setClients] = useState<ManagedClient[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -57,6 +98,9 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
   const [detailClientId, setDetailClientId] = useState<string | null>(null);
+  const [financeSummary, setFinanceSummary] = useState<ClientFinanceSummary | null>(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeError, setFinanceError] = useState<string | null>(null);
   const snapshottedIdRef = useRef<string | null>(null);
   const detailSectionRef = useRef<HTMLElement>(null);
 
@@ -101,6 +145,11 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
       return haystack.includes(query);
     });
   }, [clients, filterContract, filterIndustry, filterRegion, filterStatus, search]);
+
+  const clientDashboardCatalog = useMemo(
+    () => buildClientDashboardCatalog(clients),
+    [clients],
+  );
 
   function openClient(clientId: string) {
     setSelectedClientId(clientId);
@@ -160,6 +209,49 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
     }
   }, [selectedClientId, clients]);
 
+  useEffect(() => {
+    if (!selectedClient?.id) {
+      setFinanceSummary(null);
+      setFinanceError(null);
+      setFinanceLoading(false);
+      return;
+    }
+
+    const clientId = selectedClient.id;
+    let cancelled = false;
+
+    async function loadFinanceSummary() {
+      setFinanceLoading(true);
+      setFinanceError(null);
+      setFinanceSummary(null);
+
+      try {
+        const response = await fetch(`/api/financials/clients/${encodeURIComponent(clientId)}/summary`, {
+          cache: "no-store",
+        });
+        const data = await readApiJson<{ summary?: ClientFinanceSummary; error?: string }>(response);
+        if (!response.ok || !data.summary) {
+          throw new Error(data.error ?? "Failed to load finance summary");
+        }
+        if (!cancelled) setFinanceSummary(data.summary);
+      } catch (loadError) {
+        if (!cancelled) {
+          setFinanceSummary(null);
+          setFinanceError(
+            loadError instanceof Error ? loadError.message : "Failed to load finance summary",
+          );
+        }
+      } finally {
+        if (!cancelled) setFinanceLoading(false);
+      }
+    }
+
+    void loadFinanceSummary();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClient?.id]);
+
   function patchSelected(patch: Partial<ManagedClient>) {
     if (!selectedClient) return;
     const next = { ...selectedClient, ...patch };
@@ -200,6 +292,90 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
     await saveClient(selectedClient);
   }
 
+  async function handleConfirmPaymentTest() {
+    if (!selectedClient) return;
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`/api/clients/${selectedClient.id}/confirm-payment-test`, {
+        method: "POST",
+      });
+      const data = await readApiJson<{
+        ok?: boolean;
+        error?: string;
+        welcomeEmailSent?: boolean;
+        workspaceUrl?: string | null;
+        invoiceNumber?: string;
+      }>(response);
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Failed to confirm payment.");
+      }
+
+      const refreshed = await fetch("/api/clients", { cache: "no-store" });
+      const listData = await readApiJson<{ clients?: ManagedClient[]; error?: string }>(refreshed);
+      if (refreshed.ok && listData.clients) {
+        syncClients(listData.clients);
+        const updated = listData.clients.find((client) => client.id === selectedClient.id);
+        if (updated) {
+          snapshottedIdRef.current = updated.id;
+          setSavedSnapshot(updated);
+        }
+      }
+
+      setSaveMessage(
+        [
+          "Manual test activation complete",
+          "Invoice left unpaid",
+          data.workspaceUrl ? `Workspace ${data.workspaceUrl}` : null,
+          data.welcomeEmailSent ? "Welcome email sent" : "Welcome email not sent",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      );
+    } catch (confirmError) {
+      setError(
+        confirmError instanceof Error ? confirmError.message : "Failed to confirm payment.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResetWorkspaceOnboarding() {
+    if (!selectedClient) return;
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/clients/${selectedClient.id}/reset-workspace-onboarding`,
+        { method: "POST" },
+      );
+      const data = await readApiJson<{
+        ok?: boolean;
+        error?: string;
+        message?: string;
+        slug?: string;
+      }>(response);
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Failed to reset workspace onboarding.");
+      }
+      setSaveMessage(
+        data.message ??
+          `Workspace onboarding reset${data.slug ? ` for ${data.slug}` : ""}. Next login opens the wizard.`,
+      );
+    } catch (resetError) {
+      setError(
+        resetError instanceof Error ? resetError.message : "Failed to reset workspace onboarding.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleAddClient() {
     setBusy(true);
     setError(null);
@@ -227,21 +403,25 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
     }
   }
 
-  async function handleDeleteClient() {
-    if (!selectedClient) return;
-    if (!window.confirm(`Delete client "${selectedClient.companyName}"?`)) return;
+  async function handleDeleteClient(client?: ManagedClient) {
+    const target = client ?? selectedClient;
+    if (!target) return;
+    if (!window.confirm(
+      `Delete client "${target.companyName}"?\n\nUnpaid invoices linked to this client will also be removed. Paid invoices cannot be deleted.`,
+    )) return;
 
     setBusy(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/clients/${selectedClient.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/clients/${target.id}`, { method: "DELETE" });
       const data = await readApiJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(data.error ?? "Failed to delete client");
 
-      const remaining = clients.filter((client) => client.id !== selectedClient.id);
+      const remaining = clients.filter((item) => item.id !== target.id);
       syncClients(remaining);
-      setSelectedClientId(remaining[0]?.id ?? null);
+      if (detailClientId === target.id) setDetailClientId(null);
+      if (selectedClientId === target.id) setSelectedClientId(remaining[0]?.id ?? null);
       setSaveMessage(null);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete client");
@@ -286,25 +466,52 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
 
   return (
     <div className="space-y-6">
+      {mode === "dashboard" ? (
+        <DashboardTopTilesBar
+          storageKey="unit311-clients-dashboard-tiles"
+          catalog={clientDashboardCatalog}
+          defaultLayout={DEFAULT_CLIENTS_TILE_LAYOUT}
+          title="Client key details"
+          showCustomizeHint={false}
+        />
+      ) : null}
       {error && (
         <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
-          {error.includes("internal_clients") && (
+          {error.includes("Could not find the table") && error.includes("internal_clients") ? (
             <span className="mt-2 block text-xs text-red-200/80">
               Run{" "}
               <span className="font-mono">supabase/migrations/037_create_internal_clients.sql</span>{" "}
               in Supabase.
             </span>
-          )}
+          ) : null}
         </p>
       )}
 
-      {loading ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading clients…
-        </div>
-      ) : (
+      {mode === "dashboard" ? (
+        loading ? (
+          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading clients…
+          </div>
+        ) : (
+          <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
+            <h2 className="text-lg font-semibold text-white">Clients overview</h2>
+            <p className="mt-1 text-sm text-white/55">
+              {clients.length} accounts on record. Open Client Directory to manage accounts,
+              contracts, and contacts.
+            </p>
+          </section>
+        )
+      ) : null}
+
+      {mode === "directory" ? (
+        loading ? (
+          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading clients…
+          </div>
+        ) : (
         <div className="space-y-4">
           <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -397,9 +604,27 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
             </div>
 
             {filteredClients.length === 0 ? (
-              <p className="mt-4 text-sm text-white/45">No clients match your search.</p>
+              <p className="mt-4 text-sm text-white/45">
+                {clients.length === 0
+                  ? "No clients in this workspace yet. Create a client to get started."
+                  : "No clients match your search."}
+              </p>
             ) : (
-              <ul className="mt-4 divide-y divide-white/10 rounded-xl border border-white/10 bg-[#0b1524]/40">
+              <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-[#0b1524]/40">
+                <div
+                  className={cn(
+                    CLIENT_EXPLORER_ROW_GRID,
+                    "hidden border-b border-white/10 px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40 sm:grid",
+                  )}
+                >
+                  <span>Client name</span>
+                  <span>Primary contact</span>
+                  <span>Location</span>
+                  <span>Industry</span>
+                  <span>Status</span>
+                  <span className="text-right">Actions</span>
+                </div>
+                <ul className="divide-y divide-white/10">
                 {filteredClients.map((client) => {
                   const selected = client.id === detailClientId;
 
@@ -407,36 +632,55 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                     <li
                       key={client.id}
                       className={cn(
-                        "flex flex-wrap items-center gap-3 px-4 py-3 transition-colors sm:gap-4",
+                        CLIENT_EXPLORER_ROW_GRID,
+                        "px-4 py-3 transition-colors",
                         selected && "bg-sky-500/[0.06]",
                       )}
                     >
-                      <div className="min-w-0 flex-1 grid gap-1 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-4">
-                        <p className="truncate text-sm font-semibold text-white">{client.companyName}</p>
-                        <p className="truncate text-xs text-white/50">{client.primaryContact}</p>
-                        <p className="text-xs text-white/45">{client.region}</p>
-                        <p className="text-xs text-white/45">{client.industry}</p>
-                      </div>
-                      <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-emerald-300">
-                        {client.accountStatus}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => openClient(client.id)}
+                      <p className="min-w-0 truncate text-sm font-semibold text-white">
+                        {client.companyName}
+                      </p>
+                      <p className="min-w-0 truncate text-xs text-white/50">{client.primaryContact}</p>
+                      <p className="min-w-0 truncate text-xs text-white/45">{client.region}</p>
+                      <p className="min-w-0 truncate text-xs text-white/45">{client.industry}</p>
+                      <span
                         className={cn(
-                          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors",
-                          selected
-                            ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
-                            : "border-white/15 bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/[0.08]",
+                          "w-fit rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
+                          clientStatusClass(client.accountStatus),
                         )}
                       >
-                        <FolderOpen className="h-3.5 w-3.5" />
-                        Open
-                      </button>
+                        {client.accountStatus}
+                      </span>
+                      <div className="flex shrink-0 items-center justify-start gap-2 sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => openClient(client.id)}
+                          className={cn(
+                            "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors",
+                            selected
+                              ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
+                              : "border-white/15 bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/[0.08]",
+                          )}
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          Open
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteClient(client)}
+                          disabled={busy}
+                          aria-label={`Delete ${client.companyName}`}
+                          title={`Delete ${client.companyName}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-400/30 bg-red-500/10 text-red-200 transition-colors hover:border-red-400/50 hover:bg-red-500/20 disabled:opacity-60"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </div>
             )}
           </section>
 
@@ -496,6 +740,29 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                         Open Intelligence Platform
                       </Link>
                     )}
+                    {clientNeedsActivationConfirm(selectedClient) && (
+                      <button
+                        type="button"
+                        onClick={() => void handleConfirmPaymentTest()}
+                        disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-500/25 disabled:opacity-60"
+                      >
+                        Confirm Activation (Test)
+                        <span className="hidden font-normal text-amber-100/70 sm:inline">
+                          — leave invoice unpaid
+                        </span>
+                      </button>
+                    )}
+                    {/fotheringham/i.test(selectedClient.companyName) && (
+                      <button
+                        type="button"
+                        onClick={() => void handleResetWorkspaceOnboarding()}
+                        disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/15 px-3 py-2 text-xs font-semibold text-violet-100 transition-colors hover:bg-violet-500/25 disabled:opacity-60"
+                      >
+                        Reset Onboarding (Test)
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => void handleSaveClient()}
@@ -529,6 +796,27 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                   <p className="mt-4 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
                     {saveMessage}
                   </p>
+                )}
+
+                {clientNeedsActivationConfirm(selectedClient) && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-amber-100">
+                        Pending payment — confirm activation
+                      </p>
+                      <p className="mt-0.5 text-xs text-amber-100/70">
+                        Test activation leaves the invoice unpaid. Use this only for manual testing.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleConfirmPaymentTest()}
+                      disabled={busy}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/20 px-4 py-2.5 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-400/30 disabled:opacity-60"
+                    >
+                      Confirm Activation (Test)
+                    </button>
+                  </div>
                 )}
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -585,6 +873,28 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                     />
                   </div>
                   <div>
+                    <FieldLabel>Primary Contact First Name</FieldLabel>
+                    <input
+                      className={inputClassName()}
+                      value={selectedClient.primaryContactFirstName ?? ""}
+                      onChange={(event) =>
+                        patchSelected({ primaryContactFirstName: event.target.value })
+                      }
+                      disabled={busy}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Primary Contact Surname</FieldLabel>
+                    <input
+                      className={inputClassName()}
+                      value={selectedClient.primaryContactSurname ?? ""}
+                      onChange={(event) =>
+                        patchSelected({ primaryContactSurname: event.target.value })
+                      }
+                      disabled={busy}
+                    />
+                  </div>
+                  <div>
                     <FieldLabel>Email</FieldLabel>
                     <input
                       type="email"
@@ -604,23 +914,58 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                     />
                   </div>
                   <div>
-                    <FieldLabel>Account Status</FieldLabel>
-                    <select
+                    <FieldLabel>Role</FieldLabel>
+                    <input
                       className={inputClassName()}
-                      value={selectedClient.accountStatus}
-                      onChange={(event) =>
-                        patchSelected({
-                          accountStatus: event.target.value as ManagedClient["accountStatus"],
-                        })
-                      }
+                      value={selectedClient.jobTitle ?? ""}
+                      onChange={(event) => patchSelected({ jobTitle: event.target.value })}
                       disabled={busy}
-                    >
-                      {CLIENT_STATUS_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Account Status</FieldLabel>
+                    {isCrmLinkedClientNotes(selectedClient.notes) ? (
+                      <div className="mt-1.5 space-y-1.5">
+                        <p
+                          className={cn(
+                            inputClassName(),
+                            "flex items-center justify-between gap-3",
+                            selectedClient.accountStatus === "Pending Payment" ||
+                              selectedClient.accountStatus === "Pending"
+                              ? "text-amber-100"
+                              : "text-emerald-200",
+                          )}
+                        >
+                          <span>{selectedClient.accountStatus}</span>
+                          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
+                            CRM client
+                          </span>
+                        </p>
+                        {(selectedClient.accountStatus === "Pending Payment" ||
+                          selectedClient.accountStatus === "Pending") && (
+                          <p className="text-[11px] text-white/45">
+                            Linked from CRM — still awaiting payment confirmation before full activation.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <select
+                        className={inputClassName()}
+                        value={selectedClient.accountStatus}
+                        onChange={(event) =>
+                          patchSelected({
+                            accountStatus: event.target.value as ManagedClient["accountStatus"],
+                          })
+                        }
+                        disabled={busy}
+                      >
+                        {CLIENT_STATUS_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div>
                     <FieldLabel>Contract Type</FieldLabel>
@@ -664,6 +1009,62 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                     />
                   </div>
                   <div className="sm:col-span-2">
+                    <FieldLabel>Company Address</FieldLabel>
+                    <textarea
+                      rows={3}
+                      className={inputClassName()}
+                      value={selectedClient.companyAddress ?? ""}
+                      onChange={(event) => patchSelected({ companyAddress: event.target.value })}
+                      disabled={busy}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Company City</FieldLabel>
+                    <input
+                      className={inputClassName()}
+                      value={selectedClient.companyCity ?? ""}
+                      onChange={(event) => patchSelected({ companyCity: event.target.value })}
+                      disabled={busy}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Company Postcode</FieldLabel>
+                    <input
+                      className={inputClassName()}
+                      value={selectedClient.companyPostcode ?? ""}
+                      onChange={(event) => patchSelected({ companyPostcode: event.target.value })}
+                      disabled={busy}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Company Country</FieldLabel>
+                    <input
+                      className={inputClassName()}
+                      value={selectedClient.companyCountry ?? ""}
+                      onChange={(event) => patchSelected({ companyCountry: event.target.value })}
+                      disabled={busy}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Accounts Payable Email</FieldLabel>
+                    <input
+                      type="email"
+                      className={inputClassName()}
+                      value={
+                        selectedClient.accountsPayableEmail ??
+                        selectedClient.invoiceEmail ??
+                        ""
+                      }
+                      onChange={(event) =>
+                        patchSelected({
+                          accountsPayableEmail: event.target.value,
+                          invoiceEmail: event.target.value,
+                        })
+                      }
+                      disabled={busy}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
                     <FieldLabel>Billing Address</FieldLabel>
                     <input
                       className={inputClassName()}
@@ -671,6 +1072,138 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
                       onChange={(event) => patchSelected({ billingAddress: event.target.value })}
                       disabled={busy}
                     />
+                  </div>
+                  <div>
+                    <FieldLabel>Subscription Status</FieldLabel>
+                    <p className={cn(inputClassName(), "mt-1.5 text-white/75")}>
+                      {selectedClient.subscriptionStatus ?? "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <FieldLabel>Billing Frequency</FieldLabel>
+                    <p className={cn(inputClassName(), "mt-1.5 text-white/75")}>
+                      {selectedClient.billingFrequency ?? "—"}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Renewal Date</FieldLabel>
+                    <p className={cn(inputClassName(), "mt-1.5 text-white/75")}>
+                      {selectedClient.renewalDate ?? "—"}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2 rounded-xl border border-white/10 bg-[#0b1524]/60 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
+                        Finance
+                      </p>
+                      {financeLoading && (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-white/45">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Loading…
+                        </span>
+                      )}
+                    </div>
+                    {financeError && (
+                      <div className="mt-3 space-y-1 text-xs text-red-300">
+                        <p>{financeError}</p>
+                        {/unauthorized|authentication required/i.test(financeError) ? (
+                          <p className="text-red-200/80">
+                            <a
+                              href={centralLoginUrl()}
+                              className="font-semibold underline underline-offset-2 hover:text-white"
+                            >
+                              Sign in again
+                            </a>{" "}
+                            to load invoices and payments.
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border border-white/10 px-3 py-2.5">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
+                          Outstanding Balance
+                        </p>
+                        <p className="mt-1 font-mono text-sm text-white/90">
+                          {formatFinanceMoney(financeSummary?.outstandingBalance ?? 0)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-white/10 px-3 py-2.5">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
+                          Financial Summary
+                        </p>
+                        <p className="mt-1 text-sm text-white/75">
+                          {(financeSummary?.invoices.length ?? 0)} invoices ·{" "}
+                          {(financeSummary?.payments.length ?? 0)} payments ·{" "}
+                          {
+                            (financeSummary?.invoices.filter(
+                              (invoice) =>
+                                invoice.status === "issued" || invoice.status === "overdue",
+                            ).length ?? 0)
+                          }{" "}
+                          open
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                          Invoices
+                        </p>
+                        {(financeSummary?.invoices.length ?? 0) === 0 ? (
+                          <p className="mt-2 text-xs text-white/40">No invoices</p>
+                        ) : (
+                          <ul className="mt-2 space-y-1.5">
+                            {financeSummary!.invoices.map((invoice) => (
+                              <li
+                                key={invoice.id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-2.5 py-2 text-xs"
+                              >
+                                <div>
+                                  <Link
+                                    href={`${basePath}?view=accounts-receivable`}
+                                    className="font-medium text-sky-300 hover:text-sky-200"
+                                  >
+                                    {invoice.invoiceNumber}
+                                  </Link>
+                                  <span className="ml-2 text-white/45">{invoice.status}</span>
+                                </div>
+                                <span className="font-mono text-white/80">
+                                  {formatFinanceMoney(invoice.amount, invoice.currency)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                          Payments
+                        </p>
+                        {(financeSummary?.payments.length ?? 0) === 0 ? (
+                          <p className="mt-2 text-xs text-white/40">No payments</p>
+                        ) : (
+                          <ul className="mt-2 space-y-1.5">
+                            {financeSummary!.payments.map((payment) => (
+                              <li
+                                key={payment.id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-2.5 py-2 text-xs"
+                              >
+                                <div>
+                                  <span className="font-medium text-white/85">
+                                    {payment.invoiceNumber}
+                                  </span>
+                                  <span className="ml-2 text-white/45">{payment.paidAt.slice(0, 10)}</span>
+                                </div>
+                                <span className="font-mono text-emerald-300/90">
+                                  {formatFinanceMoney(payment.amount, payment.currency)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="sm:col-span-2">
                     <FieldLabel>Notes</FieldLabel>
@@ -686,11 +1219,12 @@ export default function ClientManagementWorkspace({ onClientsChange }: ClientMan
               </section>
           ) : (
             <section className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-12 text-center text-sm text-white/45">
-              Add a client or select one from the explorer above.
+              Select a client from the explorer to view details.
             </section>
           )}
         </div>
-      )}
+        )
+      ) : null}
     </div>
   );
 }

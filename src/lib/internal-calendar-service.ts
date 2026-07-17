@@ -4,6 +4,8 @@ import {
   type CalendarEvent,
   type CalendarEventType,
 } from "@/lib/calendar-data";
+import type { CalendarWorkspaceScope } from "@/lib/calendar-workspace";
+import { resolveCalendarWorkspaceId } from "@/lib/calendar-workspace";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 type DbCalendarEvent = Parameters<typeof mapCalendarEvent>[0];
@@ -15,11 +17,17 @@ function requireCalendarSupabase() {
   return createSupabaseServerClient();
 }
 
-export async function listCalendarEvents(from?: string, to?: string): Promise<CalendarEvent[]> {
+export async function listCalendarEvents(
+  from?: string,
+  to?: string,
+  scope?: CalendarWorkspaceScope,
+): Promise<CalendarEvent[]> {
+  const workspaceId = await resolveCalendarWorkspaceId(scope);
   const supabase = requireCalendarSupabase();
   let query = supabase
     .from("internal_calendar_events")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .order("starts_at", { ascending: true });
 
   if (from) query = query.gte("starts_at", from);
@@ -30,21 +38,55 @@ export async function listCalendarEvents(from?: string, to?: string): Promise<Ca
   return (data as DbCalendarEvent[]).map(mapCalendarEvent);
 }
 
-export async function createCalendarEvent(input: {
-  title: string;
-  eventType?: CalendarEventType;
-  startsAt: string;
-  endsAt: string;
-  clientName?: string;
-  location?: string;
-  notes?: string;
-}): Promise<CalendarEvent> {
+export async function getCalendarEvent(
+  id: string,
+  scope?: CalendarWorkspaceScope,
+): Promise<CalendarEvent | null> {
+  const workspaceId = await resolveCalendarWorkspaceId(scope);
+  const supabase = requireCalendarSupabase();
+  const { data, error } = await supabase
+    .from("internal_calendar_events")
+    .select("*")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ? mapCalendarEvent(data as DbCalendarEvent) : null;
+}
+
+/** Throws if the event is missing or belongs to another workspace. */
+export async function requireCalendarEventInWorkspace(
+  id: string,
+  scope?: CalendarWorkspaceScope,
+): Promise<CalendarEvent> {
+  const event = await getCalendarEvent(id, scope);
+  if (!event) {
+    throw new Error("Calendar event not found.");
+  }
+  return event;
+}
+
+export async function createCalendarEvent(
+  input: {
+    title: string;
+    eventType?: CalendarEventType;
+    startsAt: string;
+    endsAt: string;
+    clientName?: string;
+    location?: string;
+    notes?: string;
+  },
+  scope?: CalendarWorkspaceScope,
+): Promise<CalendarEvent> {
+  const workspaceId = await resolveCalendarWorkspaceId(scope);
   const supabase = requireCalendarSupabase();
   const blank = createBlankEventInput();
 
   const { data, error } = await supabase
     .from("internal_calendar_events")
     .insert({
+      workspace_id: workspaceId,
       title: input.title.trim(),
       event_type: input.eventType ?? blank.eventType,
       starts_at: input.startsAt,
@@ -71,8 +113,12 @@ export async function updateCalendarEvent(
     location: string;
     notes: string;
   }>,
+  scope?: CalendarWorkspaceScope,
 ): Promise<CalendarEvent> {
+  const workspaceId = await resolveCalendarWorkspaceId(scope);
   const supabase = requireCalendarSupabase();
+  await requireCalendarEventInWorkspace(id, { workspaceId });
+
   const payload: Record<string, string | null> = {
     updated_at: new Date().toISOString(),
   };
@@ -89,6 +135,7 @@ export async function updateCalendarEvent(
     .from("internal_calendar_events")
     .update(payload)
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .select("*")
     .single();
 
@@ -96,8 +143,15 @@ export async function updateCalendarEvent(
   return mapCalendarEvent(data as DbCalendarEvent);
 }
 
-export async function deleteCalendarEvent(id: string) {
+export async function deleteCalendarEvent(id: string, scope?: CalendarWorkspaceScope) {
+  const workspaceId = await resolveCalendarWorkspaceId(scope);
   const supabase = requireCalendarSupabase();
-  const { error } = await supabase.from("internal_calendar_events").delete().eq("id", id);
+  await requireCalendarEventInWorkspace(id, { workspaceId });
+
+  const { error } = await supabase
+    .from("internal_calendar_events")
+    .delete()
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
   if (error) throw new Error(error.message);
 }

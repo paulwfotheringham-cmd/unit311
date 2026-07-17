@@ -1,5 +1,7 @@
 export const INTERNAL_MESSAGING_ROOM = "internal-ops";
 export const SUPPORT_MESSAGING_ROOM = "support-desk";
+export const ENQUIRIES_MESSAGING_ROOM = "enquiries";
+export const ENQUIRIES_CHANNEL_NAME = "Enquiries";
 
 export const MESSAGING_STORAGE_KEY = "dc-messaging-operator-id";
 export const MESSAGING_ACTIVE_CHANNEL_KEY = "dc-messaging-active-channel";
@@ -108,14 +110,19 @@ function parseCallType(value: string | null | undefined): "voice" | "video" {
 }
 
 export function mapChatMessage(row: DbMessage): ChatMessage {
+  const messageType = parseMessageType(row.message_type);
   return {
     id: row.id,
     room: row.room,
     operatorId: row.operator_id,
-    operatorName: row.operator_name,
+    operatorName: normalizeMessageSenderName({
+      messageType,
+      username: row.username,
+      operatorName: row.operator_name,
+    }),
     username: row.username,
     content: row.content,
-    messageType: parseMessageType(row.message_type),
+    messageType,
     attachmentName: row.attachment_name ?? null,
     attachmentUrl: row.attachment_url ?? null,
     attachmentMime: row.attachment_mime ?? null,
@@ -152,6 +159,28 @@ export function mapScheduledCall(row: DbScheduledCall): ScheduledCall {
     createdByOperatorName: row.created_by_operator_name,
     createdAt: row.created_at,
   };
+}
+
+export function normalizeMessageSenderName(input: {
+  messageType: MessageType;
+  username: string;
+  operatorName: string;
+}): string {
+  if (input.messageType === "system" || input.username === "system") {
+    return "System";
+  }
+
+  if (input.operatorName === "Unit311 Operations" || input.operatorName === "BCN Operations") {
+    return "System";
+  }
+
+  return input.operatorName;
+}
+
+export function formatMessageSenderName(
+  message: Pick<ChatMessage, "messageType" | "username" | "operatorName">,
+) {
+  return normalizeMessageSenderName(message);
 }
 
 export function formatMessageTime(iso: string) {

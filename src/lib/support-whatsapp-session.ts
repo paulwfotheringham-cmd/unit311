@@ -1,3 +1,7 @@
+import {
+  resolveSupportWorkspaceId,
+  type SupportWorkspaceScope,
+} from "@/lib/support-workspace";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { getWhatsAppNotifyPhone } from "@/lib/whatsapp/client";
 
@@ -44,13 +48,16 @@ export function resolveWhatsAppSessionPhone(phone?: string | null) {
 
 export async function getWhatsAppSupportSession(
   phone?: string | null,
+  scope?: SupportWorkspaceScope,
 ): Promise<WhatsAppSupportSession | null> {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
   const supabase = requireSupabase();
   const normalizedPhone = resolveWhatsAppSessionPhone(phone);
 
   const { data, error } = await supabase
     .from("whatsapp_support_sessions")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .eq("phone", normalizedPhone)
     .maybeSingle();
 
@@ -58,11 +65,15 @@ export async function getWhatsAppSupportSession(
   return data ? mapSession(data as DbSession) : null;
 }
 
-export async function upsertWhatsAppSupportSession(input: {
-  phone?: string | null;
-  ticketId: string;
-  step: WhatsAppSupportSessionStep;
-}) {
+export async function upsertWhatsAppSupportSession(
+  input: {
+    phone?: string | null;
+    ticketId: string;
+    step: WhatsAppSupportSessionStep;
+  },
+  scope?: SupportWorkspaceScope,
+) {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
   const supabase = requireSupabase();
   const normalizedPhone = resolveWhatsAppSessionPhone(input.phone);
 
@@ -70,12 +81,13 @@ export async function upsertWhatsAppSupportSession(input: {
     .from("whatsapp_support_sessions")
     .upsert(
       {
+        workspace_id: workspaceId,
         phone: normalizedPhone,
         ticket_id: input.ticketId,
         step: input.step,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "phone" },
+      { onConflict: "workspace_id,phone" },
     )
     .select("*")
     .single();
@@ -84,13 +96,18 @@ export async function upsertWhatsAppSupportSession(input: {
   return mapSession(data as DbSession);
 }
 
-export async function clearWhatsAppSupportSession(phone?: string | null) {
+export async function clearWhatsAppSupportSession(
+  phone?: string | null,
+  scope?: SupportWorkspaceScope,
+) {
+  const workspaceId = await resolveSupportWorkspaceId(scope);
   const supabase = requireSupabase();
   const normalizedPhone = resolveWhatsAppSessionPhone(phone);
 
   const { error } = await supabase
     .from("whatsapp_support_sessions")
     .delete()
+    .eq("workspace_id", workspaceId)
     .eq("phone", normalizedPhone);
 
   if (error) throw new Error(error.message);

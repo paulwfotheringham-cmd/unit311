@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { navigateRedirectPath } from "@/lib/navigate-redirect";
+
 type SavedLogin = {
   username: string;
   password: string;
@@ -92,8 +94,7 @@ export default function LoginForm({
         rememberLogin ? { username: username.trim(), password } : null,
       );
 
-      router.push(data.redirectPath);
-      router.refresh();
+      navigateRedirectPath(data.redirectPath, router);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to sign in");
     } finally {

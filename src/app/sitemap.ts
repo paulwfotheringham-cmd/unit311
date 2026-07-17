@@ -3,12 +3,14 @@ import { SITE_URL } from "@/lib/site";
 
 const routes = [
   "",
-  "/inspection",
-  "/surveying",
-  "/commercial-imaging",
-  "/industries",
   "/about",
+  "/faq",
+  "/security",
   "/contact",
+  "/book",
+  "/signup",
+  "/privacypolicy",
+  "/termsandconditions",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

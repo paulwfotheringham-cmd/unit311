@@ -6,6 +6,14 @@
     {
       "path": "/api/cron/founder-session-reminders",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/crm-client-report-followups",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/wise-payment-reconcile",
+      "schedule": "0 9 * * *"
     }
   ]
 }

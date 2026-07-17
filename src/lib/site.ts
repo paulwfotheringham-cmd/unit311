@@ -12,10 +12,13 @@ export const SITE_URL =
       : DEFAULT_SITE_URL);
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Unit311";
+export const SITE_EMAIL_DOMAIN = "unit311central.com";
+export const SITE_LOGO_PATH = process.env.NEXT_PUBLIC_SITE_LOGO_PATH ?? "/images/unit311central.png";
+export const SITE_LOGO_URL = `${SITE_URL}${SITE_LOGO_PATH}`;
 export const SITE_TAGLINE = "The centralised platform to accelerate and run your business.";
 export const SITE_DESCRIPTION =
   "Unit311 gives every new business the essentials in one place — client management, CRM, projects, financials, HR, inventory and logistics, data repository, email, messaging, and social media.";
-export const SITE_HERO_LINE = "Accelerate your business. Run it in one place.";
+export const SITE_HERO_LINE = "Connect your business into a single operational platform";
 
 export const CONTACT = {
   email: "info@unit311central.com",

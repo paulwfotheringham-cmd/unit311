@@ -1,14 +1,78 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import Logo from "@/components/layout/Logo";
+import MarketingPageShell from "@/components/layout/MarketingPageShell";
+import {
+  parseValidWorkspaceReturnTo,
+  workspacePostLoginUrl,
+} from "@/lib/app-domains";
+import {
+  marketingBtnSubmit,
+  marketingEyebrow,
+  marketingFadeIn,
+  marketingFormShell,
+  marketingInput,
+  marketingInputLabel,
+  marketingLegalLink,
+  marketingPageTitle,
+  MARKETING_CONTENT_CLASS,
+} from "@/lib/marketing-ui";
+import { navigateRedirectPath } from "@/lib/navigate-redirect";
 import { SITE_NAME } from "@/lib/site";
 
 const LOGIN_BACKGROUND = "/images/construction-bg.jpg";
+const RETURN_TO_STORAGE_KEY = "unit311_workspace_return_to";
+
+function readReturnToFromLocation(): string | null {
+  if (typeof window === "undefined") return null;
+  return parseValidWorkspaceReturnTo(
+    new URLSearchParams(window.location.search).get("return_to"),
+  );
+}
+
+function readPersistedReturnTo(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return parseValidWorkspaceReturnTo(sessionStorage.getItem(RETURN_TO_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function persistReturnTo(origin: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (origin) sessionStorage.setItem(RETURN_TO_STORAGE_KEY, origin);
+    else sessionStorage.removeItem(RETURN_TO_STORAGE_KEY);
+  } catch {
+    // Ignore quota / private mode failures.
+  }
+}
+
+/**
+ * After auth, never stay on apex when the user started from a workspace.
+ * Prefer the API destination when it already targets that workspace origin.
+ */
+function resolveWorkspaceNavigationTarget(
+  apiRedirectPath: string,
+  workspaceOrigin: string,
+): string {
+  try {
+    if (/^https?:\/\//i.test(apiRedirectPath)) {
+      const apiUrl = new URL(apiRedirectPath);
+      const originUrl = new URL(workspaceOrigin);
+      if (apiUrl.origin === originUrl.origin) {
+        return apiRedirectPath;
+      }
+    }
+  } catch {
+    // Fall through to dashboard.
+  }
+  return workspacePostLoginUrl(workspaceOrigin, "dashboard");
+}
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -21,8 +85,11 @@ async function readApiJson<T>(response: Response): Promise<T> {
 
 export default function Unit311LoginPage({
   variant = "default",
+  returnTo = null,
 }: {
   variant?: "default" | "central";
+  /** Validated workspace origin from `?return_to=` (e.g. https://fotheringham.unit311central.com). */
+  returnTo?: string | null;
 }) {
   const router = useRouter();
   const isCentral = variant === "central";
@@ -32,16 +99,30 @@ export default function Unit311LoginPage({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    const fromUrl = readReturnToFromLocation() ?? returnTo;
+    if (fromUrl) persistReturnTo(fromUrl);
+  }, [returnTo]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(null);
 
+    // Prefer live URL, then server prop, then sessionStorage (survives lost query string).
+    const workspaceReturnTo =
+      readReturnToFromLocation() ?? returnTo ?? readPersistedReturnTo();
+    if (workspaceReturnTo) persistReturnTo(workspaceReturnTo);
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({
+          username,
+          password,
+          ...(workspaceReturnTo ? { returnTo: workspaceReturnTo } : {}),
+        }),
       });
 
       const data = await readApiJson<{ redirectPath?: string; error?: string }>(response);
@@ -49,8 +130,14 @@ export default function Unit311LoginPage({
         throw new Error(data.error ?? "Invalid username or password.");
       }
 
-      router.push(data.redirectPath);
-      router.refresh();
+      if (workspaceReturnTo) {
+        window.location.assign(
+          resolveWorkspaceNavigationTarget(data.redirectPath, workspaceReturnTo),
+        );
+        return;
+      }
+
+      navigateRedirectPath(data.redirectPath, router);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to sign in.");
     } finally {
@@ -59,68 +146,44 @@ export default function Unit311LoginPage({
   }
 
   return (
-    <div className="safe-area-px safe-area-pb relative flex min-h-dvh w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 sm:py-10">
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <Image
-          src={LOGIN_BACKGROUND}
-          alt=""
-          fill
-          priority
-          className="object-cover object-center grayscale"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-[#020617]/86" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.72) 55%, rgba(2, 6, 23, 0.92) 100%), radial-gradient(ellipse 70% 55% at 50% 0%, rgba(37, 99, 235, 0.14), transparent 68%)",
-          }}
-        />
-      </div>
-
-      <div className="relative w-full max-w-md space-y-6 sm:space-y-8">
+    <MarketingPageShell
+      backgroundImage={LOGIN_BACKGROUND}
+      backgroundImageClassName="object-cover object-center grayscale opacity-35"
+      overlayClassName="absolute inset-0 bg-[#020617]/86"
+      contentClassName={`${MARKETING_CONTENT_CLASS} flex flex-col items-center`}
+    >
+      <div className={`w-full max-w-md space-y-8 ${marketingFadeIn}`}>
         <div className="text-center">
-          <div className="mx-auto inline-flex justify-center">
-            <Logo
-              height={240}
-              href={undefined}
-              wordmark
-              onDark
-              className="drop-shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-            />
-          </div>
-          <h1 className="mt-6 text-xl font-semibold tracking-tight text-white sm:mt-8 sm:text-2xl md:text-3xl">
-            Sign in
-          </h1>
+          <p className={marketingEyebrow}>{workspaceName}</p>
+          <h1 className={`mt-4 ${marketingPageTitle}`}>Sign in</h1>
           {!isCentral ? (
-            <p className="mt-2 px-2 text-sm leading-relaxed text-white/55">
+            <p className="mt-3 text-sm leading-relaxed text-white/55">
               Access your {SITE_NAME} workspace.
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-white/[0.12] bg-[#07111f]/72 p-5 shadow-xl shadow-black/40 backdrop-blur-md sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+        <div className={marketingFormShell}>
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-white/80">
-                Username
+              <label htmlFor="username" className={marketingInputLabel}>
+                {isCentral ? "Email address" : "Username"}
               </label>
               <input
                 id="username"
                 name="username"
-                type="text"
+                type={isCentral ? "email" : "text"}
                 autoComplete="username"
                 required
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
-                placeholder="Enter username"
+                className={marketingInput}
+                placeholder={isCentral ? "you@unit311central.com" : "Enter username"}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-white/80">
+              <label htmlFor="password" className={marketingInputLabel}>
                 Password
               </label>
               <input
@@ -131,43 +194,29 @@ export default function Unit311LoginPage({
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
+                className={marketingInput}
                 placeholder="Enter password"
               />
             </div>
 
-            {error && (
+            {error ? (
               <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
                 {error}
               </p>
-            )}
+            ) : null}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex h-12 w-full touch-manipulation items-center justify-center rounded-md bg-[#0b2d63] px-4 text-base font-semibold text-white transition-colors hover:bg-[#082652] disabled:cursor-not-allowed disabled:opacity-70 sm:h-11 sm:text-sm"
-            >
+            <button type="submit" disabled={busy} className={marketingBtnSubmit}>
               {busy ? "Signing in…" : "Sign in"}
             </button>
 
             <p className="text-center text-sm">
-              <Link
-                href="/resetpassword"
-                className="touch-manipulation font-medium text-sky-400/80 underline-offset-2 hover:text-sky-300 hover:underline"
-              >
+              <Link href="/resetpassword" className={marketingLegalLink}>
                 Reset password
               </Link>
             </p>
           </form>
         </div>
       </div>
-
-      <p className="relative mt-8 text-center text-xs text-white/35 sm:mt-10">
-        © {new Date().getFullYear()} {workspaceName}
-        {isCentral ? (
-          <span className="mt-1 block text-[10px] text-white/25">unit311central.com</span>
-        ) : null}
-      </p>
-    </div>
+    </MarketingPageShell>
   );
 }

@@ -10,6 +10,7 @@ import {
 import { getSupportTicket, updateSupportTicket } from "@/lib/support-tickets-service";
 import { withSupportTicketsTable } from "@/lib/internal-db-migrations";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { resolveWorkspaceBinding } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const workspace = await resolveWorkspaceBinding({ fallbackInternal: true });
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace context is required." }, { status: 401 });
+    }
+    const scope = { workspaceId: workspace.id };
+
     const body = (await request.json()) as {
       ticketId?: string;
       content?: string;
@@ -50,7 +57,7 @@ export async function POST(request: NextRequest) {
     const assignee = `User ${match[1]}`;
 
     const result = await withSupportTicketsTable(async () => {
-      const existing = await getSupportTicket(ticketId);
+      const existing = await getSupportTicket(ticketId, scope);
       if (!existing) {
         throw new Error("Support ticket not found.");
       }
@@ -59,26 +66,32 @@ export async function POST(request: NextRequest) {
         throw new Error(`${existing.id} is already assigned to ${existing.userAssigned}.`);
       }
 
-      await sendMessage({
-        operatorId,
-        operatorName,
-        username,
-        content,
-        room: SUPPORT_CHANNEL_ROOM,
-        messageType: "text",
-      });
+      await sendMessage(
+        {
+          operatorId,
+          operatorName,
+          username,
+          content,
+          room: SUPPORT_CHANNEL_ROOM,
+          messageType: "text",
+        },
+        scope,
+      );
 
-      const ticket = await updateSupportTicket(ticketId, { userAssigned: assignee });
+      const ticket = await updateSupportTicket(ticketId, { userAssigned: assignee }, scope);
       const assigneeLabel = formatAssigneeForClient(assignee);
 
-      await sendMessage({
-        operatorId: "system",
-        operatorName: "Unit311 Support",
-        username: "system",
-        content: `${assigneeLabel} assigned to ${ticket.id}.`,
-        room: SUPPORT_CHANNEL_ROOM,
-        messageType: "system",
-      });
+      await sendMessage(
+        {
+          operatorId: "system",
+          operatorName: "Unit311 Support",
+          username: "system",
+          content: `${assigneeLabel} assigned to ${ticket.id}.`,
+          room: SUPPORT_CHANNEL_ROOM,
+          messageType: "system",
+        },
+        scope,
+      );
 
       return {
         ticket,

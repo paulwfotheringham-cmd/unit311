@@ -8,7 +8,13 @@ export type ClientIndustry =
   | "Infrastructure"
   | "Other";
 
-export type ClientAccountStatus = "Active" | "Prospect" | "On Hold" | "Inactive";
+export type ClientAccountStatus =
+  | "Active"
+  | "Prospect"
+  | "Pending"
+  | "Pending Payment"
+  | "On Hold"
+  | "Inactive";
 
 export type ClientContractType =
   | "Framework Agreement"
@@ -25,6 +31,13 @@ export type ClientRegion =
   | "United Kingdom"
   | "Europe-wide";
 
+export type ClientSubscriptionStatus =
+  | "inactive"
+  | "pending_payment"
+  | "active"
+  | "suspended"
+  | "cancelled";
+
 export type ManagedClient = {
   id: string;
   companyName: string;
@@ -37,6 +50,18 @@ export type ManagedClient = {
   contractType: ClientContractType;
   taxId: string;
   billingAddress: string;
+  jobTitle?: string;
+  companyAddress?: string;
+  companyCity?: string;
+  companyPostcode?: string;
+  companyCountry?: string;
+  /** Accounts Payable email (stored as invoice_email). */
+  accountsPayableEmail?: string;
+  /** @deprecated Prefer accountsPayableEmail */
+  invoiceEmail?: string;
+  billingSameAsCompany?: boolean;
+  primaryContactFirstName?: string;
+  primaryContactSurname?: string;
   activeProjects: number;
   notes: string;
   /** Linked folder in the internal file repository. */
@@ -44,6 +69,18 @@ export type ManagedClient = {
   filesFolderName?: string | null;
   /** Optional link to a client-facing intelligence platform demo. */
   platformUrl?: string;
+  platformOrganisationId?: string | null;
+  subscriptionStatus?: ClientSubscriptionStatus | null;
+  billingFrequency?: string | null;
+  renewalDate?: string | null;
+  paymentMethod?: string | null;
+  crmLeadId?: string | null;
+  provisioningStatus?: "none" | "provisioning_pending" | "provisioning" | "live" | null;
+  onboardingStage?: string | null;
+  activationDate?: string | null;
+  paymentMatchedAt?: string | null;
+  lastPaidInvoiceNumber?: string | null;
+  lastWiseTransactionId?: string | null;
 };
 
 export const CLIENT_INDUSTRY_OPTIONS: ClientIndustry[] = [
@@ -60,6 +97,8 @@ export const CLIENT_INDUSTRY_OPTIONS: ClientIndustry[] = [
 export const CLIENT_STATUS_OPTIONS: ClientAccountStatus[] = [
   "Active",
   "Prospect",
+  "Pending",
+  "Pending Payment",
   "On Hold",
   "Inactive",
 ];
@@ -200,8 +239,29 @@ export function createBlankClient(): ManagedClient {
     contractType: "Project-based",
     taxId: "",
     billingAddress: "",
+    companyAddress: "",
+    companyCity: "",
+    companyPostcode: "",
+    companyCountry: "",
+    accountsPayableEmail: "",
+    invoiceEmail: "",
+    billingSameAsCompany: true,
+    primaryContactFirstName: "",
+    primaryContactSurname: "",
+    jobTitle: "",
     activeProjects: 0,
     notes: "",
+    subscriptionStatus: null,
+    billingFrequency: null,
+    renewalDate: null,
+    paymentMethod: null,
+    crmLeadId: null,
+    provisioningStatus: "none",
+    onboardingStage: null,
+    activationDate: null,
+    paymentMatchedAt: null,
+    lastPaidInvoiceNumber: null,
+    lastWiseTransactionId: null,
   };
 }
 
@@ -211,9 +271,14 @@ export function clientStatusClass(status: ClientAccountStatus) {
       return "border-emerald-400/40 bg-emerald-500/15 text-emerald-300";
     case "Prospect":
       return "border-sky-400/40 bg-sky-500/15 text-sky-300";
+    case "Pending":
+    case "Pending Payment":
+      return "border-amber-400/40 bg-amber-500/15 text-amber-200";
     case "On Hold":
       return "border-amber-400/40 bg-amber-500/15 text-amber-200";
     case "Inactive":
+      return "border-white/20 bg-white/10 text-white/60";
+    default:
       return "border-white/20 bg-white/10 text-white/60";
   }
 }
@@ -230,11 +295,32 @@ type DbInternalClient = {
   contract_type: string;
   tax_id: string;
   billing_address: string;
+  job_title: string | null;
+  company_address: string | null;
+  company_city?: string | null;
+  company_postcode?: string | null;
+  company_country?: string | null;
+  invoice_email: string | null;
+  billing_same_as_company?: boolean | null;
+  primary_contact_first_name?: string | null;
+  primary_contact_surname?: string | null;
   active_projects: number;
   notes: string;
   platform_url: string | null;
+  platform_organisation_id: string | null;
   files_folder_id: string | null;
   files_folder_name: string | null;
+  subscription_status?: string | null;
+  billing_frequency?: string | null;
+  renewal_date?: string | null;
+  payment_method?: string | null;
+  crm_lead_id?: string | null;
+  provisioning_status?: string | null;
+  onboarding_stage?: string | null;
+  activation_date?: string | null;
+  payment_matched_at?: string | null;
+  last_paid_invoice_number?: string | null;
+  last_wise_transaction_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -252,11 +338,34 @@ export function mapInternalClient(row: DbInternalClient): ManagedClient {
     contractType: row.contract_type as ClientContractType,
     taxId: row.tax_id,
     billingAddress: row.billing_address,
+    jobTitle: row.job_title ?? undefined,
+    companyAddress: row.company_address ?? undefined,
+    companyCity: row.company_city ?? undefined,
+    companyPostcode: row.company_postcode ?? undefined,
+    companyCountry: row.company_country ?? undefined,
+    accountsPayableEmail: row.invoice_email ?? undefined,
+    invoiceEmail: row.invoice_email ?? undefined,
+    billingSameAsCompany: row.billing_same_as_company ?? undefined,
+    primaryContactFirstName: row.primary_contact_first_name ?? undefined,
+    primaryContactSurname: row.primary_contact_surname ?? undefined,
     activeProjects: row.active_projects,
     notes: row.notes,
     filesFolderId: row.files_folder_id ?? undefined,
     filesFolderName: row.files_folder_name ?? undefined,
     platformUrl: row.platform_url ?? undefined,
+    platformOrganisationId: row.platform_organisation_id ?? undefined,
+    subscriptionStatus: (row.subscription_status as ClientSubscriptionStatus | null) ?? null,
+    billingFrequency: row.billing_frequency ?? null,
+    renewalDate: row.renewal_date ?? null,
+    paymentMethod: row.payment_method ?? null,
+    crmLeadId: row.crm_lead_id ?? null,
+    provisioningStatus:
+      (row.provisioning_status as ManagedClient["provisioningStatus"]) ?? null,
+    onboardingStage: row.onboarding_stage ?? null,
+    activationDate: row.activation_date ?? null,
+    paymentMatchedAt: row.payment_matched_at ?? null,
+    lastPaidInvoiceNumber: row.last_paid_invoice_number ?? null,
+    lastWiseTransactionId: row.last_wise_transaction_id ?? null,
   };
 }
 
@@ -272,6 +381,12 @@ export function clientFieldsEqual(a: ManagedClient, b: ManagedClient) {
     a.contractType === b.contractType &&
     a.taxId === b.taxId &&
     a.billingAddress === b.billingAddress &&
+    (a.companyAddress ?? "") === (b.companyAddress ?? "") &&
+    (a.companyCity ?? "") === (b.companyCity ?? "") &&
+    (a.companyPostcode ?? "") === (b.companyPostcode ?? "") &&
+    (a.companyCountry ?? "") === (b.companyCountry ?? "") &&
+    (a.accountsPayableEmail ?? a.invoiceEmail ?? "") ===
+      (b.accountsPayableEmail ?? b.invoiceEmail ?? "") &&
     a.activeProjects === b.activeProjects &&
     a.notes === b.notes &&
     (a.filesFolderId ?? "") === (b.filesFolderId ?? "") &&

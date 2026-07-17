@@ -25,13 +25,21 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       name?: string;
       organization?: string;
+      role?: string;
       email?: string;
       startsAt?: string;
+      clientTimezone?: string;
     };
 
-    if (!body.name?.trim() || !body.organization?.trim() || !body.email?.trim() || !body.startsAt) {
+    if (
+      !body.name?.trim() ||
+      !body.organization?.trim() ||
+      !body.role?.trim() ||
+      !body.email?.trim() ||
+      !body.startsAt
+    ) {
       return NextResponse.json(
-        { error: "Name, organisation, email, and time slot are required." },
+        { error: "Name, role, organisation, email, and time slot are required." },
         { status: 400 },
       );
     }
@@ -39,8 +47,10 @@ export async function POST(request: NextRequest) {
     const result = await createFounderSessionBooking({
       name: body.name,
       organization: body.organization,
+      role: body.role,
       email: body.email,
       startsAt: body.startsAt,
+      clientTimezone: body.clientTimezone,
     });
 
     return NextResponse.json({ ok: true, ...result });

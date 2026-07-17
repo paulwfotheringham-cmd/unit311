@@ -1,6 +1,7 @@
 import { EmailServiceError } from "@/lib/email/types";
 
 export const DEFAULT_WHATSAPP_NOTIFY_PHONE = "34657106176";
+export const FOUNDER_BOOKING_WHATSAPP_PHONE = "34613014937";
 
 export function normalizeWhatsAppPhone(value: string | undefined | null) {
   const digits = (value ?? DEFAULT_WHATSAPP_NOTIFY_PHONE).replace(/\D/g, "");
@@ -46,7 +47,31 @@ export function formatClientChannelWhatsAppMessage(
   ].join("\n");
 }
 
-export async function sendWhatsAppMessage(text: string) {
+export function getFounderBookingWhatsAppPhone() {
+  return normalizeWhatsAppPhone(
+    process.env.FOUNDER_BOOKING_WHATSAPP_PHONE ?? FOUNDER_BOOKING_WHATSAPP_PHONE,
+  );
+}
+
+export function formatFounderBookingWhatsAppMessage(input: {
+  name: string;
+  organization: string;
+  role?: string;
+  email: string;
+  startsAtGmt: string;
+  videoLink: string;
+}) {
+  return [
+    "Unit311 Central — new executive session booked",
+    `${input.name} · ${input.organization}`,
+    input.role ? `Role: ${input.role}` : null,
+    input.email,
+    `When (GMT): ${input.startsAtGmt}`,
+    input.videoLink,
+  ].filter(Boolean).join("\n");
+}
+
+export async function sendWhatsAppMessage(text: string, phone?: string) {
   const apiKey = process.env.CALLMEBOT_API_KEY?.trim();
   if (!apiKey) {
     throw new EmailServiceError(
@@ -55,9 +80,9 @@ export async function sendWhatsAppMessage(text: string) {
     );
   }
 
-  const phone = getWhatsAppNotifyPhone();
+  const targetPhone = normalizeWhatsAppPhone(phone ?? getWhatsAppNotifyPhone());
   const url = new URL("https://api.callmebot.com/whatsapp.php");
-  url.searchParams.set("phone", phone);
+  url.searchParams.set("phone", targetPhone);
   url.searchParams.set("text", text);
   url.searchParams.set("apikey", apiKey);
 
@@ -76,10 +101,14 @@ export async function sendWhatsAppMessage(text: string) {
       throw new EmailServiceError(body, "SEND_FAILED");
     }
 
-    return { ok: true as const, phone, response: body || "Message sent." };
+    return { ok: true as const, phone: targetPhone, response: body || "Message sent." };
   } catch (error) {
     if (error instanceof EmailServiceError) throw error;
     const message = error instanceof Error ? error.message : "Failed to send WhatsApp message.";
     throw new EmailServiceError(message, "SEND_FAILED");
   }
+}
+
+export async function sendFounderBookingWhatsAppMessage(text: string) {
+  return sendWhatsAppMessage(text, getFounderBookingWhatsAppPhone());
 }

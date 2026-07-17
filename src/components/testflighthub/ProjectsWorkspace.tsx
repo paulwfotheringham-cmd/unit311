@@ -18,6 +18,11 @@ import { ExternalLink, FolderKanban, Loader2, Plus, Trash2, X } from "lucide-rea
 
 import ProjectDetailWorkspace from "./ProjectDetailWorkspace";
 import ProjectsDashboardStrip from "./ProjectsDashboardStrip";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import {
+  DEFAULT_PROJECTS_TILE_LAYOUT,
+  PROJECTS_DASHBOARD_TILES,
+} from "@/lib/view-dashboard-tile-catalogs";
 
 const operators = createInitialUsers();
 
@@ -296,6 +301,13 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
 
   return (
     <div className="space-y-6">
+      <DashboardTopTilesBar
+        storageKey="unit311-projects-dashboard-tiles"
+        catalog={PROJECTS_DASHBOARD_TILES}
+        defaultLayout={DEFAULT_PROJECTS_TILE_LAYOUT}
+        title="Project key details"
+        showCustomizeHint={false}
+      />
       <ProjectsDashboardStrip projects={projects} clients={clients} />
 
       {filteredClient && (

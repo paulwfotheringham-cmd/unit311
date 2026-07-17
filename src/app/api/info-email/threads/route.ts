@@ -1,9 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { listInfoEmailThreads } from "@/lib/internal-info-email-service";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
+
+function authErrorStatus(message: string) {
+  return message.includes("Authentication required") || message.includes("Workspace context")
+    ? 401
+    : 500;
+}
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
@@ -11,10 +19,12 @@ export async function GET() {
   }
 
   try {
-    const threads = await listInfoEmailThreads();
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const threads = await listInfoEmailThreads({ workspaceId: workspace.id });
     return NextResponse.json({ threads });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load inbox";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: authErrorStatus(message) });
   }
 }

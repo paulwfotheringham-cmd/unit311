@@ -4,6 +4,8 @@ import {
   type HrDocuments,
   type HrEmployee,
 } from "@/lib/hr-data";
+import type { HrWorkspaceScope } from "@/lib/hr-workspace";
+import { resolveHrWorkspaceId } from "@/lib/hr-workspace";
 import {
   ensureHrEmployeesTable,
   withHrEmployeesTable,
@@ -51,13 +53,15 @@ function buildEmployeePayload(input: Partial<HrEmployee>) {
   return payload;
 }
 
-export async function listHrEmployees(): Promise<HrEmployee[]> {
+export async function listHrEmployees(scope?: HrWorkspaceScope): Promise<HrEmployee[]> {
+  const workspaceId = await resolveHrWorkspaceId(scope);
   await ensureHrEmployeesTable();
   return withHrEmployeesTable(async () => {
     const supabase = requireHrSupabase();
     const { data, error } = await supabase
       .from("hr_employees")
       .select("*")
+      .eq("workspace_id", workspaceId)
       .order("full_name", { ascending: true });
 
     if (error) throw new Error(error.message);
@@ -65,9 +69,43 @@ export async function listHrEmployees(): Promise<HrEmployee[]> {
   });
 }
 
+export async function getHrEmployee(
+  id: string,
+  scope?: HrWorkspaceScope,
+): Promise<HrEmployee | null> {
+  const workspaceId = await resolveHrWorkspaceId(scope);
+  await ensureHrEmployeesTable();
+  return withHrEmployeesTable(async () => {
+    const supabase = requireHrSupabase();
+    const { data, error } = await supabase
+      .from("hr_employees")
+      .select("*")
+      .eq("id", id)
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data ? mapHrEmployee(data as DbEmployee) : null;
+  });
+}
+
+/** Throws if the employee is missing or belongs to another workspace. */
+export async function requireHrEmployeeInWorkspace(
+  id: string,
+  scope?: HrWorkspaceScope,
+): Promise<HrEmployee> {
+  const employee = await getHrEmployee(id, scope);
+  if (!employee) {
+    throw new Error("Employee not found.");
+  }
+  return employee;
+}
+
 export async function createHrEmployee(
   input: Partial<HrEmployee> & { fullName: string },
+  scope?: HrWorkspaceScope,
 ): Promise<HrEmployee> {
+  const workspaceId = await resolveHrWorkspaceId(scope);
   await ensureHrEmployeesTable();
   return withHrEmployeesTable(async () => {
     const supabase = requireHrSupabase();
@@ -78,6 +116,7 @@ export async function createHrEmployee(
       .from("hr_employees")
       .insert({
         id,
+        workspace_id: workspaceId,
         full_name: input.fullName.trim(),
         email: input.email?.trim() || `${id}@unit311.com`,
         phone: input.phone?.trim() || "",
@@ -107,15 +146,19 @@ export async function createHrEmployee(
 export async function updateHrEmployee(
   id: string,
   patch: Partial<HrEmployee>,
+  scope?: HrWorkspaceScope,
 ): Promise<HrEmployee> {
+  const workspaceId = await resolveHrWorkspaceId(scope);
   return withHrEmployeesTable(async () => {
     const supabase = requireHrSupabase();
+    await requireHrEmployeeInWorkspace(id, { workspaceId });
     const payload = buildEmployeePayload(patch);
 
     const { data, error } = await supabase
       .from("hr_employees")
       .update(payload)
       .eq("id", id)
+      .eq("workspace_id", workspaceId)
       .select("*")
       .single();
 
@@ -124,10 +167,16 @@ export async function updateHrEmployee(
   });
 }
 
-export async function deleteHrEmployee(id: string) {
+export async function deleteHrEmployee(id: string, scope?: HrWorkspaceScope) {
+  const workspaceId = await resolveHrWorkspaceId(scope);
   return withHrEmployeesTable(async () => {
     const supabase = requireHrSupabase();
-    const { error } = await supabase.from("hr_employees").delete().eq("id", id);
+    await requireHrEmployeeInWorkspace(id, { workspaceId });
+    const { error } = await supabase
+      .from("hr_employees")
+      .delete()
+      .eq("id", id)
+      .eq("workspace_id", workspaceId);
     if (error) throw new Error(error.message);
   });
 }

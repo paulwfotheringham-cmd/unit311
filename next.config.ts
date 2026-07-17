@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+/**
+ * Path aliases for local/dev (host-agnostic).
+ * Production host routing (apex → internal.*, clean internal URLs) lives in middleware.
+ */
 const nextConfig: NextConfig = {
   async redirects() {
     return [

@@ -12,6 +12,10 @@ export type PlatformSession = {
   userType: PlatformUserType;
   redirectPath: string;
   exp: number;
+  /** Active workspace tenancy (Phase 1) — set at login. */
+  workspaceId?: string;
+  workspaceSlug?: string;
+  workspaceName?: string;
 };
 
 export type PlatformUserRecord = {
@@ -23,6 +27,9 @@ export type PlatformUserRecord = {
   redirect_path: string;
   client_name: string | null;
   is_active: boolean;
+  email?: string | null;
+  organisation_id?: string | null;
+  workspace_id?: string | null;
   last_login_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +37,12 @@ export type PlatformUserRecord = {
 
 export function normalizePlatformUsername(username: string) {
   return username.trim().toLowerCase();
+}
+
+export function createSignupPlatformUsername(email: string) {
+  const normalized = normalizePlatformUsername(email);
+  const suffix = randomBytes(4).toString("hex");
+  return `${normalized}#${suffix}`;
 }
 
 export function hashPlatformPassword(password: string, salt: string) {
@@ -99,7 +112,10 @@ export function readPlatformSessionToken(token: string | undefined | null): Plat
   }
 }
 
-export function buildPlatformSession(user: PlatformUserRecord): PlatformSession {
+export function buildPlatformSession(
+  user: PlatformUserRecord,
+  workspace?: { id: string; slug: string; name: string } | null,
+): PlatformSession {
   return {
     sub: user.id,
     username: user.username,
@@ -107,6 +123,13 @@ export function buildPlatformSession(user: PlatformUserRecord): PlatformSession 
     userType: user.user_type,
     redirectPath: user.redirect_path,
     exp: Date.now() + PLATFORM_SESSION_MAX_AGE_SECONDS * 1000,
+    ...(workspace
+      ? {
+          workspaceId: workspace.id,
+          workspaceSlug: workspace.slug,
+          workspaceName: workspace.name,
+        }
+      : {}),
   };
 }
 

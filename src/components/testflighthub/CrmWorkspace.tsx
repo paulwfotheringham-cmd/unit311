@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import {
   createBlankLeadInput,
   formatLeadDate,
+  canSendClientReportPdf,
+  hasClientReportPptDraft,
   LEAD_SOURCE_OPTIONS,
   LEAD_STATUS_OPTIONS,
   leadStatusClass,
@@ -13,7 +16,17 @@ import {
 } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
-import { Loader2, Network, Plus, Save, Trash2 } from "lucide-react";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import CrmLeadDiscoveryEditor from "@/components/testflighthub/CrmLeadDiscoveryEditor";
+import CrmLeadLogoUpload from "@/components/testflighthub/CrmLeadLogoUpload";
+import CrmLeadQuestionsPanel from "@/components/testflighthub/CrmLeadQuestionsPanel";
+import CrmLeadTimelinePanel from "@/components/testflighthub/CrmLeadTimelinePanel";
+import { isDiscoveryCallLead } from "@/lib/discovery-questions-data";
+import {
+  CRM_DASHBOARD_TILES,
+  DEFAULT_CRM_TILE_LAYOUT,
+} from "@/lib/view-dashboard-tile-catalogs";
+import { CheckCircle2, ClipboardList, FileText, FileType, Loader2, Network, Plus, Presentation, Save, Trash2, UserPlus } from "lucide-react";
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -57,6 +70,7 @@ export default function CrmWorkspace({
 }: {
   onOpenConnections?: () => void;
 }) {
+  const searchParams = useSearchParams();
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "All">("All");
@@ -65,6 +79,7 @@ export default function CrmWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<CrmLead | null>(null);
+  const [detailView, setDetailView] = useState<"record" | "discovery" | "questions">("record");
   const snapshottedIdRef = useRef<string | null>(null);
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
 
@@ -92,11 +107,18 @@ export default function CrmWorkspace({
       if (!response.ok) throw new Error(data.error ?? "Failed to load leads");
 
       const nextLeads = data.leads ?? [];
+      const deepLinkLeadId = searchParams.get("leadId");
       setLeads(nextLeads);
       setSelectedLeadId((current) => {
+        if (deepLinkLeadId && nextLeads.some((lead) => lead.id === deepLinkLeadId)) {
+          return deepLinkLeadId;
+        }
         if (current && nextLeads.some((lead) => lead.id === current)) return current;
         return nextLeads[0]?.id ?? null;
       });
+      if (deepLinkLeadId && nextLeads.some((lead) => lead.id === deepLinkLeadId)) {
+        openDetail();
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load leads");
       setLeads([]);
@@ -104,11 +126,15 @@ export default function CrmWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, searchParams, openDetail]);
 
   useEffect(() => {
     void loadLeads();
   }, [loadLeads]);
+
+  useEffect(() => {
+    setDetailView("record");
+  }, [selectedLeadId]);
 
   useEffect(() => {
     if (!selectedLeadId) {
@@ -209,6 +235,231 @@ export default function CrmWorkspace({
     }
   }
 
+  async function handleSaveDiscovery(html: string) {
+    if (!selectedLead) return;
+
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`/api/crm/leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discoveryNotes: html }),
+      });
+
+      const data = await readApiJson<{ lead?: CrmLead; error?: string }>(response);
+      if (!response.ok || !data.lead) throw new Error(data.error ?? "Failed to save discovery notes");
+
+      setLeads((current) => current.map((item) => (item.id === data.lead!.id ? data.lead! : item)));
+      if (savedSnapshot?.id === data.lead.id) {
+        setSavedSnapshot(data.lead);
+      }
+      setSaveMessage("Discovery notes saved");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save discovery notes");
+      throw saveError;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCommitDiscovery(html: string) {
+    if (!selectedLead) {
+      return { meetingsCompleted: 0, alertsCleared: 0 };
+    }
+
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`/api/crm/leads/${selectedLead.id}/commit-discovery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discoveryNotes: html }),
+      });
+
+      const data = await readApiJson<{
+        lead?: CrmLead;
+        meetingsCompleted?: number;
+        alertsCleared?: number;
+        transcriptsSaved?: number;
+        discoveryDocumentSaved?: boolean;
+        discoveryDocumentFileName?: string | null;
+        warnings?: string[];
+        error?: string;
+      }>(response);
+      if (!response.ok) throw new Error(data.error ?? "Failed to commit discovery");
+
+      if (data.lead) {
+        setLeads((current) => current.map((item) => (item.id === data.lead!.id ? data.lead! : item)));
+        if (savedSnapshot?.id === data.lead.id) {
+          setSavedSnapshot(data.lead);
+        }
+      }
+
+      const meetingsCompleted = data.meetingsCompleted ?? 0;
+      const alertsCleared = data.alertsCleared ?? 0;
+      const transcriptsSaved = data.transcriptsSaved ?? 0;
+      const discoveryDocumentSaved = data.discoveryDocumentSaved ?? false;
+
+      const parts: string[] = ["Discovery committed"];
+
+      if (meetingsCompleted > 0) {
+        parts.push(
+          `${meetingsCompleted} meeting${meetingsCompleted === 1 ? "" : "s"} marked completed`,
+        );
+      }
+
+      if (transcriptsSaved > 0) {
+        parts.push(
+          `${transcriptsSaved} call note${transcriptsSaved === 1 ? "" : "s"} saved to client folder`,
+        );
+      }
+
+      if (discoveryDocumentSaved) {
+        parts.push("discovery notes saved to client folder");
+      }
+
+      if (alertsCleared > 0) {
+        parts.push(`${alertsCleared} home alert${alertsCleared === 1 ? "" : "s"} cleared`);
+      }
+
+      setSaveMessage(`${parts.join(" · ")}.`);
+
+      if (data.warnings?.length) {
+        setError(data.warnings.join(" · "));
+      }
+
+      window.dispatchEvent(new CustomEvent("internal-dashboard:refresh-alerts"));
+
+      return { meetingsCompleted, alertsCleared };
+    } catch (commitError) {
+      setError(commitError instanceof Error ? commitError.message : "Failed to commit discovery");
+      throw commitError;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function applyLeadUpdate(updatedLead: CrmLead) {
+    setLeads((current) => current.map((item) => (item.id === updatedLead.id ? updatedLead : item)));
+    if (savedSnapshot?.id === updatedLead.id) {
+      setSavedSnapshot(updatedLead);
+    }
+  }
+
+  async function handleReviewPowerPoint() {
+    if (!selectedLead?.clientReportPptFileId) return;
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/files/objects/${selectedLead.clientReportPptFileId}`, {
+        cache: "no-store",
+      });
+      const data = await readApiJson<{ url?: string; error?: string }>(response);
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "Failed to open PowerPoint");
+      }
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : "Failed to open PowerPoint");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleGeneratePdf() {
+    if (!selectedLead) return;
+
+    if (
+      !window.confirm(
+        `Generate the PDF and email it to ${selectedLead.contactName} at ${selectedLead.email}? The email will include a guest chat link.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`/api/crm/leads/${selectedLead.id}/generate-pdf`, {
+        method: "POST",
+      });
+
+      const data = await readApiJson<{
+        lead?: CrmLead;
+        fileName?: string;
+        chatUrl?: string;
+        clientEmailed?: boolean;
+        adminEmailed?: boolean;
+        messagingUpdated?: boolean;
+        alertCreated?: boolean;
+        meetingsLinked?: number;
+        error?: string;
+      }>(response);
+
+      if (!response.ok) throw new Error(data.error ?? "Failed to generate and send client report");
+
+      if (data.lead) {
+        applyLeadUpdate(data.lead);
+      }
+
+      const parts = ["PDF generated and saved to client folder"];
+      if (data.clientEmailed) parts.push("emailed to client");
+      if (data.adminEmailed) parts.push("copy sent to info@unit311central.com");
+      if (data.messagingUpdated) parts.push("team chat updated");
+      if (data.alertCreated) parts.push("home alert added");
+      if (data.meetingsLinked) {
+        parts.push(
+          `${data.meetingsLinked} executive session${data.meetingsLinked === 1 ? "" : "s"} linked`,
+        );
+      }
+
+      setSaveMessage(`${parts.join(" · ")}.`);
+
+      window.dispatchEvent(new CustomEvent("internal-dashboard:refresh-alerts"));
+    } catch (generateError) {
+      setError(generateError instanceof Error ? generateError.message : "Failed to generate report");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleMoveToClientDirectory() {
+    if (!selectedLead) return;
+
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`/api/crm/leads/${selectedLead.id}/promote-to-client`, {
+        method: "POST",
+      });
+      const data = await readApiJson<{ client?: { companyName: string }; error?: string }>(response);
+      if (!response.ok) throw new Error(data.error ?? "Failed to move lead to client directory");
+
+      setSaveMessage(
+        data.client
+          ? `${data.client.companyName} added to Client Directory as Active`
+          : "Lead moved to Client Directory as Active",
+      );
+    } catch (moveError) {
+      setError(
+        moveError instanceof Error ? moveError.message : "Failed to move lead to client directory",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleDeleteLead() {
     if (!selectedLead) return;
     if (!window.confirm(`Delete lead "${selectedLead.companyName}"?`)) return;
@@ -238,6 +489,7 @@ export default function CrmWorkspace({
       Warm: 0,
       Hot: 0,
       Won: 0,
+      "Active Customer": 0,
       Lost: 0,
     };
     for (const lead of leads) {
@@ -248,6 +500,13 @@ export default function CrmWorkspace({
 
   return (
     <div className="space-y-6">
+      <DashboardTopTilesBar
+        storageKey="unit311-crm-dashboard-tiles"
+        catalog={CRM_DASHBOARD_TILES}
+        defaultLayout={DEFAULT_CRM_TILE_LAYOUT}
+        title="CRM key details"
+        showCustomizeHint={false}
+      />
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -298,8 +557,10 @@ export default function CrmWorkspace({
           {error}
           {error.includes("crm_leads") && (
             <p className="mt-1 text-xs text-red-200/70">
-              Run <span className="font-mono">supabase/migrations/004_create_crm_leads.sql</span> in
-              Supabase SQL Editor.
+              Run{" "}
+              <span className="font-mono">supabase/migrations/004_create_crm_leads.sql</span> and{" "}
+              <span className="font-mono">060_crm_leads_discovery_notes.sql</span> in Supabase SQL
+              Editor.
             </p>
           )}
         </div>
@@ -368,14 +629,23 @@ export default function CrmWorkspace({
                             </p>
                           )}
                         </div>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
-                            leadStatusClass(lead.status),
-                          )}
-                        >
-                          {lead.status}
-                        </span>
+                        <div className="flex shrink-0 items-start gap-1.5">
+                          <CrmLeadLogoUpload
+                            lead={lead}
+                            busy={busy}
+                            compact
+                            onUploaded={applyLeadUpdate}
+                            onError={setError}
+                          />
+                          <span
+                            className={cn(
+                              "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
+                              leadStatusClass(lead.status),
+                            )}
+                          >
+                            {lead.status}
+                          </span>
+                        </div>
                       </div>
                     </button>
                   </li>
@@ -388,6 +658,39 @@ export default function CrmWorkspace({
         detail={
         selectedLead ? (
           <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
+            {detailView === "discovery" ? (
+              <CrmLeadDiscoveryEditor
+                companyName={selectedLead.companyName}
+                initialHtml={selectedLead.discoveryNotes}
+                busy={busy}
+                onBack={() => setDetailView("record")}
+                onSave={handleSaveDiscovery}
+                onCommit={handleCommitDiscovery}
+                onReviewPowerPoint={() => void handleReviewPowerPoint()}
+                onGeneratePdf={() => void handleGeneratePdf()}
+                canGeneratePdf={Boolean(selectedLead.email.trim())}
+                showReviewPowerPoint={
+                  hasClientReportPptDraft(selectedLead) && !selectedLead.clientReportSentAt
+                }
+                showGeneratePdf={canSendClientReportPdf(selectedLead)}
+              />
+            ) : detailView === "questions" ? (
+              <CrmLeadQuestionsPanel
+                leadId={selectedLead.id}
+                companyName={selectedLead.companyName}
+                lead={selectedLead}
+                onBack={() => setDetailView("record")}
+                busy={busy}
+                onLeadUpdated={applyLeadUpdate}
+                onReviewPowerPoint={() => void handleReviewPowerPoint()}
+                onGeneratePdf={() => void handleGeneratePdf()}
+                showReviewPowerPoint={
+                  hasClientReportPptDraft(selectedLead) && !selectedLead.clientReportSentAt
+                }
+                showGeneratePdf={canSendClientReportPdf(selectedLead)}
+              />
+            ) : (
+              <>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
@@ -405,6 +708,67 @@ export default function CrmWorkspace({
                 >
                   {selectedLead.status}
                 </span>
+                {selectedLead.needsManualReview ? (
+                  <span
+                    className="rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-100"
+                    title={selectedLead.manualReviewReason || "Needs manual review"}
+                  >
+                    Manual review
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setDetailView("discovery")}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/15 px-3 text-xs font-semibold text-violet-200 transition-colors hover:border-violet-400/60 hover:bg-violet-500/25 disabled:opacity-50"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Discovery
+                </button>
+                {isDiscoveryCallLead(selectedLead) ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setDetailView("questions")}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-200 transition-colors hover:border-emerald-400/60 hover:bg-emerald-500/25 disabled:opacity-50"
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Questions
+                  </button>
+                ) : null}
+                {hasClientReportPptDraft(selectedLead) && !selectedLead.clientReportSentAt ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleReviewPowerPoint()}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/15 px-3 text-xs font-semibold text-violet-100 transition-colors hover:border-violet-400/60 hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Open the PowerPoint draft in the client folder"
+                  >
+                    <Presentation className="h-3.5 w-3.5" />
+                    Review PowerPoint
+                  </button>
+                ) : null}
+                {canSendClientReportPdf(selectedLead) ? (
+                  <button
+                    type="button"
+                    disabled={busy || !selectedLead.email.trim()}
+                    onClick={() => void handleGeneratePdf()}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 text-xs font-semibold text-amber-100 transition-colors hover:border-amber-400/60 hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Generate PDF, email the client, and open the guest chat channel"
+                  >
+                    <FileType className="h-3.5 w-3.5" />
+                    Generate PDF
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void handleMoveToClientDirectory()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-200 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25 disabled:opacity-50"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Move to Client Directory
+                </button>
                 <button
                   type="button"
                   disabled={busy || !isDirty}
@@ -434,6 +798,15 @@ export default function CrmWorkspace({
                   value={selectedLead.companyName}
                   onChange={(event) => patchSelected({ companyName: event.target.value })}
                   disabled={busy}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <FieldLabel>Company logo</FieldLabel>
+                <CrmLeadLogoUpload
+                  lead={selectedLead}
+                  busy={busy}
+                  onUploaded={applyLeadUpdate}
+                  onError={setError}
                 />
               </div>
               <div>
@@ -489,7 +862,9 @@ export default function CrmWorkspace({
                   onChange={(event) => patchSelected({ source: event.target.value })}
                   disabled={busy}
                 >
-                  {LEAD_SOURCE_OPTIONS.map((source) => (
+                  {Array.from(
+                    new Set([selectedLead.source, ...LEAD_SOURCE_OPTIONS].filter(Boolean)),
+                  ).map((source) => (
                     <option key={source} value={source}>
                       {source}
                     </option>
@@ -541,6 +916,69 @@ export default function CrmWorkspace({
                 </p>
               </div>
               <div className="sm:col-span-2">
+                <FieldLabel>Client report</FieldLabel>
+                <div className="mt-1.5 rounded-xl border border-white/10 bg-[#0b1524] px-3 py-3 text-sm text-white/75">
+                  {selectedLead.clientReportGeneratedAt ? (
+                    <div className="space-y-2">
+                      <p>
+                        <span className="text-white/45">Draft generated:</span>{" "}
+                        {formatLeadDate(selectedLead.clientReportGeneratedAt)}
+                      </p>
+                      {selectedLead.clientReportFileName ? (
+                        <p>
+                          <span className="text-white/45">PDF:</span>{" "}
+                          {selectedLead.clientReportFileName}
+                        </p>
+                      ) : null}
+                      {selectedLead.clientReportPptFileName ? (
+                        <p>
+                          <span className="text-white/45">PowerPoint:</span>{" "}
+                          {selectedLead.clientReportPptFileName}
+                        </p>
+                      ) : null}
+                      {selectedLead.clientReportSentAt ? (
+                        <p>
+                          <span className="text-white/45">PDF sent:</span>{" "}
+                          {formatLeadDate(selectedLead.clientReportSentAt)}
+                        </p>
+                      ) : (
+                        <p className="text-amber-200/90">
+                          Review the PowerPoint in the client folder, make any corrections, then click
+                          Generate PDF to email the client.
+                        </p>
+                      )}
+                      {selectedLead.clientReportRepliedAt ? (
+                        <p>
+                          <span className="text-white/45">Client replied:</span>{" "}
+                          {formatLeadDate(selectedLead.clientReportRepliedAt)}
+                        </p>
+                      ) : selectedLead.clientReportSentAt ? (
+                        <p className="text-white/55">
+                          Awaiting client reply to info@ — reminders at 7 days and again 14 days later
+                          if no response.
+                        </p>
+                      ) : null}
+                      {selectedLead.clientReportLastReminderSentAt ? (
+                        <p>
+                          <span className="text-white/45">Last email reminder:</span>{" "}
+                          {formatLeadDate(selectedLead.clientReportLastReminderSentAt)}
+                        </p>
+                      ) : null}
+                      {selectedLead.clientChatAccessToken && selectedLead.clientReportSentAt ? (
+                        <p className="break-all text-xs text-sky-300/90">
+                          Guest chat: /report-chat/{selectedLead.clientChatAccessToken}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="text-white/45">
+                      No client report yet. Save discovery questions to auto-generate a PowerPoint
+                      draft in the client folder, then use Generate PDF to email the client.
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="sm:col-span-2">
                 <FieldLabel>Notes</FieldLabel>
                 <textarea
                   rows={4}
@@ -550,7 +988,56 @@ export default function CrmWorkspace({
                   disabled={busy}
                 />
               </div>
+              {selectedLead.originalEnquirySubmittedAt ||
+              selectedLead.originalEnquiryMessage ||
+              selectedLead.source === "Website Contact Form" ? (
+                <div className="sm:col-span-2 space-y-3 rounded-xl border border-sky-400/20 bg-sky-500/[0.06] p-4">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
+                      Original Website Enquiry
+                    </p>
+                    <p className="mt-1 text-sm text-white/55">
+                      First contact form submission — not overwritten by later enquiries.
+                    </p>
+                  </div>
+                  {selectedLead.originalEnquirySubmittedAt ? (
+                    <dl className="space-y-3 text-sm">
+                      <div>
+                        <dt className="text-[11px] uppercase tracking-[0.12em] text-white/40">
+                          Subject
+                        </dt>
+                        <dd className="mt-1 text-white">
+                          {selectedLead.originalEnquirySubject || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] uppercase tracking-[0.12em] text-white/40">
+                          Message
+                        </dt>
+                        <dd className="mt-1 whitespace-pre-wrap text-white/85">
+                          {selectedLead.originalEnquiryMessage || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] uppercase tracking-[0.12em] text-white/40">
+                          Date Submitted
+                        </dt>
+                        <dd className="mt-1 text-white/80">
+                          {formatLeadDate(selectedLead.originalEnquirySubmittedAt)}
+                        </dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <p className="text-sm text-white/45">
+                      Original enquiry details are not available for this lead yet.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+              <CrmLeadTimelinePanel leadId={selectedLead.id} />
             </div>
+              </>
+            )}
           </section>
         ) : !loading ? (
           <section className="flex min-h-[320px] items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] p-6 text-sm text-white/45">

@@ -1,17 +1,15 @@
 import HomeHero from "@/components/home/HomeHero";
+import HomeBusinessCase from "@/components/home/HomeBusinessCase";
 import HomeOfferPlatform from "@/components/home/HomeOfferPlatform";
-import HowUnit311Works from "@/components/home/HowUnit311Works";
 import HomePricing from "@/components/home/HomePricing";
-import WhoWeWorkWith from "@/components/home/WhoWeWorkWith";
 
 export default function HomePage() {
   return (
-    <>
+    <div className="overflow-x-hidden">
       <HomeHero />
       <HomeOfferPlatform />
-      <HowUnit311Works />
+      <HomeBusinessCase />
       <HomePricing />
-      <WhoWeWorkWith />
-    </>
+    </div>
   );
 }

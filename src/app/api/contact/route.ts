@@ -9,11 +9,15 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
-      name?: string;
-      company?: string;
+      firstName?: string;
+      surname?: string;
+      organisation?: string;
+      role?: string;
       email?: string;
       subject?: string;
       message?: string;
+      name?: string;
+      company?: string;
     };
 
     const result = await sendContactEnquiry(body);

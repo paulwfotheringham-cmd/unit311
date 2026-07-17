@@ -13,19 +13,19 @@ import {
   type HomeDashboardTileId,
 } from "@/lib/internal-dashboard-home-layout";
 import {
-  actionRequiredItems,
-  executiveRevenueSummary,
+  emptyActionItems,
+  emptyExecutiveRevenueSummary,
+  emptyProjectsInProgress,
+  emptyRevenueTrendData,
+  emptySupportOutstandingTrend,
+  emptyThisWeekSchedule,
+  emptyUpcomingMissions,
   missionStatusClass,
   priorityDotClass,
-  projectsInProgress,
-  revenueTrendData,
-  supportOutstandingTrend,
-  thisWeekSchedule,
-  upcomingMissions,
   type ActionItem,
   type ProjectInProgress,
   type WeekDay,
-} from "@/lib/internal-operations-command-data";
+} from "@/lib/home-dashboard-data";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -132,6 +132,8 @@ function SectionPanel({
   className,
   theme = "action",
   icon,
+  panelId,
+  headerAction,
   editMode = false,
   onMoveUp,
   onMoveDown,
@@ -144,6 +146,8 @@ function SectionPanel({
   className?: string;
   theme?: keyof typeof TILE_THEMES;
   icon?: React.ReactNode;
+  panelId?: string;
+  headerAction?: React.ReactNode;
   editMode?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -155,6 +159,7 @@ function SectionPanel({
 
   return (
     <section
+      id={panelId}
       className={cn(
         "relative rounded-2xl border bg-gradient-to-br shadow-[0_16px_48px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl",
         palette.border,
@@ -191,19 +196,27 @@ function SectionPanel({
           </button>
         </div>
       ) : null}
-      <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-4 py-3 sm:px-5">
-        {icon ? (
-          <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl", palette.icon)}>
-            {icon}
-          </span>
-        ) : null}
-        <h3 className={cn("text-[11px] font-semibold uppercase tracking-[0.18em]", palette.accent)}>
-          {title}
-        </h3>
+      <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {icon ? (
+            <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl", palette.icon)}>
+              {icon}
+            </span>
+          ) : null}
+          <h3 className={cn("text-[11px] font-semibold uppercase tracking-[0.18em]", palette.accent)}>
+            {title}
+          </h3>
+        </div>
+        {!editMode && headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
       <div className="px-4 py-3 sm:px-5 sm:py-4">{children}</div>
     </section>
   );
+}
+
+function actionItemLinkLabel(task: string) {
+  if (task.startsWith("Executive session booked")) return "Open meeting";
+  return "View";
 }
 
 function ActionRow({ item }: { item: ActionItem }) {
@@ -215,7 +228,20 @@ function ActionRow({ item }: { item: ActionItem }) {
           aria-label={`${item.priority} priority`}
         />
       </td>
-      <td className="py-2 pr-3 text-[13px] leading-snug text-white/90">{item.task}</td>
+      <td className="py-2 pr-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[13px] leading-snug text-white/90">{item.task}</span>
+          {item.href ? (
+            <Link
+              href={item.href}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-100 transition-colors hover:bg-rose-500/20"
+            >
+              {actionItemLinkLabel(item.task)}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          ) : null}
+        </div>
+      </td>
       <td className="hidden py-2 pr-3 text-[13px] text-white/55 sm:table-cell">{item.assignedTo}</td>
       <td className="py-2 text-right text-[13px] font-medium text-white/50 sm:text-left">{item.due}</td>
     </tr>
@@ -295,7 +321,7 @@ function ProjectCard({ project }: { project: ProjectInProgress }) {
 }
 
 function RevenueChart() {
-  const revenueChartData = revenueTrendData.map((point) => ({
+  const revenueChartData = emptyRevenueTrendData.map((point) => ({
     label: point.label,
     actual: point.actual ?? null,
     forecast: point.forecast ?? null,
@@ -304,7 +330,7 @@ function RevenueChart() {
   return (
     <>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {Object.values(executiveRevenueSummary).map((item) => (
+        {Object.values(emptyExecutiveRevenueSummary).map((item) => (
           <div
             key={item.label}
             className="rounded-xl border border-emerald-400/15 bg-emerald-500/[0.06] p-3"
@@ -362,7 +388,7 @@ function SupportChart() {
       </p>
       <div className="h-56 w-full min-w-0 sm:h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={supportOutstandingTrend} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+          <BarChart data={emptySupportOutstandingTrend} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="week"
@@ -388,10 +414,12 @@ function SupportChart() {
 }
 
 
-function renderTileContent(id: HomeDashboardTileId) {
+function renderTileContent(id: HomeDashboardTileId, actionItems: ActionItem[]) {
   switch (id) {
     case "action-required":
-      return (
+      return actionItems.length === 0 ? (
+        <p className="text-sm text-white/45">No action items for this workspace.</p>
+      ) : (
         <>
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full border-collapse text-left">
@@ -412,14 +440,14 @@ function renderTileContent(id: HomeDashboardTileId) {
                 </tr>
               </thead>
               <tbody>
-                {actionRequiredItems.map((item) => (
+                {actionItems.map((item) => (
                   <ActionRow key={item.id} item={item} />
                 ))}
               </tbody>
             </table>
           </div>
           <div className="space-y-2.5 sm:hidden">
-            {actionRequiredItems.map((item) => (
+            {actionItems.map((item) => (
               <div
                 key={`${item.id}-mobile`}
                 className="flex gap-2.5 rounded-lg border border-white/[0.06] bg-black/15 p-3"
@@ -428,7 +456,18 @@ function renderTileContent(id: HomeDashboardTileId) {
                   className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", priorityDotClass(item.priority))}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] leading-snug text-white/90">{item.task}</p>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <p className="text-[13px] leading-snug text-white/90">{item.task}</p>
+                    {item.href ? (
+                      <Link
+                        href={item.href}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-rose-100 transition-colors hover:bg-rose-500/20"
+                      >
+                        {actionItemLinkLabel(item.task)}
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    ) : null}
+                  </div>
                   <p className="mt-1 text-[11px] text-white/45">
                     {item.assignedTo} · {item.due}
                   </p>
@@ -445,21 +484,25 @@ function renderTileContent(id: HomeDashboardTileId) {
     case "this-week":
       return (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {thisWeekSchedule.map((day, index) => (
+          {emptyThisWeekSchedule.map((day, index) => (
             <WeekCalendarDay key={day.day} day={day} index={index} />
           ))}
         </div>
       );
     case "projects":
-      return (
+      return emptyProjectsInProgress.length === 0 ? (
+        <p className="text-sm text-white/45">No projects in progress for this workspace.</p>
+      ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {projectsInProgress.map((project) => (
+          {emptyProjectsInProgress.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       );
     case "upcoming-missions":
-      return (
+      return emptyUpcomingMissions.length === 0 ? (
+        <p className="text-sm text-white/45">No upcoming missions for this workspace.</p>
+      ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[16rem] border-collapse text-left">
             <thead>
@@ -482,7 +525,7 @@ function renderTileContent(id: HomeDashboardTileId) {
               </tr>
             </thead>
             <tbody>
-              {upcomingMissions.map((mission) => (
+              {emptyUpcomingMissions.map((mission) => (
                 <tr key={mission.id} className="border-b border-white/[0.05] last:border-0">
                   <td className="py-2 pr-2 align-top">
                     <p className="text-[13px] font-medium leading-snug text-white/85">{mission.name}</p>
@@ -648,16 +691,123 @@ export default function InternalDashboardHome({ showCustomize = true }: Internal
   const [layout, setLayout] = useState<HomeDashboardTileId[]>(DEFAULT_HOME_DASHBOARD_LAYOUT);
   const [editMode, setEditMode] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [scrollToActionRequired, setScrollToActionRequired] = useState(false);
+  const [liveActionItems, setLiveActionItems] = useState<ActionItem[]>([]);
+  const [liveActionItemsLoaded, setLiveActionItemsLoaded] = useState(false);
+
+  const displayedActionItems = useMemo(
+    () => (liveActionItemsLoaded ? liveActionItems : emptyActionItems),
+    [liveActionItems, liveActionItemsLoaded],
+  );
 
   useEffect(() => {
-    setLayout(loadHomeDashboardLayout());
-    setHydrated(true);
+    let cancelled = false;
+
+    async function hydrateWorkspaceLayout() {
+      try {
+        const response = await fetch("/api/auth/whoami", { cache: "no-store" });
+        const data = (await response.json()) as {
+          workspaceId?: string | null;
+        };
+        if (cancelled) return;
+        const id = data.workspaceId?.trim() || null;
+        setWorkspaceId(id);
+        setLayout(loadHomeDashboardLayout(id));
+      } catch {
+        if (!cancelled) {
+          setLayout(loadHomeDashboardLayout(null));
+        }
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    }
+
+    void hydrateWorkspaceLayout();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const persistLayout = useCallback((next: HomeDashboardTileId[]) => {
-    setLayout(next);
-    saveHomeDashboardLayout(next);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActionItems() {
+      try {
+        const response = await fetch("/api/internal/action-items", { cache: "no-store" });
+        const data = (await response.json()) as {
+          items?: Array<{
+            id: string;
+            priority: ActionItem["priority"];
+            task: string;
+            assignedTo: string;
+            due: string;
+            href: string | null;
+          }>;
+          workspace?: { id?: string };
+        };
+        if (cancelled) return;
+        if (data.workspace?.id) {
+          setWorkspaceId(data.workspace.id);
+        }
+        if (!response.ok) {
+          setLiveActionItemsLoaded(true);
+          setLiveActionItems([]);
+          return;
+        }
+        setLiveActionItemsLoaded(true);
+        setLiveActionItems(
+          (data.items ?? []).map((item) => ({
+            id: item.id,
+            priority: item.priority,
+            task: item.task,
+            assignedTo: item.assignedTo,
+            due: item.due,
+            href: item.href ?? undefined,
+          })),
+        );
+      } catch {
+        if (!cancelled) {
+          setLiveActionItemsLoaded(true);
+          setLiveActionItems([]);
+        }
+      }
+    }
+
+    void loadActionItems();
+
+    function handleRefreshAlerts() {
+      void loadActionItems();
+    }
+
+    window.addEventListener("internal-dashboard:refresh-alerts", handleRefreshAlerts);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("internal-dashboard:refresh-alerts", handleRefreshAlerts);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!scrollToActionRequired || !layout.includes("action-required")) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("home-tile-action-required")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      setScrollToActionRequired(false);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [layout, scrollToActionRequired]);
+
+  const persistLayout = useCallback(
+    (next: HomeDashboardTileId[]) => {
+      setLayout(next);
+      saveHomeDashboardLayout(next, workspaceId);
+    },
+    [workspaceId],
+  );
 
   const hiddenTiles = useMemo(
     () => HOME_DASHBOARD_TILE_CATALOG.map((tile) => tile.id).filter((id) => !layout.includes(id)),
@@ -695,6 +845,19 @@ export default function InternalDashboardHome({ showCustomize = true }: Internal
     setEditMode(false);
   }, [persistLayout]);
 
+  const openActionRequired = useCallback(() => {
+    if (!layout.includes("action-required")) {
+      addTile("action-required");
+      setScrollToActionRequired(true);
+      return;
+    }
+
+    document.getElementById("home-tile-action-required")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [addTile, layout]);
+
   const renderTilePanel = (id: HomeDashboardTileId, index: number) => {
     const definition = getHomeDashboardTileDefinition(id);
     if (!definition) return null;
@@ -705,6 +868,7 @@ export default function InternalDashboardHome({ showCustomize = true }: Internal
         title={definition.title}
         theme={TILE_THEME_BY_ID[id]}
         icon={TILE_ICON_BY_ID[id]}
+        panelId={id === "action-required" ? "home-tile-action-required" : undefined}
         editMode={editMode}
         canMoveUp={index > 0}
         canMoveDown={index < layout.length - 1}
@@ -712,7 +876,7 @@ export default function InternalDashboardHome({ showCustomize = true }: Internal
         onMoveDown={() => moveTile(index, 1)}
         onRemove={() => removeTile(id)}
       >
-        {renderTileContent(id)}
+        {renderTileContent(id, displayedActionItems)}
       </SectionPanel>
     );
   };
@@ -756,20 +920,30 @@ export default function InternalDashboardHome({ showCustomize = true }: Internal
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
               Command centre
             </p>
-            <p className="mt-1 text-sm text-white/55">
-              {editMode
-                ? "Reorder or remove tiles, then choose Done editing."
-                : "Executive overview — customize which tiles appear on your home view."}
-            </p>
+            {editMode ? (
+              <p className="mt-1 text-sm text-white/55">
+                Reorder or remove tiles, then choose Done editing.
+              </p>
+            ) : null}
           </div>
-          <HomeTilesMenu
-            editMode={editMode}
-            hiddenTiles={hiddenTiles}
-            onEditLayout={() => setEditMode(true)}
-            onDoneEditing={() => setEditMode(false)}
-            onAddTile={addTile}
-            onReset={resetLayout}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={openActionRequired}
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-100 transition-colors hover:border-rose-400/45 hover:bg-rose-500/20"
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+              Action required
+            </button>
+            <HomeTilesMenu
+              editMode={editMode}
+              hiddenTiles={hiddenTiles}
+              onEditLayout={() => setEditMode(true)}
+              onDoneEditing={() => setEditMode(false)}
+              onAddTile={addTile}
+              onReset={resetLayout}
+            />
+          </div>
         </div>
       ) : null}
 

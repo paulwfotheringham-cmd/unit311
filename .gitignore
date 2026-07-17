@@ -77,3 +77,4 @@ scripts/inspect-vercel-*.mjs
 # OS / trash
 $RECYCLE.BIN/
 Desktop.ini
+.env*

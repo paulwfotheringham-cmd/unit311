@@ -133,8 +133,8 @@ export function localCreateChannel(input: {
   const descriptionLine = input.description?.trim() ? ` ${input.description.trim()}` : "";
 
   localSendMessage({
-    operatorId: input.createdByOperatorId,
-    operatorName: input.createdByOperatorName,
+    operatorId: "system",
+    operatorName: "System",
     username: "system",
     content:
       channelType === "client"
@@ -162,6 +162,21 @@ export function localUpdateChannelMembers(
   const updated = { ...channel, memberOperatorIds: members };
   channels.set(channel.room, updated);
   return updated;
+}
+
+export function localDeleteChannel(channelId: string) {
+  const channel = Array.from(channels.values()).find((entry) => entry.id === channelId);
+  if (!channel) throw new Error("Channel not found.");
+  if (channel.room === INTERNAL_MESSAGING_ROOM) {
+    throw new Error("The default internal operations room cannot be deleted.");
+  }
+
+  channels.delete(channel.room);
+  messagesByRoom.delete(channel.room);
+  for (const key of readState.keys()) {
+    if (key.endsWith(`:${channel.room}`)) readState.delete(key);
+  }
+  return channel;
 }
 
 export function localMarkChannelRead(viewerKey: string, room: string) {

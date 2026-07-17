@@ -12,10 +12,13 @@ import {
   Eye,
   EyeOff,
   Link2,
+  Mail,
   Menu,
   Plus,
   Settings,
   Share2,
+  Truck,
+  Wallet,
 } from "lucide-react";
 
 const NAV_CUSTOM_STORAGE_KEY = "unit311-nav-custom";
@@ -30,14 +33,51 @@ type PlatformCredentials = {
   urlPlaceholder: string;
 };
 
-type AccountancyPackage = "xero" | "quickbooks" | "sage";
-
-type AccountancyIntegration = {
-  package: AccountancyPackage;
+type IntegrationCredentials = {
   apiKey: string;
   tenantId: string;
   syncEnabled: boolean;
 };
+
+type FinanceProvider = "xero" | "sage" | "oracle" | "sage-payroll" | "zoho-payroll";
+type LogisticsProvider = "fedex" | "ups" | "dhl";
+type EmailProvider = "office365" | "google-suite";
+
+type ProviderOption<T extends string> = {
+  id: T;
+  name: string;
+};
+
+const FINANCE_PROVIDERS: ProviderOption<FinanceProvider>[] = [
+  { id: "xero", name: "Xero" },
+  { id: "sage", name: "Sage" },
+  { id: "oracle", name: "Oracle" },
+  { id: "sage-payroll", name: "Sage Payroll" },
+  { id: "zoho-payroll", name: "Zoho Payroll" },
+];
+
+const LOGISTICS_PROVIDERS: ProviderOption<LogisticsProvider>[] = [
+  { id: "fedex", name: "FedEx" },
+  { id: "ups", name: "UPS" },
+  { id: "dhl", name: "DHL" },
+];
+
+const EMAIL_PROVIDERS: ProviderOption<EmailProvider>[] = [
+  { id: "office365", name: "Office 365" },
+  { id: "google-suite", name: "Google Suite" },
+];
+
+function createEmptyIntegrationCredentials(): IntegrationCredentials {
+  return { apiKey: "", tenantId: "", syncEnabled: false };
+}
+
+function createIntegrationCredentialsMap<T extends string>(
+  providers: ProviderOption<T>[],
+): Record<T, IntegrationCredentials> {
+  return Object.fromEntries(
+    providers.map((provider) => [provider.id, createEmptyIntegrationCredentials()]),
+  ) as Record<T, IntegrationCredentials>;
+}
 
 type NavEditorItem = {
   id: string;
@@ -78,12 +118,6 @@ const PLATFORMS: PlatformCredentials[] = [
     ),
     urlPlaceholder: "https://www.instagram.com/bcndrone",
   },
-];
-
-const ACCOUNTANCY_PACKAGES: { id: AccountancyPackage; name: string; accent: string }[] = [
-  { id: "xero", name: "Xero", accent: "border-[#13B5EA]/35 from-[#13B5EA]/15 to-[#13B5EA]/5" },
-  { id: "quickbooks", name: "QuickBooks", accent: "border-[#2CA01C]/35 from-[#2CA01C]/15 to-[#2CA01C]/5" },
-  { id: "sage", name: "Sage", accent: "border-emerald-400/35 from-emerald-500/15 to-emerald-500/5" },
 ];
 
 const NOTIFICATION_FUNCTIONS = ["Projects", "Support", "Finance"] as const;
@@ -259,48 +293,104 @@ function PlatformCredentialsCard({ platform }: { platform: PlatformCredentials }
   );
 }
 
-function AccountancyCard({
-  pkg,
-  integration,
-  onChange,
+function ProviderIntegrationSection<T extends string>({
+  title,
+  description,
+  icon,
+  providers,
+  selectedProvider,
+  onSelectProvider,
+  credentials,
+  onChangeCredentials,
+  tenantLabel = "Tenant ID",
+  tenantPlaceholder = "Tenant or organisation ID",
 }: {
-  pkg: (typeof ACCOUNTANCY_PACKAGES)[number];
-  integration: AccountancyIntegration;
-  onChange: (next: AccountancyIntegration) => void;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  providers: ProviderOption<T>[];
+  selectedProvider: T | "";
+  onSelectProvider: (provider: T | "") => void;
+  credentials: IntegrationCredentials;
+  onChangeCredentials: (next: IntegrationCredentials) => void;
+  tenantLabel?: string;
+  tenantPlaceholder?: string;
 }) {
+  const activeProvider = providers.find((provider) => provider.id === selectedProvider);
+
   return (
-    <article className={cn("rounded-xl border bg-gradient-to-br p-4", pkg.accent)}>
-      <h3 className="text-sm font-semibold text-white">{pkg.name}</h3>
-      <div className="mt-3 space-y-3">
-        <div>
-          <FieldLabel>API key</FieldLabel>
-          <input
-            type="password"
-            value={integration.apiKey}
-            onChange={(event) => onChange({ ...integration, apiKey: event.target.value })}
-            placeholder={`${pkg.name} API key`}
-            className={inputClassName()}
-          />
+    <article className="overflow-hidden rounded-xl border border-white/10 bg-[#0b1524]/40">
+      <div className="border-b border-white/10 bg-white/[0.03] px-3 py-3">
+        <div className="flex items-start gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-sky-300">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-white">{title}</h3>
+            <p className="text-[10px] text-white/45">{description}</p>
+          </div>
         </div>
+      </div>
+
+      <div className="space-y-3 p-3">
         <div>
-          <FieldLabel>Tenant ID</FieldLabel>
-          <input
-            type="text"
-            value={integration.tenantId}
-            onChange={(event) => onChange({ ...integration, tenantId: event.target.value })}
-            placeholder="Tenant or organisation ID"
+          <FieldLabel>Provider</FieldLabel>
+          <select
+            value={selectedProvider}
+            onChange={(event) => onSelectProvider(event.target.value as T | "")}
             className={inputClassName()}
-          />
+          >
+            <option value="">Choose provider…</option>
+            {providers.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0b1524]/60 px-3 py-2.5">
-          <input
-            type="checkbox"
-            checked={integration.syncEnabled}
-            onChange={(event) => onChange({ ...integration, syncEnabled: event.target.checked })}
-            className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-          />
-          <span className="text-sm text-white/75">Enable automatic sync</span>
-        </label>
+
+        {selectedProvider && activeProvider ? (
+          <div className="space-y-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-200/80">
+              {activeProvider.name} connection
+            </p>
+            <div>
+              <FieldLabel>API key</FieldLabel>
+              <input
+                type="password"
+                value={credentials.apiKey}
+                onChange={(event) =>
+                  onChangeCredentials({ ...credentials, apiKey: event.target.value })
+                }
+                placeholder={`${activeProvider.name} API key`}
+                className={inputClassName()}
+              />
+            </div>
+            <div>
+              <FieldLabel>{tenantLabel}</FieldLabel>
+              <input
+                type="text"
+                value={credentials.tenantId}
+                onChange={(event) =>
+                  onChangeCredentials({ ...credentials, tenantId: event.target.value })
+                }
+                placeholder={tenantPlaceholder}
+                className={inputClassName()}
+              />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0b1524]/60 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={credentials.syncEnabled}
+                onChange={(event) =>
+                  onChangeCredentials({ ...credentials, syncEnabled: event.target.checked })
+                }
+                className="h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+              />
+              <span className="text-sm text-white/75">Enable automatic sync</span>
+            </label>
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -311,11 +401,19 @@ export default function SettingsWorkspace() {
   const [navCustom, setNavCustom] = useState<NavCustomStorage>(() => loadNavCustomState());
   const [customNavLabel, setCustomNavLabel] = useState("");
 
-  const [integrations, setIntegrations] = useState<Record<AccountancyPackage, AccountancyIntegration>>({
-    xero: { package: "xero", apiKey: "", tenantId: "", syncEnabled: false },
-    quickbooks: { package: "quickbooks", apiKey: "", tenantId: "", syncEnabled: false },
-    sage: { package: "sage", apiKey: "", tenantId: "", syncEnabled: false },
-  });
+  const [financeProvider, setFinanceProvider] = useState<FinanceProvider | "">("");
+  const [logisticsProvider, setLogisticsProvider] = useState<LogisticsProvider | "">("");
+  const [emailProvider, setEmailProvider] = useState<EmailProvider | "">("");
+
+  const [financeCredentials, setFinanceCredentials] = useState<
+    Record<FinanceProvider, IntegrationCredentials>
+  >(() => createIntegrationCredentialsMap(FINANCE_PROVIDERS));
+  const [logisticsCredentials, setLogisticsCredentials] = useState<
+    Record<LogisticsProvider, IntegrationCredentials>
+  >(() => createIntegrationCredentialsMap(LOGISTICS_PROVIDERS));
+  const [emailCredentials, setEmailCredentials] = useState<
+    Record<EmailProvider, IntegrationCredentials>
+  >(() => createIntegrationCredentialsMap(EMAIL_PROVIDERS));
 
   const [phoneNotifications, setPhoneNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -414,22 +512,77 @@ export default function SettingsWorkspace() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 xl:items-stretch">
         <SettingsColumn
-          title="External integrations"
-          description="Accountancy packages for finance sync."
+          title="Integrations"
+          description="Finance, logistics, and email provider connections."
           icon={<Link2 className="h-4 w-4" />}
           accentClass="border-emerald-400/20"
         >
           <div className="space-y-3">
-            {ACCOUNTANCY_PACKAGES.map((pkg) => (
-              <AccountancyCard
-                key={pkg.id}
-                pkg={pkg}
-                integration={integrations[pkg.id]}
-                onChange={(next) =>
-                  setIntegrations((current) => ({ ...current, [pkg.id]: next }))
-                }
-              />
-            ))}
+            <ProviderIntegrationSection
+              title="Finance"
+              description="Accounting and payroll systems."
+              icon={<Wallet className="h-4 w-4" />}
+              providers={FINANCE_PROVIDERS}
+              selectedProvider={financeProvider}
+              onSelectProvider={setFinanceProvider}
+              credentials={
+                financeProvider
+                  ? financeCredentials[financeProvider]
+                  : createEmptyIntegrationCredentials()
+              }
+              onChangeCredentials={(next) => {
+                if (!financeProvider) return;
+                setFinanceCredentials((current) => ({
+                  ...current,
+                  [financeProvider]: next,
+                }));
+              }}
+            />
+
+            <ProviderIntegrationSection
+              title="Logistics"
+              description="Courier and shipping APIs."
+              icon={<Truck className="h-4 w-4" />}
+              providers={LOGISTICS_PROVIDERS}
+              selectedProvider={logisticsProvider}
+              onSelectProvider={setLogisticsProvider}
+              credentials={
+                logisticsProvider
+                  ? logisticsCredentials[logisticsProvider]
+                  : createEmptyIntegrationCredentials()
+              }
+              onChangeCredentials={(next) => {
+                if (!logisticsProvider) return;
+                setLogisticsCredentials((current) => ({
+                  ...current,
+                  [logisticsProvider]: next,
+                }));
+              }}
+              tenantLabel="Account number"
+              tenantPlaceholder="Shipper or account number"
+            />
+
+            <ProviderIntegrationSection
+              title="Email"
+              description="Mailbox and calendar providers."
+              icon={<Mail className="h-4 w-4" />}
+              providers={EMAIL_PROVIDERS}
+              selectedProvider={emailProvider}
+              onSelectProvider={setEmailProvider}
+              credentials={
+                emailProvider
+                  ? emailCredentials[emailProvider]
+                  : createEmptyIntegrationCredentials()
+              }
+              onChangeCredentials={(next) => {
+                if (!emailProvider) return;
+                setEmailCredentials((current) => ({
+                  ...current,
+                  [emailProvider]: next,
+                }));
+              }}
+            />
+
             <p className="text-[10px] leading-relaxed text-white/35">
               Preview only — credentials are held in local state until live connectors ship.
             </p>

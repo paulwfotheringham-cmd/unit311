@@ -114,3 +114,4 @@ Protect with `CRON_SECRET` (or setup secret where implemented).
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [README.md](./README.md)
 - [docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md)
+- [docs/VERCEL_ARCHITECTURE.md](./docs/VERCEL_ARCHITECTURE.md) (host / middleware / domains; regenerate diagram with `npm run diagram:vercel-architecture`)

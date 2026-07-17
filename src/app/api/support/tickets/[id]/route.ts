@@ -4,11 +4,19 @@ import { deleteSupportTicket, getSupportTicket, updateSupportTicket } from "@/li
 import type { SupportTicketPriority } from "@/lib/support-data";
 import { notifyClientTicketAssigned } from "@/lib/support-client-notify";
 import { withSupportTicketsTable } from "@/lib/internal-db-migrations";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+function authErrorStatus(message: string) {
+  return message.includes("Authentication required") || message.includes("Workspace context")
+    ? 401
+    : 500;
+}
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   if (!isSupabaseConfigured()) {
@@ -16,15 +24,19 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const scope = { workspaceId: workspace.id };
+
     const { id } = await context.params;
-    const ticket = await withSupportTicketsTable(() => getSupportTicket(id));
+    const ticket = await withSupportTicketsTable(() => getSupportTicket(id, scope));
     if (!ticket) {
       return NextResponse.json({ error: "Support ticket not found." }, { status: 404 });
     }
     return NextResponse.json({ ticket });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load support ticket";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: authErrorStatus(message) });
   }
 }
 
@@ -34,6 +46,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const scope = { workspaceId: workspace.id };
+
     const { id } = await context.params;
     const body = (await request.json()) as {
       name?: string;
@@ -45,12 +61,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     };
 
     const ticket = await withSupportTicketsTable(async () => {
-      const existing = await getSupportTicket(id);
+      const existing = await getSupportTicket(id, scope);
       if (!existing) {
         throw new Error("Support ticket not found.");
       }
 
-      const updated = await updateSupportTicket(id, body);
+      const updated = await updateSupportTicket(id, body, scope);
       const nextAssignee = body.userAssigned?.trim() || null;
       const previousAssignee = existing.userAssigned?.trim() || null;
 
@@ -63,7 +79,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ ticket });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update support ticket";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = authErrorStatus(message) === 401 ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -73,11 +90,15 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const scope = { workspaceId: workspace.id };
+
     const { id } = await context.params;
-    await withSupportTicketsTable(() => deleteSupportTicket(id));
+    await withSupportTicketsTable(() => deleteSupportTicket(id, scope));
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete support ticket";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: authErrorStatus(message) });
   }
 }

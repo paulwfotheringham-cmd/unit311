@@ -1,15 +1,17 @@
 import { CENTRAL_SITE_URL } from "@/lib/app-domains";
 
 export type ContactEnquiryInput = {
-  name: string;
-  company: string;
+  firstName: string;
+  surname: string;
+  organisation: string;
+  role: string;
   email: string;
   subject: string;
   message: string;
 };
 
-function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] || "there";
+function fullName(input: ContactEnquiryInput) {
+  return [input.firstName, input.surname].filter(Boolean).join(" ").trim();
 }
 
 function escapeHtml(value: string) {
@@ -66,11 +68,15 @@ function enquiryDetailsHtml(input: ContactEnquiryInput) {
   const subjectLine = input.subject
     ? `<strong>Subject:</strong> ${escapeHtml(input.subject)}<br/>`
     : "";
+  const roleLine = input.role
+    ? `<strong>Role:</strong> ${escapeHtml(input.role)}<br/>`
+    : "";
 
   return `
     <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-      <strong>Name:</strong> ${escapeHtml(input.name)}<br/>
-      <strong>Company:</strong> ${escapeHtml(input.company || "Not provided")}<br/>
+      <strong>Name:</strong> ${escapeHtml(fullName(input))}<br/>
+      <strong>Organisation:</strong> ${escapeHtml(input.organisation)}<br/>
+      ${roleLine}
       <strong>Email:</strong> <a href="mailto:${escapeHtml(input.email)}" style="color:#2563eb;">${escapeHtml(input.email)}</a><br/>
       ${subjectLine}
     </p>
@@ -84,31 +90,61 @@ function enquiryDetailsHtml(input: ContactEnquiryInput) {
 }
 
 export function buildContactConfirmationEmail(input: ContactEnquiryInput) {
-  const greeting = escapeHtml(firstName(input.name));
+  const greeting = escapeHtml(input.firstName || "there");
+  const bookUrl = `${CENTRAL_SITE_URL}/book`;
   const html = emailShell(
-    "We received your enquiry",
+    "Thank you for contacting Unit311 Central",
     `
       <p style="margin:0 0 16px;font-size:15px;color:#334155;">
         Hi ${greeting},
       </p>
       <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-        Thank you for contacting Unit311 Central. We&apos;ve received your enquiry and will review it within one business day.
+        Thank you for contacting Unit311 Central.
       </p>
-      ${enquiryDetailsHtml(input)}
-      <p style="margin:0;font-size:14px;color:#475569;">
-        If you need to add anything, simply reply to this email.
+      <p style="margin:0 0 16px;font-size:15px;color:#334155;">
+        We have received your enquiry and will review it as soon as possible.
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;color:#334155;">
+        If appropriate, a member of our team will contact you shortly.
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;color:#334155;">
+        If you would prefer to arrange an Executive Strategy Session immediately, you can book one at:
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;color:#334155;">
+        <a href="${bookUrl}" style="color:#2563eb;text-decoration:none;">${bookUrl}</a>
+      </p>
+      <p style="margin:0;font-size:15px;color:#334155;">
+        Kind regards,<br/>
+        Unit311 Central
       </p>
     `,
   );
 
   return {
-    subject: "We received your enquiry — Unit311 Central",
+    subject: "Thank you for contacting Unit311 Central",
     html,
-    text: `Hi ${greeting},\n\nThank you for contacting Unit311 Central. We've received your enquiry and will review it within one business day.\n\nName: ${input.name}\nCompany: ${input.company || "Not provided"}\nEmail: ${input.email}\n${input.subject ? `Subject: ${input.subject}\n` : ""}\nMessage:\n${input.message}\n\nUnit311 Central`,
+    text: [
+      `Hi ${input.firstName},`,
+      "",
+      "Thank you for contacting Unit311 Central.",
+      "",
+      "We have received your enquiry and will review it as soon as possible.",
+      "",
+      "If appropriate, a member of our team will contact you shortly.",
+      "",
+      "If you would prefer to arrange an Executive Strategy Session immediately, you can book one at:",
+      "",
+      bookUrl,
+      "",
+      "Kind regards,",
+      "",
+      "Unit311 Central",
+    ].join("\n"),
   };
 }
 
 export function buildContactInternalNotificationEmail(input: ContactEnquiryInput) {
+  const name = fullName(input);
   const html = emailShell(
     "New contact form enquiry",
     `
@@ -117,14 +153,14 @@ export function buildContactInternalNotificationEmail(input: ContactEnquiryInput
       </p>
       ${enquiryDetailsHtml(input)}
       <p style="margin:0;font-size:14px;color:#475569;">
-        Reply directly to this email to respond to ${escapeHtml(input.name)}.
+        Reply directly to this email to respond to ${escapeHtml(name)}.
       </p>
     `,
   );
 
   return {
-    subject: `New contact enquiry — ${input.name} (${input.subject.trim() || "General enquiry"})`,
+    subject: `New contact enquiry — ${name} (${input.subject.trim() || "General enquiry"})`,
     html,
-    text: `New contact form enquiry from unit311central.com/contact.\n\nName: ${input.name}\nCompany: ${input.company || "Not provided"}\nEmail: ${input.email}\n${input.subject ? `Subject: ${input.subject}\n` : ""}\nMessage:\n${input.message}`,
+    text: `New contact form enquiry from unit311central.com/contact.\n\nName: ${name}\nOrganisation: ${input.organisation}\n${input.role ? `Role: ${input.role}\n` : ""}Email: ${input.email}\n${input.subject ? `Subject: ${input.subject}\n` : ""}\nMessage:\n${input.message}`,
   };
 }

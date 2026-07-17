@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { fetchMailboxMessages } from "@/lib/email/imap";
 import type { EmailMessage } from "@/lib/email/types";
+import { resolveEmailWorkspaceId, type EmailWorkspaceScope } from "@/lib/email-workspace";
 import {
   formatClientChannelWhatsAppMessage,
   formatNewEmailWhatsAppMessage,
@@ -25,7 +26,7 @@ function requireSupabase() {
   return createSupabaseServerClient();
 }
 
-export async function getWhatsAppNotificationStatus() {
+export async function getWhatsAppNotificationStatus(scope?: EmailWorkspaceScope) {
   const configured = isWhatsAppConfigured();
   const phone = getWhatsAppNotifyPhone();
 
@@ -38,12 +39,19 @@ export async function getWhatsAppNotificationStatus() {
     };
   }
 
+  const workspaceId = await resolveEmailWorkspaceId(scope);
   const supabase = requireSupabase();
   const [{ data: settings }, { data: lastLog }] = await Promise.all([
-    supabase.from("email_whatsapp_settings").select("*").eq("account_id", "info").maybeSingle(),
+    supabase
+      .from("email_whatsapp_settings")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("account_id", "info")
+      .maybeSingle(),
     supabase
       .from("email_whatsapp_notification_log")
       .select("notified_at")
+      .eq("workspace_id", workspaceId)
       .eq("account_id", "info")
       .order("notified_at", { ascending: false })
       .limit(1)
@@ -60,7 +68,11 @@ export async function getWhatsAppNotificationStatus() {
   };
 }
 
-export async function setWhatsAppNotificationsEnabled(enabled: boolean) {
+export async function setWhatsAppNotificationsEnabled(
+  enabled: boolean,
+  scope?: EmailWorkspaceScope,
+) {
+  const workspaceId = await resolveEmailWorkspaceId(scope);
   const supabase = requireSupabase();
   const phone = getWhatsAppNotifyPhone();
 
@@ -68,12 +80,13 @@ export async function setWhatsAppNotificationsEnabled(enabled: boolean) {
     .from("email_whatsapp_settings")
     .upsert(
       {
+        workspace_id: workspaceId,
         account_id: "info",
         enabled,
         notify_phone: phone,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "account_id" },
+      { onConflict: "workspace_id,account_id" },
     )
     .select("*")
     .single();
@@ -82,7 +95,7 @@ export async function setWhatsAppNotificationsEnabled(enabled: boolean) {
   return data as WhatsAppSettingsRow;
 }
 
-async function isWhatsAppEnabledForInfo() {
+async function isWhatsAppEnabledForInfo(workspaceId: string) {
   if (!isWhatsAppConfigured()) return false;
   if (!isSupabaseConfigured()) return true;
 
@@ -90,19 +103,21 @@ async function isWhatsAppEnabledForInfo() {
   const { data } = await supabase
     .from("email_whatsapp_settings")
     .select("enabled")
+    .eq("workspace_id", workspaceId)
     .eq("account_id", "info")
     .maybeSingle();
 
   return (data as { enabled?: boolean } | null)?.enabled ?? true;
 }
 
-async function wasMessageNotified(messageUid: number) {
+async function wasMessageNotified(messageUid: number, workspaceId: string) {
   if (!isSupabaseConfigured()) return false;
 
   const supabase = requireSupabase();
   const { data } = await supabase
     .from("email_whatsapp_notification_log")
     .select("id")
+    .eq("workspace_id", workspaceId)
     .eq("account_id", "info")
     .eq("message_uid", messageUid)
     .maybeSingle();
@@ -110,12 +125,13 @@ async function wasMessageNotified(messageUid: number) {
   return Boolean(data);
 }
 
-async function markMessageNotified(message: EmailMessage) {
+async function markMessageNotified(message: EmailMessage, workspaceId: string) {
   if (!isSupabaseConfigured()) return;
 
   const supabase = requireSupabase();
   const { error } = await supabase.from("email_whatsapp_notification_log").upsert(
     {
+      workspace_id: workspaceId,
       account_id: "info",
       message_uid: message.uid,
       message_id: message.messageId,
@@ -123,7 +139,7 @@ async function markMessageNotified(message: EmailMessage) {
       subject: message.subject,
       notified_at: new Date().toISOString(),
     },
-    { onConflict: "account_id,message_uid" },
+    { onConflict: "workspace_id,account_id,message_uid" },
   );
 
   if (error) throw new Error(error.message);
@@ -139,13 +155,14 @@ function hashStringToSafeInteger(value: string) {
   return Math.abs(hash % 9007199254740991);
 }
 
-async function wasMessagingMessageNotified(messageId: string) {
+async function wasMessagingMessageNotified(messageId: string, workspaceId: string) {
   if (!isSupabaseConfigured()) return false;
 
   const supabase = requireSupabase();
   const { data } = await supabase
     .from("email_whatsapp_notification_log")
     .select("id")
+    .eq("workspace_id", workspaceId)
     .eq("account_id", WESTPORT_MESSAGING_ACCOUNT_ID)
     .eq("message_id", messageId)
     .maybeSingle();
@@ -153,13 +170,18 @@ async function wasMessagingMessageNotified(messageId: string) {
   return Boolean(data);
 }
 
-async function markMessagingMessageNotified(message: ChatMessage, channelName: string) {
+async function markMessagingMessageNotified(
+  message: ChatMessage,
+  channelName: string,
+  workspaceId: string,
+) {
   if (!isSupabaseConfigured()) return;
 
   const supabase = requireSupabase();
   const firstLine = message.content.trim().split(/\r?\n/)[0]?.trim() || "(No message)";
   const { error } = await supabase.from("email_whatsapp_notification_log").upsert(
     {
+      workspace_id: workspaceId,
       account_id: WESTPORT_MESSAGING_ACCOUNT_ID,
       message_uid: hashStringToSafeInteger(message.id),
       message_id: message.id,
@@ -167,39 +189,43 @@ async function markMessagingMessageNotified(message: ChatMessage, channelName: s
       subject: firstLine,
       notified_at: new Date().toISOString(),
     },
-    { onConflict: "account_id,message_uid" },
+    { onConflict: "workspace_id,account_id,message_uid" },
   );
 
   if (error) throw new Error(error.message);
 }
 
 /** On first run, mark existing inbox messages as seen so old mail does not trigger alerts. */
-async function bootstrapNotificationLog(messages: EmailMessage[]) {
+async function bootstrapNotificationLog(messages: EmailMessage[], workspaceId: string) {
   if (!isSupabaseConfigured()) return;
 
   const supabase = requireSupabase();
   const { count, error: countError } = await supabase
     .from("email_whatsapp_notification_log")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("account_id", "info");
 
   if (countError) throw new Error(countError.message);
   if ((count ?? 0) > 0) return;
 
   const inbound = messages.filter((message) => message.direction === "inbound");
   for (const message of inbound) {
-    await markMessageNotified(message);
+    await markMessageNotified(message, workspaceId);
   }
 }
 
 export async function processInfoMailboxWhatsAppNotifications(
   prefetchedMessages?: EmailMessage[],
+  scope?: EmailWorkspaceScope,
 ) {
-  if (!(await isWhatsAppEnabledForInfo())) {
+  const workspaceId = await resolveEmailWorkspaceId(scope);
+  if (!(await isWhatsAppEnabledForInfo(workspaceId))) {
     return { sent: 0, skipped: "disabled" as const };
   }
 
   const messages = prefetchedMessages ?? (await fetchMailboxMessages("info"));
-  await bootstrapNotificationLog(messages);
+  await bootstrapNotificationLog(messages, workspaceId);
 
   const candidates = messages.filter((message) => message.direction === "inbound");
 
@@ -207,13 +233,13 @@ export async function processInfoMailboxWhatsAppNotifications(
   const results: Array<{ messageUid: number; subject: string; ok: boolean; error?: string }> = [];
 
   for (const message of candidates) {
-    if (await wasMessageNotified(message.uid)) continue;
+    if (await wasMessageNotified(message.uid, workspaceId)) continue;
 
     try {
       await sendWhatsAppMessage(
         formatNewEmailWhatsAppMessage(message.fromName, message.subject),
       );
-      await markMessageNotified(message);
+      await markMessageNotified(message, workspaceId);
       sent += 1;
       results.push({ messageUid: message.uid, subject: message.subject, ok: true });
     } catch (error) {
@@ -235,8 +261,12 @@ export async function sendWhatsAppTestNotification() {
   );
 }
 
-export async function notifyWestportClientMessageWhatsApp(message: ChatMessage) {
-  if (!(await isWhatsAppEnabledForInfo())) {
+export async function notifyWestportClientMessageWhatsApp(
+  message: ChatMessage,
+  scope?: EmailWorkspaceScope,
+) {
+  const workspaceId = await resolveEmailWorkspaceId(scope);
+  if (!(await isWhatsAppEnabledForInfo(workspaceId))) {
     return { sent: false as const, skipped: "disabled" as const };
   }
 
@@ -248,11 +278,11 @@ export async function notifyWestportClientMessageWhatsApp(message: ChatMessage) 
     return { sent: false as const, skipped: "system" as const };
   }
 
-  if (await wasMessagingMessageNotified(message.id)) {
+  if (await wasMessagingMessageNotified(message.id, workspaceId)) {
     return { sent: false as const, skipped: "already_notified" as const };
   }
 
-  const channel = await getChannelByRoom(message.room);
+  const channel = await getChannelByRoom(message.room, { workspaceId });
   if (!channel || channel.channelType !== "client") {
     return { sent: false as const, skipped: "not_client_channel" as const };
   }
@@ -260,7 +290,7 @@ export async function notifyWestportClientMessageWhatsApp(message: ChatMessage) 
   await sendWhatsAppMessage(
     formatClientChannelWhatsAppMessage(channel.name, message.createdAt, message.content),
   );
-  await markMessagingMessageNotified(message, channel.name);
+  await markMessagingMessageNotified(message, channel.name, workspaceId);
 
   return { sent: true as const, channelName: channel.name };
 }

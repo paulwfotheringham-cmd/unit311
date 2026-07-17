@@ -71,8 +71,16 @@ async function readApiJson<T>(response: Response): Promise<T> {
   }
 }
 
-function resolveUploadFolderId(currentFolderId: string | null) {
-  return currentFolderId;
+function resolveActiveFolderId(
+  scope: FileRepositoryScope,
+  folderId: string | null,
+  breadcrumb: BreadcrumbSegment[],
+) {
+  if (scope === "external" && !folderId) {
+    return breadcrumb[0]?.id ?? null;
+  }
+
+  return folderId;
 }
 
 function entryIcon(entry: BrowseEntry) {
@@ -109,6 +117,8 @@ export default function FileRepositoryWorkspace({
   rootLabel,
 }: FileRepositoryWorkspaceProps = {}) {
   const usesApi = scope !== "external";
+  const usesExternalApi = scope === "external";
+  const canMutate = usesApi || usesExternalApi;
   const resolvedRootLabel = defaultRootLabel(scope, rootLabel ?? clientName);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [folderId, setFolderId] = useState<string | null>(initialFolderId);
@@ -157,6 +167,24 @@ export default function FileRepositoryWorkspace({
     setError(null);
 
     try {
+      if (usesExternalApi) {
+        const params = new URLSearchParams();
+        if (folderId) params.set("folderId", folderId);
+        if (query) params.set("q", query);
+        const response = await fetch(`/api/files/external/browse?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const data = (await response.json()) as {
+          entries?: BrowseEntry[];
+          breadcrumb?: BreadcrumbSegment[];
+          error?: string;
+        };
+        if (!response.ok) throw new Error(data.error ?? "Failed to load external files");
+        setEntries(data.entries ?? []);
+        setBreadcrumb(data.breadcrumb ?? [{ id: null, name: resolvedRootLabel }]);
+        return;
+      }
+
       if (!usesApi) {
         const data = browseExternalFiles({ folderId, query });
         setEntries(data.entries);
@@ -191,7 +219,7 @@ export default function FileRepositoryWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, folderId, query, resolvedRootLabel, scope, usesApi]);
+  }, [categoryFilter, folderId, query, resolvedRootLabel, scope, usesApi, usesExternalApi]);
 
   useEffect(() => {
     setFolderId(initialFolderId);
@@ -220,17 +248,20 @@ export default function FileRepositoryWorkspace({
     const name = window.prompt("New folder name");
     if (!name?.trim()) return;
 
-    if (!usesApi) {
-      setError("External files are read-only in this view.");
-      return;
-    }
+    if (!canMutate) return;
 
     setBusy(true);
     try {
+      const targetFolderId = resolveActiveFolderId(scope, folderId, breadcrumb);
       const response = await fetch("/api/files/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, parentId: folderId, categoryId: categoryFilter }),
+        body: JSON.stringify({
+          name,
+          parentId: scope === "external" ? targetFolderId : folderId,
+          categoryId: categoryFilter,
+          externalScope: scope === "external",
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Failed to create folder");
@@ -245,15 +276,12 @@ export default function FileRepositoryWorkspace({
   async function handleUpload(files: FileList | null) {
     if (!files?.length) return;
 
-    if (!usesApi) {
-      setError("External files are read-only in this view.");
-      return;
-    }
+    if (!canMutate) return;
 
     setBusy(true);
     setError(null);
 
-    const targetFolderId = resolveUploadFolderId(folderId);
+    const targetFolderId = resolveActiveFolderId(scope, folderId, breadcrumb);
 
     try {
       for (const file of Array.from(files)) {
@@ -630,11 +658,6 @@ export default function FileRepositoryWorkspace({
       )}
 
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-        {scope === "external" && (
-          <div className="border-b border-amber-400/20 bg-amber-500/10 px-4 py-2 text-xs text-amber-100 sm:px-5">
-            External partner and client deliverables — read-only preview dataset.
-          </div>
-        )}
         <div className="border-b border-white/10 p-4 sm:p-5">
           <div className="flex flex-wrap items-center gap-2 text-sm text-white/55">
             {breadcrumb.map((segment, index) => (
@@ -673,7 +696,7 @@ export default function FileRepositoryWorkspace({
 
             <button
               type="button"
-              disabled={busy || !usesApi}
+              disabled={busy || !canMutate}
               onClick={() => void handleCreateFolder()}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-medium text-white transition-colors hover:bg-white/[0.08] disabled:opacity-50"
             >
@@ -683,7 +706,7 @@ export default function FileRepositoryWorkspace({
 
             <button
               type="button"
-              disabled={busy || !usesApi}
+              disabled={busy || !canMutate}
               onClick={() => uploadInputRef.current?.click()}
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#2563eb] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8] disabled:opacity-50"
             >

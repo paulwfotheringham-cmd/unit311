@@ -1,6 +1,7 @@
 "use client";
 
 import { ChartTooltip } from "@/components/dashboard/ChartTooltip";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
 import {
   CREDITORS_ACCOUNTS,
   CREDITORS_AGING_DATA,
@@ -12,6 +13,10 @@ import {
   ledgerStatusLabel,
   type LedgerKpi,
 } from "@/lib/financials-ledger-mock-data";
+import {
+  CREDITORS_DASHBOARD_TILES,
+  DEFAULT_CREDITORS_TILE_LAYOUT,
+} from "@/lib/view-dashboard-tile-catalogs";
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 import {
@@ -45,6 +50,13 @@ function KpiCard({ kpi }: { kpi: LedgerKpi }) {
 export default function CreditorsWorkspace() {
   return (
     <div className="space-y-6">
+      <DashboardTopTilesBar
+        storageKey="unit311-creditors-dashboard-tiles"
+        catalog={CREDITORS_DASHBOARD_TILES}
+        defaultLayout={DEFAULT_CREDITORS_TILE_LAYOUT}
+        title="Creditors key details"
+        showCustomizeHint={false}
+      />
       <section className={panelClassName()}>
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/10">

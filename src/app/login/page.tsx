@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 
 import Unit311LoginPage from "@/components/auth/Unit311LoginPage";
-import { isCentralDomainHost } from "@/lib/app-domains";
+import {
+  getRequestHost,
+  isCentralDomainHost,
+  parseValidWorkspaceReturnTo,
+} from "@/lib/app-domains";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const host = (await headers()).get("host");
+  const host = getRequestHost({ headers: await headers() });
   const isCentral = isCentralDomainHost(host);
 
   return {
@@ -17,9 +21,17 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function LoginPage() {
-  const host = (await headers()).get("host");
-  const isCentral = isCentralDomainHost(host);
+type PageProps = {
+  searchParams: Promise<{ return_to?: string }>;
+};
 
-  return <Unit311LoginPage variant={isCentral ? "central" : "default"} />;
+export default async function LoginPage({ searchParams }: PageProps) {
+  const host = getRequestHost({ headers: await headers() });
+  const isCentral = isCentralDomainHost(host);
+  const params = await searchParams;
+  const returnTo = parseValidWorkspaceReturnTo(params.return_to);
+
+  return (
+    <Unit311LoginPage variant={isCentral ? "central" : "default"} returnTo={returnTo} />
+  );
 }

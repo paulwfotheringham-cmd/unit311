@@ -68,7 +68,12 @@ export async function createInternalOperator(
     const supabase = requireOperatorsSupabase();
     const blank = createBlankUserInput();
     const id = `user-${crypto.randomUUID().slice(0, 8)}`;
-    const username = normalizePlatformUsername(input.username);
+    const username = normalizePlatformUsername(
+      input.username?.trim() || input.email?.trim() || "",
+    );
+    if (!username) {
+      throw new Error("Email address is required for internal users.");
+    }
     const password = input.password?.trim() || generatePlatformPassword();
     const passwordHash = hashPlatformPasswordForUser(username, password);
 
@@ -96,6 +101,7 @@ export async function createInternalOperator(
       {
         username,
         display_name: input.fullName.trim(),
+        email: input.email?.trim().toLowerCase() || username,
         password_hash: passwordHash,
         user_type: "internal",
         redirect_path: "/internaldashboard",
@@ -132,7 +138,23 @@ export async function updateInternalOperator(
 ): Promise<ManagedUser> {
   return withInternalOperatorsTable(async () => {
     const supabase = requireOperatorsSupabase();
-    const payload = buildOperatorPayload(patch);
+
+    const normalizedPatch = { ...patch };
+    if (normalizedPatch.email?.trim()) {
+      normalizedPatch.username = normalizedPatch.email.trim().toLowerCase();
+    }
+
+    const { data: existing, error: existingError } = await supabase
+      .from("internal_operators")
+      .select("username, full_name")
+      .eq("id", id)
+      .single();
+
+    if (existingError || !existing) {
+      throw new Error(existingError?.message ?? "User not found");
+    }
+
+    const payload = buildOperatorPayload(normalizedPatch);
 
     const { data, error } = await supabase
       .from("internal_operators")
@@ -142,7 +164,71 @@ export async function updateInternalOperator(
       .single();
 
     if (error) throw new Error(error.message);
+
+    const nextUsername =
+      typeof payload.username === "string" ? payload.username : existing.username;
+    const nextDisplayName =
+      typeof payload.full_name === "string" ? payload.full_name : existing.full_name;
+
+    if (nextUsername !== existing.username || nextDisplayName !== existing.full_name) {
+      const { error: platformError } = await supabase
+        .from("platform_users")
+        .update({
+          username: nextUsername,
+          display_name: nextDisplayName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("username", existing.username)
+        .eq("user_type", "internal");
+
+      if (platformError) throw new Error(platformError.message);
+    }
+
     return mapInternalOperator(data as DbOperator);
+  });
+}
+
+export async function setInternalOperatorPassword(
+  id: string,
+  password?: string,
+): Promise<{ password: string }> {
+  return withInternalOperatorsTable(async () => {
+    const supabase = requireOperatorsSupabase();
+    const { data: operator, error: loadError } = await supabase
+      .from("internal_operators")
+      .select("username, full_name")
+      .eq("id", id)
+      .single();
+
+    if (loadError || !operator) {
+      throw new Error(loadError?.message ?? "User not found");
+    }
+
+    const newPassword = password?.trim() || generatePlatformPassword();
+    if (newPassword.length < 8) {
+      throw new Error("Password must be at least 8 characters");
+    }
+
+    const username = normalizePlatformUsername(operator.username);
+    const passwordHash = hashPlatformPasswordForUser(username, newPassword);
+
+    const { error } = await supabase.from("platform_users").upsert(
+      {
+        username,
+        display_name: operator.full_name,
+        email: username.includes("@") ? username : null,
+        password_hash: passwordHash,
+        user_type: "internal",
+        redirect_path: "/internaldashboard",
+        client_name: null,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "username" },
+    );
+
+    if (error) throw new Error(error.message);
+    return { password: newPassword };
   });
 }
 

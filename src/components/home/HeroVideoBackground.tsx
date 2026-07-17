@@ -6,7 +6,6 @@ const HERO_VIDEO = "/images/video.mp4";
 const PLAYBACK_RATE = 0.8;
 const LOOP_LEAD_IN_SECONDS = 0.05;
 const LOOP_TRIM_SECONDS = 0.12;
-const HERO_OBJECT_POSITION = "50% 42%";
 
 export default function HeroVideoBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,8 +88,7 @@ export default function HeroVideoBackground() {
       ) : (
         <video
           ref={videoRef}
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: HERO_OBJECT_POSITION }}
+          className="absolute inset-0 h-full w-full object-cover object-[50%_32%] sm:object-[50%_38%] md:object-[50%_42%]"
           autoPlay
           muted
           loop

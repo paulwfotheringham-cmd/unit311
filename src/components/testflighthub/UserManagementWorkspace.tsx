@@ -13,7 +13,7 @@ import {
 } from "@/lib/user-management-data";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
-import { Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Plus, Save, Trash2 } from "lucide-react";
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -49,6 +49,7 @@ export default function UserManagementWorkspace({ onUsersChange }: UserManagemen
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
   const [savedSnapshot, setSavedSnapshot] = useState<ManagedUser | null>(null);
   const snapshottedIdRef = useRef<string | null>(null);
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
@@ -208,6 +209,76 @@ export default function UserManagementWorkspace({ onUsersChange }: UserManagemen
     }
   }
 
+  async function handleResetPassword() {
+    if (!selectedUser) return;
+    if (!window.confirm(`Reset password for "${selectedUser.fullName}"?`)) return;
+
+    setBusy(true);
+    setError(null);
+    setPasswordMessage(null);
+
+    try {
+      const response = await fetch(`/api/users/${selectedUser.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset-password" }),
+      });
+
+      const data = await readApiJson<{ temporaryPassword?: string; error?: string }>(response);
+      if (!response.ok || !data.temporaryPassword) {
+        throw new Error(data.error ?? "Failed to reset password");
+      }
+
+      setPasswordMessage(`New password: ${data.temporaryPassword}`);
+      setNewPassword("");
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : "Failed to reset password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSetPassword() {
+    if (!selectedUser) return;
+
+    const passwordToSet = newPassword.trim();
+    if (passwordToSet.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!window.confirm(`Set a new password for "${selectedUser.fullName}"?`)) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setPasswordMessage(null);
+
+    try {
+      const response = await fetch(`/api/users/${selectedUser.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set-password",
+          password: passwordToSet,
+        }),
+      });
+
+      const data = await readApiJson<{ password?: string; error?: string }>(response);
+      if (!response.ok || !data.password) {
+        throw new Error(data.error ?? "Failed to set password");
+      }
+
+      setPasswordMessage(`Password set: ${data.password}`);
+      setNewPassword("");
+    } catch (setPasswordError) {
+      setError(setPasswordError instanceof Error ? setPasswordError.message : "Failed to set password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleDeleteUser() {
     if (!selectedUser) return;
     if (!window.confirm(`Delete user "${selectedUser.fullName}"?`)) return;
@@ -349,6 +420,15 @@ export default function UserManagementWorkspace({ onUsersChange }: UserManagemen
                     </button>
                     <button
                       type="button"
+                      onClick={() => void handleResetPassword()}
+                      disabled={busy}
+                      className="inline-flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 transition-colors hover:bg-amber-500/20 disabled:opacity-60"
+                    >
+                      <KeyRound className="h-3.5 w-3.5" />
+                      Reset password
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void handleDeleteUser()}
                       disabled={busy}
                       className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition-colors hover:bg-red-500/20 disabled:opacity-60"
@@ -477,6 +557,33 @@ export default function UserManagementWorkspace({ onUsersChange }: UserManagemen
                       value={selectedUser.notes}
                       onChange={(event) => patchSelected({ notes: event.target.value })}
                     />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>New password</FieldLabel>
+                    <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        autoComplete="new-password"
+                        className={cn(inputClassName(), "mt-0 font-mono sm:flex-1")}
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        placeholder="Enter at least 8 characters"
+                        disabled={busy}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleSetPassword()}
+                        disabled={busy || newPassword.trim().length < 8}
+                        className="inline-flex h-[42px] shrink-0 items-center justify-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/10 px-4 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                        Set password
+                      </button>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+                      Sets the login password for @{selectedUser.username}. Use Reset password for a
+                      random value, or enter one here and click Set password.
+                    </p>
                   </div>
                 </div>
               </section>

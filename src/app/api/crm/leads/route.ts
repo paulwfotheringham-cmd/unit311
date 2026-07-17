@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import type { LeadStatus } from "@/lib/crm-data";
 import { createLead, listLeads } from "@/lib/crm-leads-service";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +14,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const status = request.nextUrl.searchParams.get("status") as LeadStatus | "All" | null;
-    const leads = await listLeads(status ?? "All");
-    return NextResponse.json({ leads });
+    const leads = await listLeads(status ?? "All", { workspaceId: workspace.id });
+    return NextResponse.json({
+      leads,
+      workspace: { id: workspace.id, slug: workspace.slug, name: workspace.name },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load leads";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -27,6 +38,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const body = (await request.json()) as {
       companyName?: string;
       contactName?: string;
@@ -47,10 +60,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const lead = await createLead(body as { companyName: string; contactName: string });
+    const lead = await createLead(
+      body as { companyName: string; contactName: string },
+      { workspaceId: workspace.id },
+    );
     return NextResponse.json({ lead });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create lead";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
