@@ -105,7 +105,7 @@ function ChaseCamera({
   const segmentRef = useRef<CameraSegment>({
     from: [telemetry.latitude, telemetry.longitude],
     to: [telemetry.latitude, telemetry.longitude],
-    startedAt: performance.now(),
+    startedAt: 0,
     durationMs: SIMULATION_TICK_SECONDS * 1000,
   });
 
@@ -162,6 +162,9 @@ function ChaseCamera({
 
       const current = telemetryRef.current;
       const segment = segmentRef.current;
+      if (segment.startedAt === 0) {
+        segment.startedAt = timestamp;
+      }
       const elapsedMs = timestamp - segment.startedAt;
       const progress = smoothstep(elapsedMs / segment.durationMs);
       const displayPosition = lerpLatLng(segment.from, segment.to, progress);

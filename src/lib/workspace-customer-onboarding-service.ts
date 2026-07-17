@@ -214,13 +214,13 @@ export async function saveWorkspaceOnboardingDraft(
         .filter((key) => ONBOARDING_MODULES.some((module) => module.id === key)),
     );
 
-    for (const module of ONBOARDING_MODULES) {
-      const enabled = selected.has(module.id);
+    for (const onboardingModule of ONBOARDING_MODULES) {
+      const enabled = selected.has(onboardingModule.id);
       const { data: existing } = await supabase
         .from("workspace_modules")
         .select("id")
         .eq("workspace_id", state.workspaceId)
-        .eq("module_key", module.id)
+        .eq("module_key", onboardingModule.id)
         .maybeSingle();
 
       if (existing?.id) {
@@ -231,7 +231,7 @@ export async function saveWorkspaceOnboardingDraft(
       } else if (enabled) {
         await supabase.from("workspace_modules").insert({
           workspace_id: state.workspaceId,
-          module_key: module.id,
+          module_key: onboardingModule.id,
           enabled: true,
         });
       }

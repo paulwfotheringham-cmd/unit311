@@ -156,6 +156,7 @@ function MessageBody({
 export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
   const [internalUsers, setInternalUsers] = useState<ManagedUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const users = internalUsers;
 
   const loadInternalUsers = useCallback(async () => {
@@ -204,7 +205,6 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
   const [creatingChannel, setCreatingChannel] = useState(false);
   const [createChannelError, setCreateChannelError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "live" | "polling">(
     "connecting",
   );

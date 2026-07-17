@@ -62,7 +62,9 @@ export function useExecutiveCallWebRtc({
   const guestReadyRef = useRef(false);
   const postedReadyRef = useRef(false);
 
-  localStreamRef.current = localStream;
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
 
   useEffect(() => {
     if (!enabled || !localStream) {

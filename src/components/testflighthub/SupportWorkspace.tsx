@@ -194,9 +194,10 @@ export default function SupportWorkspace() {
     [inQueueCount, outstandingCount, periodTickets, resolvedCount],
   );
 
+  const [historicChartNowMs] = useState(() => Date.now());
   const historicChartData = useMemo(() => {
     const buckets: Array<{ week: string; opened: number; resolved: number }> = [];
-    const now = Date.now();
+    const now = historicChartNowMs;
     const weekMs = 7 * 24 * 60 * 60 * 1000;
 
     for (let index = 5; index >= 0; index -= 1) {
@@ -219,7 +220,7 @@ export default function SupportWorkspace() {
     }
 
     return buckets;
-  }, [tickets]);
+  }, [historicChartNowMs, tickets]);
 
   const openTicketsNow = useMemo(
     () => tickets.filter((ticket) => !ticket.archived && !ticket.closed).length,

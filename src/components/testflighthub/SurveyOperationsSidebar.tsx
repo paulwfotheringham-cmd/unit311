@@ -161,6 +161,7 @@ export default function SurveyOperationsSidebar({
   const resolvedActiveView = (activeView as InternalOperationsView | undefined) ?? "home";
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
   const internalNavSections = internalSurveyNavSections;
+  const internalBasePath = basePath;
   const [isInternalOpsHost] = useState(() => {
     if (mode !== "internal") return false;
     if (basePath === "/dashboard") return false;
@@ -197,12 +198,11 @@ export default function SurveyOperationsSidebar({
     if (Object.keys(autoExpanded).length > 0) {
       setExpandedParents((current) => ({ ...current, ...autoExpanded }));
     }
-  }, [internalNavSections, resolvedActiveView, pathname, searchParams]);
+  }, [internalNavSections, resolvedActiveView, pathname, searchParams, internalBasePath]);
 
   const inAppNavigation =
     isSurveyOperationsDashboardPath(pathname, basePath) && onViewChange != null;
   const logoHref = mode === "internal" ? basePath : basePath;
-  const internalBasePath = basePath;
 
   function renderNavItem(
     item: { label: string; icon: string },
