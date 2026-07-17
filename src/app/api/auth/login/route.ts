@@ -33,6 +33,21 @@ const DEMO_LOGIN = {
 } as const;
 
 /**
+ * Demo login (client/client) is a local/dev convenience only.
+ * Disabled by default. Never available when NODE_ENV or VERCEL_ENV is production,
+ * even if ENABLE_DEMO_LOGIN is set.
+ */
+function isDemoLoginEnabled(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  if (process.env.VERCEL_ENV === "production") {
+    return false;
+  }
+  return process.env.ENABLE_DEMO_LOGIN === "true";
+}
+
+/**
  * When the user started from a customer workspace (`return_to`), always send them
  * back to that host after login — never strand them on apex /payment, /questions, etc.
  * Onboarding vs dashboard is decided from workspace state on the customer host.
@@ -128,6 +143,7 @@ export async function POST(request: NextRequest) {
       : null;
 
     if (
+      isDemoLoginEnabled() &&
       normalizePlatformUsername(body.username) === DEMO_LOGIN.username &&
       body.password === DEMO_LOGIN.password
     ) {
