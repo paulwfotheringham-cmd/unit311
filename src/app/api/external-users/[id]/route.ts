@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireInternalAdministratorSession } from "@/lib/internal-admin-auth";
 import {
   deleteExternalUser,
   resetExternalUserPassword,
@@ -12,6 +13,9 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const auth = await requireInternalAdministratorSession();
+  if ("error" in auth) return auth.error;
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
@@ -35,6 +39,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const auth = await requireInternalAdministratorSession();
+  if ("error" in auth) return auth.error;
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
@@ -50,6 +57,9 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const auth = await requireInternalAdministratorSession();
+  if ("error" in auth) return auth.error;
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
