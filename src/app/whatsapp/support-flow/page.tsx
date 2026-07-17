@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { Loader2, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 
 import {
@@ -339,13 +339,15 @@ export default function WhatsAppSupportFlowPage() {
   }, []);
 
   useEffect(() => {
-    setLines(loadStoredLines(CHAT_STORAGE_KEY));
-    setNotifyLines(loadStoredLines(NOTIFY_STORAGE_KEY));
-    setTicketId(window.localStorage.getItem(PENDING_TICKET_KEY));
-    setIntakeStep(loadIntakeStep());
-    setVisibleColumns(loadColumnCount());
-    setAssigned(window.localStorage.getItem(ASSIGNED_KEY) === "1");
-    setHydrated(true);
+    startTransition(() => {
+      setLines(loadStoredLines(CHAT_STORAGE_KEY));
+      setNotifyLines(loadStoredLines(NOTIFY_STORAGE_KEY));
+      setTicketId(window.localStorage.getItem(PENDING_TICKET_KEY));
+      setIntakeStep(loadIntakeStep());
+      setVisibleColumns(loadColumnCount());
+      setAssigned(window.localStorage.getItem(ASSIGNED_KEY) === "1");
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -364,14 +366,18 @@ export default function WhatsAppSupportFlowPage() {
 
   useEffect(() => {
     if (!ticketId || visibleColumns < 3) return;
-    void loadPlatformMessages(ticketId);
+    startTransition(() => {
+      void loadPlatformMessages(ticketId);
+    });
     const interval = window.setInterval(() => void loadPlatformMessages(ticketId), 4000);
     return () => window.clearInterval(interval);
   }, [ticketId, visibleColumns, loadPlatformMessages]);
 
   useEffect(() => {
     if (!ticketId || visibleColumns < 4) return;
-    void loadTicket(ticketId);
+    startTransition(() => {
+      void loadTicket(ticketId);
+    });
     const interval = window.setInterval(() => void loadTicket(ticketId), 4000);
     return () => window.clearInterval(interval);
   }, [ticketId, visibleColumns, loadTicket]);

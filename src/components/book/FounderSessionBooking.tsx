@@ -2,7 +2,7 @@
 
 
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 
 
@@ -136,19 +136,11 @@ export default function FounderSessionBooking({ onBookingSuccess }: FounderSessi
 
   const [success, setSuccess] = useState<BookingSuccess | null>(null);
 
-  const [storedConfirmation, setStoredConfirmation] = useState<StoredBookConfirmation | null>(null);
-
-
-
-  useEffect(() => {
-
-    if (isBookFormSubmitted()) {
-
-      setStoredConfirmation(readStoredBookConfirmation());
-
-    }
-
-  }, []);
+  const [storedConfirmation, setStoredConfirmation] = useState<StoredBookConfirmation | null>(() =>
+    typeof window !== "undefined" && isBookFormSubmitted()
+      ? readStoredBookConfirmation()
+      : null,
+  );
 
 
 
@@ -159,10 +151,6 @@ export default function FounderSessionBooking({ onBookingSuccess }: FounderSessi
 
 
     async function loadDateKeys() {
-
-      setLoadingSlots(true);
-
-      setError(null);
 
       try {
 
@@ -198,7 +186,11 @@ export default function FounderSessionBooking({ onBookingSuccess }: FounderSessi
 
 
 
-    void loadDateKeys();
+    startTransition(() => {
+      setLoadingSlots(true);
+      setError(null);
+      void loadDateKeys();
+    });
 
     return () => {
 
@@ -223,10 +215,6 @@ export default function FounderSessionBooking({ onBookingSuccess }: FounderSessi
 
 
     async function loadSlots() {
-
-      setLoadingSlots(true);
-
-      setError(null);
 
       try {
 
@@ -274,7 +262,11 @@ export default function FounderSessionBooking({ onBookingSuccess }: FounderSessi
 
 
 
-    void loadSlots();
+    startTransition(() => {
+      setLoadingSlots(true);
+      setError(null);
+      void loadSlots();
+    });
 
     return () => {
 

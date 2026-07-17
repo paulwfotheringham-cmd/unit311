@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import MarketingNavWordmark from "@/components/layout/MarketingNavWordmark";
 import { isClientCallRoute } from "@/lib/client-call-routes";
@@ -36,7 +36,18 @@ function scrollToSection(hash: string) {
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookFormSubmitted, setBookFormSubmitted] = useState(false);
-  const [isInternalAppHost, setIsInternalAppHost] = useState(false);
+  const [isInternalAppHost] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const host = window.location.hostname.toLowerCase();
+    const onInternalHost =
+      host === "internal.unit311central.com" || host === "internal.localhost";
+    const onCustomerHost =
+      host.endsWith(".unit311central.com") &&
+      host !== "unit311central.com" &&
+      host !== "www.unit311central.com" &&
+      host !== "internal.unit311central.com";
+    return onInternalHost || onCustomerHost;
+  });
   const pathname = usePathname();
   const isLoginPage = pathname === "/login" || pathname === "/clientlogin";
   const isHomePage = pathname === "/" || pathname === null;
@@ -70,25 +81,17 @@ export default function Navbar() {
     pathname?.startsWith("/whatsapp/");
 
   useEffect(() => {
-    const host = window.location.hostname.toLowerCase();
-    const onInternalHost =
-      host === "internal.unit311central.com" || host === "internal.localhost";
-    const onCustomerHost =
-      host.endsWith(".unit311central.com") &&
-      host !== "unit311central.com" &&
-      host !== "www.unit311central.com" &&
-      host !== "internal.unit311central.com";
-    setIsInternalAppHost(onInternalHost || onCustomerHost);
-  }, []);
-
-  useEffect(() => {
     if (pathname !== "/book") {
       clearBookFormSubmitted();
-      setBookFormSubmitted(false);
+      startTransition(() => {
+        setBookFormSubmitted(false);
+      });
       return;
     }
 
-    setBookFormSubmitted(isBookFormSubmitted());
+    startTransition(() => {
+      setBookFormSubmitted(isBookFormSubmitted());
+    });
 
     function handleBookSubmitted() {
       setBookFormSubmitted(true);

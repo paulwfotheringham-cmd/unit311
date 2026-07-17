@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -11,7 +11,9 @@ function OverviewVideoModal({ open, onClose }: { open: boolean; onClose: () => v
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    startTransition(() => {
+      setMounted(true);
+    });
   }, []);
 
   useEffect(() => {

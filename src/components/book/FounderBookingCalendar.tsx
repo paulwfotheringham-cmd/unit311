@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { getFounderBookingMonthBounds } from "@/lib/founder-booking/slots";
 import { cn } from "@/lib/utils";
@@ -121,7 +121,9 @@ export default function FounderBookingCalendar({
 
   useEffect(() => {
     if (!selectedDateKey || !bookableSet.has(selectedDateKey)) return;
-    setVisibleMonth(monthYearFromDateKey(selectedDateKey));
+    startTransition(() => {
+      setVisibleMonth(monthYearFromDateKey(selectedDateKey));
+    });
   }, [selectedDateKey, bookableSet]);
 
   const displayMonth = visibleMonth;

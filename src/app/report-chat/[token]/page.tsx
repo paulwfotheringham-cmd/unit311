@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 import { formatMessageTime, type ChatMessage } from "@/lib/internal-messaging-data";
 import { cn } from "@/lib/utils";
@@ -54,18 +54,21 @@ export default function ReportChatPage({ params }: ReportChatPageProps) {
     if (!token) return;
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
-    void loadChat(token)
-      .catch((loadError) => {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load chat");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    startTransition(() => {
+      setLoading(true);
+      setError(null);
+
+      void loadChat(token)
+        .catch((loadError) => {
+          if (!cancelled) {
+            setError(loadError instanceof Error ? loadError.message : "Failed to load chat");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    });
 
     const interval = window.setInterval(() => {
       void loadChat(token).catch(() => undefined);

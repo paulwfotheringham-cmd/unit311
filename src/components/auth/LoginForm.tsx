@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { navigateRedirectPath } from "@/lib/navigate-redirect";
@@ -67,9 +67,11 @@ export default function LoginForm({
     const saved = loadSavedLogin(storageKey);
     if (!saved) return;
 
-    setUsername(saved.username);
-    setPassword(saved.password);
-    setRememberLogin(true);
+    startTransition(() => {
+      setUsername(saved.username);
+      setPassword(saved.password);
+      setRememberLogin(true);
+    });
   }, [storageKey]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

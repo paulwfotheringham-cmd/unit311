@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 
 type SpeechRecognitionResultLike = {
   isFinal: boolean;
@@ -135,10 +135,14 @@ export function useSpeechTranscription({
 
   useEffect(() => {
     if (!enabled) {
-      stop();
+      startTransition(() => {
+        stop();
+      });
       return;
     }
-    start();
+    startTransition(() => {
+      start();
+    });
     return () => stop();
   }, [enabled, speaker, start, stop]);
 

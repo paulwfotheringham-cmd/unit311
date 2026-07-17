@@ -18,11 +18,11 @@ const BOOK_INTRO_BULLETS = [
 ] as const;
 
 export default function BookPageContent() {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(() =>
+    typeof window !== "undefined" ? isBookFormSubmitted() : false,
+  );
 
   useEffect(() => {
-    setSubmitted(isBookFormSubmitted());
-
     function handleSubmitted() {
       setSubmitted(true);
     }
