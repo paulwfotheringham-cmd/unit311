@@ -90,11 +90,6 @@ export function middleware(request: NextRequest) {
       return NextResponse.next({ request: { headers } });
     }
 
-    // Phase 1 tenancy diagnostics — do not rewrite onto the splash gateway.
-    if (pathname === "/diagnostics/workspace" || pathname.startsWith("/diagnostics/workspace/")) {
-      return NextResponse.next({ request: { headers } });
-    }
-
     // Workspace onboarding lives at /onboarding on the customer host.
     if (pathname === "/onboarding" || pathname.startsWith("/onboarding/")) {
       return rewriteTo(
