@@ -8,6 +8,7 @@ import {
 import { CENTRAL_SITE_URL } from "@/lib/app-domains";
 import { getLeadByIdForCapability } from "@/lib/crm-leads-service";
 import type { CrmLead } from "@/lib/crm-data";
+import { getAuthSecret } from "@/lib/platform-auth";
 
 /** Opaque AES-GCM invite for CRM → /signup?t=… (no IDs in cleartext). */
 export const CRM_SIGNUP_INVITE_PURPOSE = "crm-signup" as const;
@@ -37,14 +38,6 @@ export type CrmSignupInviteLead = Pick<
 export type ResolveCrmSignupInviteResult =
   | { ok: true; lead: CrmSignupInviteLead; token: string }
   | { ok: false; reason: "missing" | "invalid" | "expired" | "not_found" };
-
-function getAuthSecret() {
-  const secret = process.env.AUTH_SECRET ?? process.env.SUPABASE_ANON_KEY;
-  if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
-  }
-  return secret;
-}
 
 function deriveInviteKey() {
   return createHash("sha256").update(`unit311-crm-signup-invite:v1:${getAuthSecret()}`).digest();

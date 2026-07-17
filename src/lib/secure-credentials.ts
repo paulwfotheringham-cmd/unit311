@@ -5,6 +5,8 @@ import {
   randomBytes,
 } from "node:crypto";
 
+import { getAuthSecret } from "@/lib/platform-auth";
+
 const PURPOSE = "unit311-software-credentials:v1";
 
 export type EncryptedSecret = {
@@ -12,14 +14,6 @@ export type EncryptedSecret = {
   nonce: string;
   tag: string;
 };
-
-function getAuthSecret() {
-  const secret = process.env.AUTH_SECRET ?? process.env.SUPABASE_ANON_KEY;
-  if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
-  }
-  return secret;
-}
 
 function deriveKey() {
   return createHash("sha256").update(`${PURPOSE}:${getAuthSecret()}`).digest();

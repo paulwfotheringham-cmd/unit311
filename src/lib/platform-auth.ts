@@ -69,13 +69,30 @@ export function verifyPlatformPassword(password: string, storedHash: string) {
   }
 }
 
-function getAuthSecret() {
-  const secret = process.env.AUTH_SECRET ?? process.env.SUPABASE_ANON_KEY;
-  if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
+function isProductionRuntime() {
+  return (
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production"
+  );
+}
+
+/**
+ * Dedicated secret for HMAC session signing (and related AUTH_SECRET consumers).
+ * Never falls back to SUPABASE_ANON_KEY (public client key).
+ * Production fails fast when unset; local/dev uses a non-public placeholder.
+ */
+export function getAuthSecret(): string {
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) {
+    return secret;
   }
 
-  return secret;
+  if (isProductionRuntime()) {
+    throw new Error(
+      "AUTH_SECRET is required in production for session signing. A public key such as SUPABASE_ANON_KEY must not be used.",
+    );
+  }
+
+  return "unit311-local-dev-auth-secret";
 }
 
 export function createPlatformSessionToken(session: PlatformSession) {

@@ -56,7 +56,7 @@ Minimum required for a healthy production site:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SITE_URL=https://unit311central.com`
-- `AUTH_SECRET` (recommended)
+- `AUTH_SECRET` (required in production for session signing; never use the anon key)
 
 Commonly required for full product:
 
