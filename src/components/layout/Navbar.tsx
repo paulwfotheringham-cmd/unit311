@@ -42,7 +42,6 @@ export default function Navbar() {
   const isHomePage = pathname === "/" || pathname === null;
   const isMarketingPage = isMarketingRoute(pathname);
   const isBookPage = pathname === "/book";
-  const isTestBookThankYouPage = pathname === "/test-book-thank-you";
   const isPaymentPage =
     pathname === "/payment" ||
     pathname === "/payment-card" ||
@@ -52,7 +51,6 @@ export default function Navbar() {
     isHomePage ||
     isMarketingPage ||
     isBookPage ||
-    isTestBookThankYouPage ||
     isPaymentPage ||
     isLoginPage ||
     isClientCallPage;
@@ -105,10 +103,6 @@ export default function Navbar() {
   }
 
   if (pathname === "/book" && bookFormSubmitted) {
-    return null;
-  }
-
-  if (pathname === "/test-book-thank-you") {
     return null;
   }
 
