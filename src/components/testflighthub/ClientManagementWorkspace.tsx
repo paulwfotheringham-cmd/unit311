@@ -43,22 +43,6 @@ async function readApiJson<T>(response: Response): Promise<T> {
   }
 }
 
-/** Whether the Confirm Activation (Test) controls should render. */
-function clientNeedsActivationConfirm(client: ManagedClient) {
-  if (client.accountStatus === "Pending Payment" || client.accountStatus === "Pending") {
-    return true;
-  }
-  // Defend against CRM saves that previously forced accountStatus to Active while
-  // payment onboarding was still incomplete.
-  if (client.onboardingStage === "awaiting_payment" && !client.paymentMatchedAt) {
-    return true;
-  }
-  if (client.subscriptionStatus === "pending_payment") {
-    return true;
-  }
-  return false;
-}
-
 type ClientManagementWorkspaceProps = {
   onClientsChange?: (clients: ManagedClient[]) => void;
   /** Dashboard shows tiles/summary; directory shows the client explorer. */
@@ -290,57 +274,6 @@ export default function ClientManagementWorkspace({
     setError(null);
     setSaveMessage(null);
     await saveClient(selectedClient);
-  }
-
-  async function handleConfirmPaymentTest() {
-    if (!selectedClient) return;
-    setBusy(true);
-    setError(null);
-    setSaveMessage(null);
-
-    try {
-      const response = await fetch(`/api/clients/${selectedClient.id}/confirm-payment-test`, {
-        method: "POST",
-      });
-      const data = await readApiJson<{
-        ok?: boolean;
-        error?: string;
-        welcomeEmailSent?: boolean;
-        workspaceUrl?: string | null;
-        invoiceNumber?: string;
-      }>(response);
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "Failed to confirm payment.");
-      }
-
-      const refreshed = await fetch("/api/clients", { cache: "no-store" });
-      const listData = await readApiJson<{ clients?: ManagedClient[]; error?: string }>(refreshed);
-      if (refreshed.ok && listData.clients) {
-        syncClients(listData.clients);
-        const updated = listData.clients.find((client) => client.id === selectedClient.id);
-        if (updated) {
-          snapshottedIdRef.current = updated.id;
-          setSavedSnapshot(updated);
-        }
-      }
-
-      setSaveMessage(
-        [
-          "Manual test activation complete",
-          "Invoice left unpaid",
-          data.workspaceUrl ? `Workspace ${data.workspaceUrl}` : null,
-          data.welcomeEmailSent ? "Welcome email sent" : "Welcome email not sent",
-        ]
-          .filter(Boolean)
-          .join(" · "),
-      );
-    } catch (confirmError) {
-      setError(
-        confirmError instanceof Error ? confirmError.message : "Failed to confirm payment.",
-      );
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function handleResetWorkspaceOnboarding() {
@@ -740,19 +673,6 @@ export default function ClientManagementWorkspace({
                         Open Intelligence Platform
                       </Link>
                     )}
-                    {clientNeedsActivationConfirm(selectedClient) && (
-                      <button
-                        type="button"
-                        onClick={() => void handleConfirmPaymentTest()}
-                        disabled={busy}
-                        className="inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-500/25 disabled:opacity-60"
-                      >
-                        Confirm Activation (Test)
-                        <span className="hidden font-normal text-amber-100/70 sm:inline">
-                          — leave invoice unpaid
-                        </span>
-                      </button>
-                    )}
                     {/fotheringham/i.test(selectedClient.companyName) && (
                       <button
                         type="button"
@@ -796,27 +716,6 @@ export default function ClientManagementWorkspace({
                   <p className="mt-4 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
                     {saveMessage}
                   </p>
-                )}
-
-                {clientNeedsActivationConfirm(selectedClient) && (
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-amber-100">
-                        Pending payment — confirm activation
-                      </p>
-                      <p className="mt-0.5 text-xs text-amber-100/70">
-                        Test activation leaves the invoice unpaid. Use this only for manual testing.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleConfirmPaymentTest()}
-                      disabled={busy}
-                      className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/20 px-4 py-2.5 text-sm font-semibold text-amber-50 transition-colors hover:bg-amber-400/30 disabled:opacity-60"
-                    >
-                      Confirm Activation (Test)
-                    </button>
-                  </div>
                 )}
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
