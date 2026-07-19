@@ -84,6 +84,8 @@ export const FINANCIALS_FILES_WORKSPACE_ISOLATION_MIGRATION_PATH =
   "supabase/migrations/088_financials_files_workspace_isolation.sql";
 export const MESSAGING_EMAIL_SUPPORT_WORKSPACE_ISOLATION_MIGRATION_PATH =
   "supabase/migrations/089_messaging_email_support_workspace_isolation.sql";
+export const ACCOUNTS_WORKSPACE_CODE_UNIQUE_MIGRATION_PATH =
+  "supabase/migrations/090_accounts_workspace_code_unique.sql";
 export const CLIENT_PLATFORM_SUBDOMAIN_MIGRATION_PATH =
   "supabase/migrations/051_client_platform_subdomain.sql";
 export const PAYMENT_RECEIPT_FILE_ID_MIGRATION_PATH =

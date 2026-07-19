@@ -79,11 +79,35 @@ Ways to apply:
 2. Guarded App Router helpers under `/api/internal/apply-*` (require `INTERNAL_FILES_SETUP_SECRET`).
 3. Named scripts in `package.json` (`db:*`) for specific migrations.
 
+### Production schema baseline (post-recovery, 2026-07-19)
+
+Production database **Unit311 Central** (`kkxtvzxqmbacjatkiupq`) includes recovery migrations:
+
+**067, 068, 085, 087, 088, 089, 090**
+
+| Version | File | Applied how |
+| --- | --- | --- |
+| 067 | `067_treasury_settings.sql` | Direct apply during recovery |
+| 068 | `068_founder_session_booking_role.sql` | Direct apply during recovery |
+| 085 | `085_executive_call_webrtc_signals.sql` | Direct apply during recovery |
+| 087 | `087_crm_projects_workspace_isolation.sql` | Direct apply during recovery |
+| 088 | `088_financials_files_workspace_isolation.sql` | Direct apply during recovery |
+| 089 | `089_messaging_email_support_workspace_isolation.sql` | Direct apply during recovery |
+| 090 | `090_accounts_workspace_code_unique.sql` | Direct apply to production during recovery (2026-07-19) |
+
+Migration **090** replaces global `UNIQUE(accounts.code)` with `UNIQUE(workspace_id, code)` so each workspace can seed the standard Chart of Accounts.
+
+Allowlist: `/api/internal/apply-unit311central-pending-migrations` includes these paths through **090**.
+
+Full process notes: [docs/PRODUCTION_DEPLOYMENT.md](./docs/PRODUCTION_DEPLOYMENT.md).  
+Release summary: [docs/RELEASE_NOTES_RECOVERY_2026-07.md](./docs/RELEASE_NOTES_RECOVERY_2026-07.md).
+
 After migrations that affect workspace foundations, confirm:
 
 - Internal workspace `slug = unit311` exists
 - `provision_workspace()` is present (migration `079_…`)
 - Phase 1 `workspace_id` columns remain intact
+- `accounts` has `UNIQUE(workspace_id, code)` (migration `090_…`)
 
 See [docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md).
 

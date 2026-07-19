@@ -52,6 +52,7 @@ const MIGRATIONS = [
   "supabase/migrations/087_crm_projects_workspace_isolation.sql",
   "supabase/migrations/088_financials_files_workspace_isolation.sql",
   "supabase/migrations/089_messaging_email_support_workspace_isolation.sql",
+  "supabase/migrations/090_accounts_workspace_code_unique.sql",
 ];
 
 function isAuthorized(request: NextRequest) {

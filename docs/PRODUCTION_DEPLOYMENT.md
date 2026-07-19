@@ -8,7 +8,30 @@
 | Local folder | `Desktop\unit311` only |
 | Vercel project | `unit311central` (`prj_lyDcefpA3tnfzWLiZ9Ui0xVk6nJD`) |
 | Production branch | `main` |
-| Known-good recovery deployment | `dpl_98yEC1z5opp5ad7NXhk6G4EePPJ9` |
+| Post-recovery production tip (2026-07-19) | `dpl_GbBLZzFyPow2mXpbgtNCqbuT36qb` (commit `1e6db83`+) |
+| Earlier known-good (pre Edge/booking fixes) | `dpl_98yEC1z5opp5ad7NXhk6G4EePPJ9` |
+
+### Production database schema (recovery closeout)
+
+Supabase project **Unit311 Central** (`kkxtvzxqmbacjatkiupq`).
+
+Production includes the following recovery migrations (applied directly during the Jul 2026 recovery; not via `supabase db push`):
+
+| Migration | Purpose |
+| --- | --- |
+| `067_treasury_settings.sql` | Treasury settings foundation |
+| `068_founder_session_booking_role.sql` | Founder booking role column |
+| `085_executive_call_webrtc_signals.sql` | Executive Call WebRTC signaling |
+| `087_crm_projects_workspace_isolation.sql` | CRM / founder bookings `workspace_id` |
+| `088_financials_files_workspace_isolation.sql` | Journal lines + treasury workspace isolation |
+| `089_messaging_email_support_workspace_isolation.sql` | Messaging / email / support tenant uniqueness |
+| `090_accounts_workspace_code_unique.sql` | Multi-tenant GL: `UNIQUE(workspace_id, code)` |
+
+**Note on 090:** Applied directly to production on 2026-07-19 during recovery closeout verification. The SQL file and pending-migrations allowlist entry are kept in-repo so the repository matches production. Re-applying 090 is idempotent (safe no-op when the composite unique already exists).
+
+`supabase_migrations.schema_migrations` may remain empty; this project applies SQL out-of-band. Do not run `supabase db push` against production without an explicit ops plan.
+
+See also: [RELEASE_NOTES_RECOVERY_2026-07.md](./RELEASE_NOTES_RECOVERY_2026-07.md).
 
 **Do not** deploy Unit311 Central from `Desktop\onwardair` or any other repository/folder.
 
@@ -35,8 +58,9 @@ If production is wrong:
 
 1. Do **not** redeploy from a local dirty tree.
 2. Use Vercel **Instant Rollback** / **Promote Existing Deployment**.
-3. Preferred recovery target after the Jul 2026 incident:  
-   **`dpl_98yEC1z5opp5ad7NXhk6G4EePPJ9`**
+3. Prefer the latest known-good production deployment for the current release line  
+   (post-recovery tip: **`dpl_GbBLZzFyPow2mXpbgtNCqbuT36qb`**).  
+   Use **`dpl_98yEC1z5opp5ad7NXhk6G4EePPJ9`** only if you intentionally need the pre–Edge/booking-fix build.
 4. Verify after rollback:
    - `unit311central.com`
    - `internal.unit311central.com`
@@ -47,7 +71,7 @@ If production is wrong:
 Example (Vercel CLI promote of an existing deployment — does not rebuild):
 
 ```bash
-npx vercel promote dpl_98yEC1z5opp5ad7NXhk6G4EePPJ9 --scope paul-fs-projects-9f603a39 --yes
+npx vercel promote dpl_GbBLZzFyPow2mXpbgtNCqbuT36qb --scope paul-fs-projects-9f603a39 --yes
 ```
 
 ## Forbidden
