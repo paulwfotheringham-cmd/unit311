@@ -117,7 +117,6 @@ function defaultStateForRegistry(
 ): WorkspaceShippingProviderState {
   const override = MOCK_OVERRIDES[entry.code];
   return {
-    providerCode: entry.code,
     connectionStatus: "not_connected",
     businessAccountStatus: "not_started",
     apiStatus: "not_started",
