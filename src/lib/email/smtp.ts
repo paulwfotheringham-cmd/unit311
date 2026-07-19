@@ -14,8 +14,11 @@ import {
   type EmailSendPayload,
 } from "@/lib/email/types";
 
-function createTransport(accountId: EmailAccountId) {
-  return getAccountCredentials(accountId).then((credentials) => ({
+function createTransport(
+  accountId: EmailAccountId,
+  scope?: { workspaceId?: string | null },
+) {
+  return getAccountCredentials(accountId, scope).then((credentials) => ({
     credentials,
     transport: nodemailer.createTransport({
       host: ZOHO_SMTP_HOST,
@@ -32,8 +35,11 @@ function createTransport(accountId: EmailAccountId) {
   }));
 }
 
-export async function verifyMailboxTransport(accountId: EmailAccountId) {
-  const { credentials, transport } = await createTransport(accountId);
+export async function verifyMailboxTransport(
+  accountId: EmailAccountId,
+  scope?: { workspaceId?: string | null },
+) {
+  const { credentials, transport } = await createTransport(accountId, scope);
 
   try {
     await transport.verify();
@@ -61,7 +67,9 @@ function parseRecipients(value: string | undefined) {
 }
 
 export async function sendMailboxEmail(payload: EmailSendPayload) {
-  const { credentials, transport } = await createTransport(payload.account);
+  const { credentials, transport } = await createTransport(payload.account, {
+    workspaceId: payload.workspaceId,
+  });
 
   try {
     const info = await transport.sendMail({

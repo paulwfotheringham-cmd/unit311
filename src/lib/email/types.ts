@@ -55,6 +55,8 @@ export type EmailSendPayload = {
   attachments?: EmailSendAttachment[];
   inReplyTo?: string | null;
   references?: string[];
+  /** Explicit tenant for DB/memory mailbox credentials (public/system callers). */
+  workspaceId?: string | null;
 };
 
 export type EmailReplyContext = {

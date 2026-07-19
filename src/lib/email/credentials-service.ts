@@ -80,11 +80,14 @@ export async function resolveAccountCredentials(
   id: EmailAccountId,
   scope?: EmailWorkspaceScope,
 ): Promise<MemoryCredential | null> {
+  // Platform env secrets do not need a session/workspace. Resolve workspace only
+  // for memory/DB tenant credentials (Email Settings and similar authenticated flows).
+  const envCredential = readEnvCredential(id);
+  if (envCredential) return envCredential;
+
   const workspaceId = await resolveEmailWorkspaceId(scope);
   return (
-    readEnvCredential(id) ??
-    readMemoryCredential(workspaceId, id) ??
-    (await readSupabaseCredential(id, workspaceId))
+    readMemoryCredential(workspaceId, id) ?? (await readSupabaseCredential(id, workspaceId))
   );
 }
 

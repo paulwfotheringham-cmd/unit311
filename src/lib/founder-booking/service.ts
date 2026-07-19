@@ -394,6 +394,7 @@ export async function createFounderSessionBooking(input: {
       subject: confirmation.subject,
       html: confirmation.html,
       text: confirmation.text,
+      workspaceId: bookingWorkspaceId,
     }),
     sendMailboxEmail({
       account: "info",
@@ -401,6 +402,7 @@ export async function createFounderSessionBooking(input: {
       subject: internal.subject,
       html: internal.html,
       text: internal.text,
+      workspaceId: bookingWorkspaceId,
     }),
   ]);
 
