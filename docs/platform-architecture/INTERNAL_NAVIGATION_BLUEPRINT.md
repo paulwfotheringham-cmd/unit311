@@ -68,7 +68,9 @@ BUSINESS CENTRAL
     ├── Professional Advisors
     ├── Software & Licences
     ├── Contracts
-    └── Unit311 Details            ← MERGE from File Explorer (final tab)
+    └── Unit311 Details
+        ├── Overview
+        └── Module Go-Live             ← readiness register (ID / Module / Status)
 
 Assets
 ├── Assets

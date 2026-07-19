@@ -21,7 +21,8 @@ export type Unit311BuiltinCategoryId =
   | "linkedin"
   | "voice-and-video"
   | "software-asset-register"
-  | "architecture-diagrams";
+  | "architecture-diagrams"
+  | "module-go-live";
 
 export type Unit311DetailCategoryId = Unit311BuiltinCategoryId | `custom-${string}`;
 
@@ -92,6 +93,12 @@ export const UNIT311_DETAIL_CATEGORIES: readonly Unit311DetailCategory[] = [
     id: "architecture-diagrams",
     label: "Architecture Diagrams",
     folderName: "Architecture Diagrams",
+    builtin: true,
+  },
+  {
+    id: "module-go-live",
+    label: "Module Go-Live",
+    folderName: "Module Go-Live",
     builtin: true,
   },
 ] as const;

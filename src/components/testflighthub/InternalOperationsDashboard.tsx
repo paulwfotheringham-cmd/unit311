@@ -43,6 +43,7 @@ import MeetingsWorkspace from "./MeetingsWorkspace";
 import ConnectionsWorkspace from "./ConnectionsWorkspace";
 import FileRepositoryWorkspace from "./FileRepositoryWorkspace";
 import Unit311DetailsWorkspace from "./Unit311DetailsWorkspace";
+import ModuleGoLiveWorkspace from "./ModuleGoLiveWorkspace";
 import ClientFilesExplorerWorkspace from "./ClientFilesExplorerWorkspace";
 import AccountsPayableWorkspace from "./AccountsPayableWorkspace";
 import AccountsReceivableWorkspace from "./AccountsReceivableWorkspace";
@@ -585,6 +586,8 @@ export default function InternalOperationsDashboard({
           )}
 
           {activeView === "unit311-details" && <Unit311DetailsWorkspace />}
+
+          {activeView === "module-go-live" && <ModuleGoLiveWorkspace />}
 
           {activeView === "files-external" && <FileRepositoryWorkspace scope="external" />}
 

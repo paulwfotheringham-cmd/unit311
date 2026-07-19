@@ -59,6 +59,7 @@ export type InternalOperationsView =
   | "files-external"
   | "files-client"
   | "unit311-details"
+  | "module-go-live"
   | "users"
   | "users-external"
   | "external-client-access"
@@ -174,6 +175,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "files-external",
   "files-client",
   "unit311-details",
+  "module-go-live",
   "users",
   "users-external",
   "external-client-access",
@@ -263,6 +265,8 @@ export type InternalNavChildItem = {
   readonly view?: InternalOperationsView;
   readonly href?: string;
   readonly query?: Record<string, string>;
+  /** One nested level only (e.g. Unit311 Details → Module Go-Live). */
+  readonly children?: readonly InternalNavChildItem[];
 };
 
 export type InternalNavItem = {
@@ -361,7 +365,13 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
           { label: "Professional Advisors", view: "corporate-advisers" as const },
           { label: "Software & Licences", view: "corporate-software" as const },
           { label: "Contracts", view: "corporate-contracts" as const },
-          { label: "Unit311 Details", view: "unit311-details" as const },
+          {
+            label: "Unit311 Details",
+            children: [
+              { label: "Overview", view: "unit311-details" as const },
+              { label: "Module Go-Live", view: "module-go-live" as const },
+            ],
+          },
         ],
       },
     ],
@@ -544,6 +554,10 @@ export const internalViewTitles: Record<
   files: { title: "File Explorer", subtitle: "Business Productivity" },
   "files-internal": { title: "Internal Files", subtitle: "File Explorer" },
   "unit311-details": { title: "Unit311 Details", subtitle: "Corporate Information" },
+  "module-go-live": {
+    title: "Module Go-Live",
+    subtitle: "Corporate Information · Unit311 Details",
+  },
   "files-external": { title: "External Files", subtitle: "File Explorer" },
   "files-client": { title: "Client Explorer", subtitle: "File Explorer" },
   users: { title: "Internal Users", subtitle: "Tools" },
@@ -734,7 +748,13 @@ export function isInternalNavChildActive(
   pathname = "",
   basePath: SurveyOperationsBasePath = INTERNAL_OPERATIONS_BASE_PATH,
   searchParams?: URLSearchParams | null,
-) {
+): boolean {
+  if (item.children?.length) {
+    return item.children.some((child) =>
+      isInternalNavChildActive(child, activeView, pathname, basePath, searchParams),
+    );
+  }
+
   if (item.href) {
     if (item.href.includes("?")) {
       const [hrefPath, hrefQuery] = item.href.split("?", 2);

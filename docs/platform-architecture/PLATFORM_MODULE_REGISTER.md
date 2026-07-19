@@ -113,7 +113,8 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 | Professional Advisors | Business Central → Corporate Information → Professional Advisors | Not Started | — | — | Coming Soon UI |
 | Software & Licences | Business Central → Corporate Information → Software & Licences | Not Started | — | — | Implemented UI |
 | Contracts | Business Central → Corporate Information → Contracts | Not Started | — | — | Coming Soon UI |
-| Unit311 Details | Business Central → Corporate Information → Unit311 Details | Not Started | PRM-002 §9 | Company Details | Nav moved; merge into Company Details is a module concern later |
+| Unit311 Details | Business Central → Corporate Information → Unit311 Details → Overview | Not Started | PRM-002 §9 | Company Details | Nav moved; merge into Company Details is a module concern later |
+| Module Go-Live | Business Central → Corporate Information → Unit311 Details → Module Go-Live | Implemented | — | — | Authoritative readiness register (ID / Module / Status). Persisted via Unit311 Details content store. Not a project tool. |
 
 ### Assets
 

@@ -192,6 +192,21 @@ export default function SurveyOperationsSidebar({
           )
         ) {
           autoExpanded[item.label] = true;
+          item.children?.forEach((child) => {
+            if (
+              child.children?.some((nested) =>
+                isInternalNavChildActive(
+                  nested,
+                  resolvedActiveView,
+                  pathname,
+                  internalBasePath,
+                  searchParams,
+                ),
+              )
+            ) {
+              autoExpanded[`${item.label}::${child.label}`] = true;
+            }
+          });
         }
       });
     });
@@ -254,7 +269,14 @@ export default function SurveyOperationsSidebar({
     );
   }
 
-  function renderInternalChildItem(child: InternalNavChildItem) {
+  function renderInternalChildItem(
+    child: InternalNavChildItem,
+    parentExpandKey?: string,
+    nested = false,
+  ) {
+    const expandKey = parentExpandKey
+      ? `${parentExpandKey}::${child.label}`
+      : child.label;
     const active = isInternalNavChildActive(
       child,
       resolvedActiveView,
@@ -262,17 +284,50 @@ export default function SurveyOperationsSidebar({
       internalBasePath,
       searchParams,
     );
+    const hasNestedChildren = (child.children?.length ?? 0) > 0;
+
+    if (hasNestedChildren) {
+      const expanded = expandedParents[expandKey] ?? active;
+      const Chevron = expanded ? ChevronDown : ChevronRight;
+      return (
+        <div key={expandKey}>
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() =>
+              setExpandedParents((current) => ({
+                ...current,
+                [expandKey]: !expanded,
+              }))
+            }
+            className={cn(childNavItemClass(active), "justify-between")}
+          >
+            <span className="truncate">{childNavLabel(child)}</span>
+            <Chevron className="h-3 w-3 shrink-0 text-white/35" />
+          </button>
+          {expanded ? (
+            <div className="ml-2 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+              {child.children?.map((nestedChild) =>
+                renderInternalChildItem(nestedChild, expandKey, true),
+              )}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
     const navHref =
       child.href ?? getInternalNavHref(child.view ?? "home", internalBasePath, child.query);
+    const itemClass = cn(childNavItemClass(active), nested && "pl-3");
 
     if (child.href) {
       return (
         <Link
-          key={child.label}
+          key={expandKey}
           href={child.href}
           aria-current={active ? "page" : undefined}
           onClick={onClose}
-          className={childNavItemClass(active)}
+          className={itemClass}
         >
           <span className="truncate">{childNavLabel(child)}</span>
         </Link>
@@ -282,14 +337,14 @@ export default function SurveyOperationsSidebar({
     if (inAppNavigation && child.view && !child.query) {
       return (
         <button
-          key={child.label}
+          key={expandKey}
           type="button"
           aria-current={active ? "page" : undefined}
           onClick={() => {
             (onViewChange as (view: InternalOperationsView) => void)(child.view!);
             onClose?.();
           }}
-          className={childNavItemClass(active)}
+          className={itemClass}
         >
           <span className="truncate">{childNavLabel(child)}</span>
         </button>
@@ -298,11 +353,11 @@ export default function SurveyOperationsSidebar({
 
     return (
       <Link
-        key={child.label}
+        key={expandKey}
         href={navHref}
         aria-current={active ? "page" : undefined}
         onClick={onClose}
-        className={childNavItemClass(active)}
+        className={itemClass}
       >
         <span className="truncate">{childNavLabel(child)}</span>
       </Link>
@@ -382,7 +437,9 @@ export default function SurveyOperationsSidebar({
           </button>
           {expanded ? (
             <div className="mt-0.5 space-y-0.5">
-              {item.children?.map((child) => renderInternalChildItem(child))}
+              {item.children?.map((child) =>
+                renderInternalChildItem(child, item.label),
+              )}
             </div>
           ) : null}
         </div>

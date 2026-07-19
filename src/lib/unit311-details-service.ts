@@ -17,6 +17,7 @@ import {
   type Unit311DetailCategoryId,
   type Unit311DetailTask,
 } from "@/lib/unit311-details-data";
+import { MODULE_GO_LIVE_STORAGE_CATEGORY_ID } from "@/lib/module-go-live-data";
 import {
   browseFolder,
   createFolder,
@@ -432,6 +433,10 @@ export async function getUnit311DetailsOverview(scope?: FilesWorkspaceScope) {
   const tasks: Record<string, Unit311DetailTask[]> = {};
 
   for (const category of bootstrap.categories) {
+    if (category.id === MODULE_GO_LIVE_STORAGE_CATEGORY_ID) {
+      continue;
+    }
+
     const folderId = bootstrap.folders[category.id];
     if (!folderId) {
       contents[category.id] = "";
@@ -447,7 +452,9 @@ export async function getUnit311DetailsOverview(scope?: FilesWorkspaceScope) {
   return {
     rootFolderId: bootstrap.rootFolderId,
     folders: bootstrap.folders,
-    categories: bootstrap.categories,
+    categories: bootstrap.categories.filter(
+      (category) => category.id !== MODULE_GO_LIVE_STORAGE_CATEGORY_ID,
+    ),
     contents,
     tasks,
   };
