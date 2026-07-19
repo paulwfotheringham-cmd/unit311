@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   STRATEGY_COLUMNS,
@@ -80,7 +80,9 @@ export default function StrategyWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadItems();
+    startTransition(() => {
+      void loadItems();
+    });
   }, [loadItems]);
 
   useEffect(() => {
@@ -139,14 +141,6 @@ export default function StrategyWorkspace() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5">
-        <p className="text-sm text-white/55">
-          Capability matrix across surveying, inspection, and premium media. Each row lists the
-          Matrice 4T hardware or software needed to deliver it. Set priority (1 = highest) for
-          each line item.
-        </p>
-      </div>
-
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
           {error}

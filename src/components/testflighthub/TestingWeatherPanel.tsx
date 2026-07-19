@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 
 import {
@@ -98,7 +98,9 @@ export default function TestingWeatherPanel({ liveTelemetry }: TestingWeatherPan
 
   useEffect(() => {
     if (activeProfileId && TESTING_FLIGHT_PROFILE_IDS.includes(activeProfileId)) {
-      setSelectedProfileId(activeProfileId);
+      startTransition(() => {
+        setSelectedProfileId(activeProfileId);
+      });
     }
   }, [activeProfileId]);
 

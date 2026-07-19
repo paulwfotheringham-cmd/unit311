@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { MoreVertical, Trash2 } from "lucide-react";
 
 import { CLIENT_OPEN_TICKET_PHRASE, inputPlaceholderForStep } from "@/lib/support-intake-prompts";
@@ -131,11 +131,13 @@ export default function WhatsAppSupportChatPage() {
   }, []);
 
   useEffect(() => {
-    setLines(loadStoredLines(CHAT_STORAGE_KEY));
-    setNotifyLines(loadStoredLines(NOTIFY_STORAGE_KEY));
-    setPendingTicketId(loadPendingTicketId());
-    setIntakeStep(loadIntakeStep());
-    setHydrated(true);
+    startTransition(() => {
+      setLines(loadStoredLines(CHAT_STORAGE_KEY));
+      setNotifyLines(loadStoredLines(NOTIFY_STORAGE_KEY));
+      setPendingTicketId(loadPendingTicketId());
+      setIntakeStep(loadIntakeStep());
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {

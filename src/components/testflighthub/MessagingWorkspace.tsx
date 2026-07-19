@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   buildScheduledCallDateTime,
+  formatMessageSenderName,
   formatMessageTime,
   formatScheduledCallTime,
   generateCallLink,
   INTERNAL_MESSAGING_ROOM,
   MESSAGING_ACTIVE_CHANNEL_KEY,
   MESSAGING_STORAGE_KEY,
+  normalizeMessageSenderName,
   type ChatMessage,
   type MessageChannel,
   type MessageChannelType,
@@ -17,7 +19,7 @@ import {
   type ScheduledCall,
 } from "@/lib/internal-messaging-data";
 import { CLIENT_MESSAGING_OPTIONS } from "@/lib/client-messaging-config";
-import { createInitialUsers } from "@/lib/user-management-data";
+import { type ManagedUser } from "@/lib/user-management-data";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
@@ -31,13 +33,27 @@ import {
   Phone,
   Plus,
   Send,
+  Trash2,
   UserPlus,
   Users,
   Video,
   X,
 } from "lucide-react";
 
-const operators = createInitialUsers();
+type MessagingWorkspaceProps = {
+  users?: ManagedUser[];
+};
+
+function formatOperatorLabel(operator: ManagedUser) {
+  const email = operator.email || (operator.username.includes("@") ? operator.username : "");
+  if (email) {
+    const localPart = email.split("@")[0]?.trim();
+    if (localPart) return `${localPart}@`;
+    return email;
+  }
+  if (operator.username) return `@${operator.username}`;
+  return operator.fullName || "Operator";
+}
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -103,21 +119,83 @@ function MessageBody({
     );
   }
 
+  const lines = message.content.split("\n");
+  const actionLines: Array<{ label: string; href: string }> = [];
+  const bodyLines: string[] = [];
+  for (const line of lines) {
+    const match = line.match(/^(Open CRM Lead|Reply|Open email):\s+(\S.+)$/i);
+    if (match) {
+      actionLines.push({ label: match[1], href: match[2].trim() });
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
   return (
-    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
-      {message.content}
-    </p>
+    <div className="mt-2 space-y-3">
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/80">
+        {bodyLines.join("\n").trimEnd()}
+      </p>
+      {actionLines.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {actionLines.map((action) => (
+            <a
+              key={`${action.label}-${action.href}`}
+              href={action.href}
+              className="inline-flex items-center rounded-lg border border-sky-400/35 bg-sky-500/15 px-3 py-1.5 text-xs font-semibold text-sky-100 transition-colors hover:bg-sky-500/25"
+            >
+              {action.label}
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
-export default function MessagingWorkspace() {
+export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
+  const [internalUsers, setInternalUsers] = useState<ManagedUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const users = internalUsers;
+
+  const loadInternalUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const response = await fetch("/api/users", { cache: "no-store" });
+      const data = await readApiJson<{ users?: ManagedUser[]; error?: string }>(response);
+      if (!response.ok) throw new Error(data.error ?? "Failed to load internal users");
+      setInternalUsers(data.users ?? []);
+    } catch (loadError) {
+      setInternalUsers([]);
+      setError(loadError instanceof Error ? loadError.message : "Failed to load internal users");
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    startTransition(() => {
+      void loadInternalUsers();
+    });
+  }, [loadInternalUsers]);
+
+  const activeOperators = useMemo(
+    () => users.filter((operator) => operator.status === "Active"),
+    [users],
+  );
+  const activeOperatorIds = useMemo(
+    () => new Set(activeOperators.map((operator) => operator.id)),
+    [activeOperators],
+  );
+
   const operatorsById = useMemo(
-    () => new Map(operators.map((operator) => [operator.id, operator])),
-    [],
+    () => new Map(users.map((operator) => [operator.id, operator])),
+    [users],
   );
 
   const [joinedOperatorId, setJoinedOperatorId] = useState<string | null>(null);
-  const [pendingOperatorId, setPendingOperatorId] = useState(operators[0]?.id ?? "");
+  const [pendingOperatorId, setPendingOperatorId] = useState(activeOperators[0]?.id ?? "");
   const [activeRoom, setActiveRoom] = useState(INTERNAL_MESSAGING_ROOM);
   const [channels, setChannels] = useState<MessageChannel[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -129,7 +207,6 @@ export default function MessagingWorkspace() {
   const [creatingChannel, setCreatingChannel] = useState(false);
   const [createChannelError, setCreateChannelError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "live" | "polling">(
     "connecting",
   );
@@ -138,7 +215,7 @@ export default function MessagingWorkspace() {
   const [newChannelDescription, setNewChannelDescription] = useState("");
   const [newChannelPrivate, setNewChannelPrivate] = useState(false);
   const [newChannelMembers, setNewChannelMembers] = useState<string[]>(
-    operators.map((operator) => operator.id),
+    () => activeOperators.map((operator) => operator.id),
   );
   const [newChannelType, setNewChannelType] = useState<MessageChannelType>("internal");
   const [newChannelClientKey, setNewChannelClientKey] = useState("venturi");
@@ -151,6 +228,7 @@ export default function MessagingWorkspace() {
   const [scheduleParticipants, setScheduleParticipants] = useState<string[]>([]);
   const [scheduleCallType, setScheduleCallType] = useState<"voice" | "video">("video");
   const [scheduling, setScheduling] = useState(false);
+  const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
   const { showDetail: showChat, openDetail: openChat, closeDetail: closeChat } = useMobileDetailPanel();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -164,9 +242,9 @@ export default function MessagingWorkspace() {
       name: "Internal Operations Room",
       channelType: "internal",
       clientKey: null,
-      createdByOperatorId: "user-1",
-      createdByOperatorName: "Paul Fotheringham",
-      memberOperatorIds: operators.map((operator) => operator.id),
+      createdByOperatorId: activeOperators[0]?.id ?? "",
+      createdByOperatorName: activeOperators[0]?.fullName ?? "Operator",
+      memberOperatorIds: activeOperators.map((operator) => operator.id),
       memberClientUsernames: [],
       createdAt: new Date().toISOString(),
     } satisfies MessageChannel);
@@ -193,7 +271,8 @@ export default function MessagingWorkspace() {
   }, []);
 
   const loadChannels = useCallback(async (operatorId?: string | null) => {
-    const resolvedOperatorId = operatorId ?? operators[0]?.id ?? "user-1";
+    const resolvedOperatorId = operatorId ?? activeOperators[0]?.id ?? users[0]?.id ?? "";
+    if (!resolvedOperatorId) return [];
     const params = new URLSearchParams({
       viewerType: "internal",
       operatorId: resolvedOperatorId,
@@ -215,7 +294,11 @@ export default function MessagingWorkspace() {
       );
     });
     return loaded;
-  }, []);
+  }, [activeOperators, users]);
+
+  function filterActiveOperatorIds(operatorIds: string[]) {
+    return operatorIds.filter((id) => activeOperatorIds.has(id));
+  }
 
   const markRead = useCallback(async (room: string, operatorId: string) => {
     await fetch("/api/messaging/channels", {
@@ -252,16 +335,56 @@ export default function MessagingWorkspace() {
   useEffect(() => {
     const storedOperator = window.localStorage.getItem(MESSAGING_STORAGE_KEY);
     const storedChannel = window.localStorage.getItem(MESSAGING_ACTIVE_CHANNEL_KEY);
-    if (storedOperator && operatorsById.has(storedOperator)) {
-      setJoinedOperatorId(storedOperator);
-      setPendingOperatorId(storedOperator);
-    } else if (operators[0]) {
-      setJoinedOperatorId(operators[0].id);
-      setPendingOperatorId(operators[0].id);
-      window.localStorage.setItem(MESSAGING_STORAGE_KEY, operators[0].id);
-    }
-    if (storedChannel) setActiveRoom(storedChannel);
-  }, [operatorsById]);
+
+    if (usersLoading) return;
+
+    startTransition(() => {
+      if (activeOperators.length === 0) {
+        setJoinedOperatorId(null);
+        window.localStorage.removeItem(MESSAGING_STORAGE_KEY);
+        return;
+      }
+
+      const validIds = new Set(activeOperators.map((operator) => operator.id));
+      const storedIsValid = Boolean(storedOperator && validIds.has(storedOperator));
+      const joinedIsValid = Boolean(joinedOperatorId && validIds.has(joinedOperatorId));
+
+      if (!joinedIsValid) {
+        setJoinedOperatorId(storedIsValid ? storedOperator : null);
+      }
+
+      if (!storedIsValid && storedOperator) {
+        window.localStorage.removeItem(MESSAGING_STORAGE_KEY);
+      }
+
+      setPendingOperatorId((current) =>
+        current && validIds.has(current) ? current : activeOperators[0]!.id,
+      );
+
+      if (storedChannel) setActiveRoom(storedChannel);
+    });
+  }, [activeOperators, joinedOperatorId, usersLoading]);
+
+  useEffect(() => {
+    if (activeOperators.length === 0) return;
+
+    startTransition(() => {
+      setPendingOperatorId((current) =>
+        current && activeOperators.some((operator) => operator.id === current)
+          ? current
+          : activeOperators[0]!.id,
+      );
+      setNewChannelMembers((current) => {
+        if (
+          current.length > 0 &&
+          current.every((id) => activeOperators.some((operator) => operator.id === id))
+        ) {
+          return current;
+        }
+        return activeOperators.map((operator) => operator.id);
+      });
+    });
+  }, [activeOperators]);
 
   useEffect(() => {
     let cancelled = false;
@@ -285,7 +408,9 @@ export default function MessagingWorkspace() {
       }
     }
 
-    void bootstrap();
+    startTransition(() => {
+      void bootstrap();
+    });
     return () => {
       cancelled = true;
     };
@@ -293,7 +418,9 @@ export default function MessagingWorkspace() {
 
   useEffect(() => {
     if (!joinedOperatorId) return;
-    void loadChannels(joinedOperatorId).catch(() => undefined);
+    startTransition(() => {
+      void loadChannels(joinedOperatorId).catch(() => undefined);
+    });
   }, [joinedOperatorId, loadChannels]);
 
   useEffect(() => {
@@ -356,21 +483,26 @@ export default function MessagingWorkspace() {
 
               setMessages((current) => {
                 if (current.some((message) => message.id === row.id)) return current;
+                const messageType =
+                  row.message_type === "file" ||
+                  row.message_type === "call" ||
+                  row.message_type === "system"
+                    ? row.message_type
+                    : "text";
                 return [
                   ...current,
                   {
                     id: row.id,
                     room: row.room,
                     operatorId: row.operator_id,
-                    operatorName: row.operator_name,
+                    operatorName: normalizeMessageSenderName({
+                      messageType,
+                      username: row.username,
+                      operatorName: row.operator_name,
+                    }),
                     username: row.username,
                     content: row.content,
-                    messageType:
-                      row.message_type === "file" ||
-                      row.message_type === "call" ||
-                      row.message_type === "system"
-                        ? row.message_type
-                        : "text",
+                    messageType,
                     attachmentName: row.attachment_name ?? null,
                     attachmentUrl: row.attachment_url ?? null,
                     attachmentMime: row.attachment_mime ?? null,
@@ -432,8 +564,10 @@ export default function MessagingWorkspace() {
       }
     }
 
-    setRealtimeStatus("connecting");
-    void connectRealtime();
+    startTransition(() => {
+      setRealtimeStatus("connecting");
+      void connectRealtime();
+    });
 
     return () => {
       cancelled = true;
@@ -528,9 +662,15 @@ export default function MessagingWorkspace() {
       return;
     }
 
-    const memberOperatorIds = newChannelPrivate
-      ? Array.from(new Set([joinedOperator.id, ...newChannelMembers]))
-      : newChannelMembers;
+    const memberOperatorIds = filterActiveOperatorIds(
+      newChannelPrivate
+        ? Array.from(new Set([joinedOperator.id, ...newChannelMembers]))
+        : newChannelMembers,
+    );
+    if (memberOperatorIds.length === 0) {
+      setCreateChannelError("Select at least one internal user.");
+      return;
+    }
 
     const selectedClient =
       newChannelType === "client"
@@ -583,7 +723,7 @@ export default function MessagingWorkspace() {
       setNewChannelPrivate(false);
       setNewChannelType("internal");
       setNewChannelClientKey(CLIENT_MESSAGING_OPTIONS[0]?.key ?? "venturi");
-      setNewChannelMembers(operators.map((operator) => operator.id));
+      setNewChannelMembers(activeOperators.map((operator) => operator.id));
       setShowCreateChannel(false);
       selectChannel(data.channel.room);
     } catch (createError) {
@@ -599,6 +739,12 @@ export default function MessagingWorkspace() {
   async function handleSaveMembers() {
     if (!activeChannel.id || activeChannel.id === "default") return;
 
+    const nextMembers = filterActiveOperatorIds(memberDraft);
+    if (nextMembers.length === 0) {
+      setError("Select at least one internal user.");
+      return;
+    }
+
     setSending(true);
     setError(null);
     try {
@@ -607,7 +753,7 @@ export default function MessagingWorkspace() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           channelId: activeChannel.id,
-          memberOperatorIds: memberDraft,
+          memberOperatorIds: nextMembers,
         }),
       });
       const data = await readApiJson<{ channel?: MessageChannel; error?: string }>(response);
@@ -660,7 +806,7 @@ export default function MessagingWorkspace() {
           room: activeRoom,
           title: scheduleTitle.trim(),
           scheduledAt,
-          participantOperatorIds: scheduleParticipants,
+          participantOperatorIds: filterActiveOperatorIds(scheduleParticipants),
           callLink,
           callType: scheduleCallType,
           createdByOperatorId: joinedOperator.id,
@@ -739,6 +885,43 @@ export default function MessagingWorkspace() {
     );
   }
 
+  async function handleDeleteChannel(channel: MessageChannel) {
+    if (channel.room === INTERNAL_MESSAGING_ROOM) return;
+    if (channel.id === "default" || channel.id.startsWith("local-default")) return;
+
+    if (
+      !window.confirm(
+        `Delete channel "${channel.name}"? Messages in this channel will be permanently removed.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingChannelId(channel.id);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/messaging/channels?channelId=${encodeURIComponent(channel.id)}`,
+        { method: "DELETE" },
+      );
+      const data = await readApiJson<{ error?: string }>(response);
+      if (!response.ok) throw new Error(data.error ?? "Failed to delete channel");
+
+      setChannels((current) => {
+        const next = current.filter((entry) => entry.id !== channel.id);
+        if (activeRoom === channel.room) {
+          const fallbackRoom = next[0]?.room ?? INTERNAL_MESSAGING_ROOM;
+          selectChannel(fallbackRoom);
+        }
+        return next;
+      });
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete channel");
+    } finally {
+      setDeletingChannelId(null);
+    }
+  }
+
   function renderChannelButton(channel: MessageChannel) {
     const clientLabel =
       channel.channelType === "client"
@@ -746,12 +929,12 @@ export default function MessagingWorkspace() {
         : null;
 
     return (
-      <li key={channel.room}>
+      <li key={channel.room} className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => selectChannel(channel.room)}
           className={cn(
-            "flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors",
+            "flex min-w-0 flex-1 items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors",
             channel.room === activeRoom
               ? "border-sky-400/30 bg-sky-500/10 text-white"
               : "border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.06]",
@@ -774,6 +957,25 @@ export default function MessagingWorkspace() {
             <span className="text-[10px] text-white/40">{channel.memberOperatorIds.length}</span>
           </div>
         </button>
+        {channel.room !== INTERNAL_MESSAGING_ROOM && channel.id !== "default" ? (
+          <button
+            type="button"
+            disabled={deletingChannelId === channel.id}
+            onClick={() => void handleDeleteChannel(channel)}
+            title="Delete channel"
+            className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2 text-xs font-semibold text-rose-200 transition-colors hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={`Delete ${channel.name}`}
+          >
+            {deletingChannelId === channel.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </>
+            )}
+          </button>
+        ) : null}
       </li>
     );
   }
@@ -841,7 +1043,7 @@ export default function MessagingWorkspace() {
                   joinedOperator ? [joinedOperator.id] : newChannelMembers.slice(0, 1),
                 );
               } else {
-                setNewChannelMembers(operators.map((operator) => operator.id));
+                setNewChannelMembers(activeOperators.map((operator) => operator.id));
               }
             }}
           />
@@ -901,21 +1103,27 @@ export default function MessagingWorkspace() {
             {newChannelType === "client" ? "Internal team members" : "Add users"}
           </p>
           <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto">
-            {operators.map((operator) => (
-              <label
-                key={operator.id}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-white/70"
-              >
-                <input
-                  type="checkbox"
-                  checked={newChannelMembers.includes(operator.id)}
-                  onChange={() =>
-                    toggleMemberSelection(operator.id, newChannelMembers, setNewChannelMembers)
-                  }
-                />
-                {operator.fullName}
-              </label>
-            ))}
+            {usersLoading ? (
+              <p className="px-2 py-1.5 text-xs text-white/45">Loading internal users…</p>
+            ) : activeOperators.length === 0 ? (
+              <p className="px-2 py-1.5 text-xs text-white/45">No internal users available.</p>
+            ) : (
+              activeOperators.map((operator) => (
+                <label
+                  key={operator.id}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-white/70"
+                >
+                  <input
+                    type="checkbox"
+                    checked={newChannelMembers.includes(operator.id)}
+                    onChange={() =>
+                      toggleMemberSelection(operator.id, newChannelMembers, setNewChannelMembers)
+                    }
+                  />
+                  {formatOperatorLabel(operator)}
+                </label>
+              ))
+            )}
           </div>
         </div>
         {createChannelError && (
@@ -957,35 +1165,51 @@ export default function MessagingWorkspace() {
 
           {!joinedOperator ? (
             <div className="mt-4 space-y-3">
-              <select
-                value={pendingOperatorId}
-                onChange={(event) => setPendingOperatorId(event.target.value)}
-                className={inputClassName()}
-              >
-                {operators.map((operator) => (
-                  <option key={operator.id} value={operator.id}>
-                    {operator.fullName} (@{operator.username})
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => handleJoin(pendingOperatorId)}
-                className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#2563eb] text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
-              >
-                Join messaging
-              </button>
+              {usersLoading ? (
+                <div className="flex items-center gap-2 text-sm text-white/50">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading internal users…
+                </div>
+              ) : activeOperators.length === 0 ? (
+                <p className="text-sm text-white/50">
+                  No internal users found. Add admin, info, and paul under Internal users.
+                </p>
+              ) : (
+                <>
+                  <select
+                    value={pendingOperatorId}
+                    onChange={(event) => setPendingOperatorId(event.target.value)}
+                    className={inputClassName()}
+                  >
+                    {activeOperators.map((operator) => (
+                      <option key={operator.id} value={operator.id}>
+                        {formatOperatorLabel(operator)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleJoin(pendingOperatorId)}
+                    disabled={!pendingOperatorId}
+                    className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#2563eb] text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Join messaging
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-sky-400/30 bg-sky-500/10 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">
                 Connected
               </p>
-              <p className="mt-1 text-sm font-semibold text-white">{joinedOperator.fullName}</p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                {formatOperatorLabel(joinedOperator)}
+              </p>
               <button
                 type="button"
                 onClick={handleLeave}
-                className="mt-3 text-xs font-medium text-white/55 transition-colors hover:text-white"
+                className="mt-3 inline-flex h-9 items-center rounded-lg border border-white/15 px-3 text-xs font-semibold text-white/80 transition-colors hover:bg-white/[0.06]"
               >
                 Switch operator
               </button>
@@ -1118,7 +1342,7 @@ export default function MessagingWorkspace() {
                   People
                 </p>
                 <div className="mt-2 space-y-1.5">
-                  {operators.map((operator) => (
+                  {activeOperators.map((operator) => (
                     <label
                       key={operator.id}
                       className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-white/70"
@@ -1134,7 +1358,7 @@ export default function MessagingWorkspace() {
                           )
                         }
                       />
-                      {operator.fullName}
+                      {formatOperatorLabel(operator)}
                     </label>
                   ))}
                 </div>
@@ -1202,17 +1426,26 @@ export default function MessagingWorkspace() {
                           (client) => client.key === activeChannel.clientKey,
                         )?.label ?? "Client",
                       ].join(" · ")
-                    : channelMembers.map((member) => member.fullName).join(" · ") ||
+                    : channelMembers.map((member) => formatOperatorLabel(member)).join(" · ") ||
                       "No members"}
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {joinedOperator ? (
+                <button
+                  type="button"
+                  onClick={handleLeave}
+                  className="inline-flex h-9 items-center rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06]"
+                >
+                  Switch operator
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={!joinedOperator}
                 onClick={() => {
-                  setMemberDraft(activeChannel.memberOperatorIds);
+                  setMemberDraft(filterActiveOperatorIds(activeChannel.memberOperatorIds));
                   setShowAddMembers(true);
                 }}
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
@@ -1268,7 +1501,7 @@ export default function MessagingWorkspace() {
           <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4">
             <p className="text-sm font-semibold text-white">Add users to channel</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              {operators.map((operator) => (
+              {activeOperators.map((operator) => (
                 <label
                   key={operator.id}
                   className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75"
@@ -1280,7 +1513,7 @@ export default function MessagingWorkspace() {
                       toggleMemberSelection(operator.id, memberDraft, setMemberDraft)
                     }
                   />
-                  {operator.fullName}
+                  {formatOperatorLabel(operator)}
                 </label>
               ))}
             </div>
@@ -1338,7 +1571,9 @@ export default function MessagingWorkspace() {
                       )}
                     >
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-white">{message.operatorName}</p>
+                        <p className="text-sm font-semibold text-white">
+                          {formatMessageSenderName(message)}
+                        </p>
                         <p className="font-mono text-[10px] text-white/35">@{message.username}</p>
                         <p className="text-[10px] text-white/30">
                           {formatMessageTime(message.createdAt)}
@@ -1361,24 +1596,33 @@ export default function MessagingWorkspace() {
               Pick your name, then join — you can also use the panel on the left.
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <select
-                value={pendingOperatorId}
-                onChange={(event) => setPendingOperatorId(event.target.value)}
-                className={cn(inputClassName(), "sm:min-w-0 sm:flex-1")}
-              >
-                {operators.map((operator) => (
-                  <option key={operator.id} value={operator.id}>
-                    {operator.fullName} (@{operator.username})
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => handleJoin(pendingOperatorId)}
-                className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#2563eb] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
-              >
-                Join messaging
-              </button>
+              {usersLoading ? (
+                <p className="text-sm text-amber-100/70">Loading internal users…</p>
+              ) : activeOperators.length === 0 ? (
+                <p className="text-sm text-amber-100/70">No internal users available.</p>
+              ) : (
+                <>
+                  <select
+                    value={pendingOperatorId}
+                    onChange={(event) => setPendingOperatorId(event.target.value)}
+                    className={cn(inputClassName(), "sm:min-w-0 sm:flex-1")}
+                  >
+                    {activeOperators.map((operator) => (
+                      <option key={operator.id} value={operator.id}>
+                        {formatOperatorLabel(operator)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleJoin(pendingOperatorId)}
+                    disabled={!pendingOperatorId}
+                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#2563eb] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Join messaging
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

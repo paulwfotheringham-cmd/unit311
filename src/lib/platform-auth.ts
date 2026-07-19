@@ -12,6 +12,14 @@ export type PlatformSession = {
   userType: PlatformUserType;
   redirectPath: string;
   exp: number;
+  /**
+   * Active workspace claim cache (RC1-C07).
+   * Identity is sub/username/userType; membership is authorizeUserForWorkspace;
+   * active workspace on customer hosts is derived from the request host after authz.
+   */
+  workspaceId?: string;
+  workspaceSlug?: string;
+  workspaceName?: string;
 };
 
 export type PlatformUserRecord = {
@@ -23,6 +31,9 @@ export type PlatformUserRecord = {
   redirect_path: string;
   client_name: string | null;
   is_active: boolean;
+  email?: string | null;
+  organisation_id?: string | null;
+  workspace_id?: string | null;
   last_login_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +41,12 @@ export type PlatformUserRecord = {
 
 export function normalizePlatformUsername(username: string) {
   return username.trim().toLowerCase();
+}
+
+export function createSignupPlatformUsername(email: string) {
+  const normalized = normalizePlatformUsername(email);
+  const suffix = randomBytes(4).toString("hex");
+  return `${normalized}#${suffix}`;
 }
 
 export function hashPlatformPassword(password: string, salt: string) {
@@ -52,13 +69,30 @@ export function verifyPlatformPassword(password: string, storedHash: string) {
   }
 }
 
-function getAuthSecret() {
-  const secret = process.env.AUTH_SECRET ?? process.env.SUPABASE_ANON_KEY;
-  if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
+function isProductionRuntime() {
+  return (
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production"
+  );
+}
+
+/**
+ * Dedicated secret for HMAC session signing (and related AUTH_SECRET consumers).
+ * Never falls back to SUPABASE_ANON_KEY (public client key).
+ * Production fails fast when unset; local/dev uses a non-public placeholder.
+ */
+export function getAuthSecret(): string {
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) {
+    return secret;
   }
 
-  return secret;
+  if (isProductionRuntime()) {
+    throw new Error(
+      "AUTH_SECRET is required in production for session signing. A public key such as SUPABASE_ANON_KEY must not be used.",
+    );
+  }
+
+  return "unit311-local-dev-auth-secret";
 }
 
 export function createPlatformSessionToken(session: PlatformSession) {
@@ -99,7 +133,10 @@ export function readPlatformSessionToken(token: string | undefined | null): Plat
   }
 }
 
-export function buildPlatformSession(user: PlatformUserRecord): PlatformSession {
+export function buildPlatformSession(
+  user: PlatformUserRecord,
+  workspace?: { id: string; slug: string; name: string } | null,
+): PlatformSession {
   return {
     sub: user.id,
     username: user.username,
@@ -107,6 +144,13 @@ export function buildPlatformSession(user: PlatformUserRecord): PlatformSession 
     userType: user.user_type,
     redirectPath: user.redirect_path,
     exp: Date.now() + PLATFORM_SESSION_MAX_AGE_SECONDS * 1000,
+    ...(workspace
+      ? {
+          workspaceId: workspace.id,
+          workspaceSlug: workspace.slug,
+          workspaceName: workspace.name,
+        }
+      : {}),
   };
 }
 

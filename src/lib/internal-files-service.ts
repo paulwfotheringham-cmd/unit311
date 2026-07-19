@@ -12,6 +12,10 @@ import {
   type FileFolder,
   type FileObject,
 } from "@/lib/internal-files-data";
+import {
+  resolveFilesWorkspaceId,
+  type FilesWorkspaceScope,
+} from "@/lib/files-workspace";
 
 type DbCategory = {
   id: string;
@@ -84,22 +88,25 @@ export function requireFilesSupabase() {
   return createSupabaseServerClient();
 }
 
-export async function listCategories(): Promise<FileCategory[]> {
+export async function listCategories(scope?: FilesWorkspaceScope): Promise<FileCategory[]> {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   const { data, error } = await supabase
     .from("file_categories")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);
   return (data as DbCategory[]).map(mapCategory);
 }
 
-export async function createCategory(name: string, color: string) {
+export async function createCategory(name: string, color: string, scope?: FilesWorkspaceScope) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   const { data, error } = await supabase
     .from("file_categories")
-    .insert({ name: name.trim(), color })
+    .insert({ name: name.trim(), color, workspace_id: workspaceId })
     .select("*")
     .single();
 
@@ -107,12 +114,30 @@ export async function createCategory(name: string, color: string) {
   return mapCategory(data as DbCategory);
 }
 
-export async function updateCategory(id: string, name: string, color: string) {
+export async function updateCategory(
+  id: string,
+  name: string,
+  color: string,
+  scope?: FilesWorkspaceScope,
+) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("file_categories")
+    .select("id")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+  if (!existing) throw new Error("Category not found.");
+
   const { data, error } = await supabase
     .from("file_categories")
     .update({ name: name.trim(), color })
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .select("*")
     .single();
 
@@ -120,20 +145,48 @@ export async function updateCategory(id: string, name: string, color: string) {
   return mapCategory(data as DbCategory);
 }
 
-export async function deleteCategory(id: string) {
+export async function deleteCategory(id: string, scope?: FilesWorkspaceScope) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
-  const { error } = await supabase.from("file_categories").delete().eq("id", id);
+
+  const { data: existing, error: existingError } = await supabase
+    .from("file_categories")
+    .select("id")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+  if (!existing) throw new Error("Category not found.");
+
+  const { error } = await supabase
+    .from("file_categories")
+    .delete()
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
   if (error) throw new Error(error.message);
 }
 
-async function getFolderById(id: string): Promise<FileFolder | null> {
+export async function getFolderById(
+  id: string,
+  scope?: FilesWorkspaceScope,
+): Promise<FileFolder | null> {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
-  const { data, error } = await supabase.from("file_folders").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from("file_folders")
+    .select("*")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data ? mapFolder(data as DbFolder) : null;
 }
 
-export async function buildBreadcrumb(folderId: string | null): Promise<BreadcrumbSegment[]> {
+export async function buildBreadcrumb(
+  folderId: string | null,
+  scope?: FilesWorkspaceScope,
+): Promise<BreadcrumbSegment[]> {
   const segments: BreadcrumbSegment[] = [{ id: null, name: "Internal Files" }];
   if (!folderId) return segments;
 
@@ -141,7 +194,7 @@ export async function buildBreadcrumb(folderId: string | null): Promise<Breadcru
   let currentId: string | null = folderId;
 
   while (currentId) {
-    const folder = await getFolderById(currentId);
+    const folder = await getFolderById(currentId, scope);
     if (!folder) break;
     chain.unshift(folder);
     currentId = folder.parentId;
@@ -154,18 +207,30 @@ export async function buildBreadcrumb(folderId: string | null): Promise<Breadcru
   return segments;
 }
 
-export async function browseFolder(options: {
-  folderId?: string | null;
-  query?: string;
-  categoryId?: string | null;
-}): Promise<{ entries: BrowseEntry[]; breadcrumb: BreadcrumbSegment[] }> {
+export async function browseFolder(
+  options: {
+    folderId?: string | null;
+    query?: string;
+    categoryId?: string | null;
+  },
+  scope?: FilesWorkspaceScope,
+): Promise<{ entries: BrowseEntry[]; breadcrumb: BreadcrumbSegment[] }> {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   const folderId = options.folderId ?? null;
   const query = options.query?.trim() ?? "";
   const categoryId = options.categoryId ?? null;
 
-  let folderQuery = supabase.from("file_folders").select("*").order("name", { ascending: true });
-  let fileQuery = supabase.from("file_objects").select("*").order("name", { ascending: true });
+  let folderQuery = supabase
+    .from("file_folders")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("name", { ascending: true });
+  let fileQuery = supabase
+    .from("file_objects")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("name", { ascending: true });
 
   if (query) {
     folderQuery = folderQuery.ilike("name", `%${query}%`);
@@ -199,11 +264,17 @@ export async function browseFolder(options: {
     return a.item.name.localeCompare(b.item.name);
   });
 
-  const breadcrumb = await buildBreadcrumb(folderId);
+  const breadcrumb = await buildBreadcrumb(folderId, scope);
   return { entries, breadcrumb };
 }
 
-export async function createFolder(name: string, parentId: string | null, categoryId: string | null) {
+export async function createFolder(
+  name: string,
+  parentId: string | null,
+  categoryId: string | null,
+  scope?: FilesWorkspaceScope,
+) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   const { data, error } = await supabase
     .from("file_folders")
@@ -211,6 +282,7 @@ export async function createFolder(name: string, parentId: string | null, catego
       name: name.trim(),
       parent_id: parentId,
       category_id: categoryId,
+      workspace_id: workspaceId,
     })
     .select("*")
     .single();
@@ -222,12 +294,18 @@ export async function createFolder(name: string, parentId: string | null, catego
 export async function updateFolder(
   id: string,
   updates: { name?: string; parentId?: string | null; categoryId?: string | null },
+  scope?: FilesWorkspaceScope,
 ) {
   if (updates.parentId === id) {
     throw new Error("A folder cannot be moved into itself.");
   }
 
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
+
+  const existing = await getFolderById(id, { workspaceId });
+  if (!existing) throw new Error("Folder not found.");
+
   const payload: Record<string, string | null> = {
     updated_at: new Date().toISOString(),
   };
@@ -240,6 +318,7 @@ export async function updateFolder(
     .from("file_folders")
     .update(payload)
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .select("*")
     .single();
 
@@ -247,24 +326,26 @@ export async function updateFolder(
   return mapFolder(data as DbFolder);
 }
 
-async function deleteFolderRecursive(folderId: string) {
+async function deleteFolderRecursive(folderId: string, workspaceId: string) {
   const supabase = requireFilesSupabase();
 
   const { data: childFolders, error: childFolderError } = await supabase
     .from("file_folders")
     .select("id")
-    .eq("parent_id", folderId);
+    .eq("parent_id", folderId)
+    .eq("workspace_id", workspaceId);
 
   if (childFolderError) throw new Error(childFolderError.message);
 
   for (const child of childFolders ?? []) {
-    await deleteFolderRecursive(child.id);
+    await deleteFolderRecursive(child.id, workspaceId);
   }
 
   const { data: files, error: filesError } = await supabase
     .from("file_objects")
     .select("storage_path")
-    .eq("folder_id", folderId);
+    .eq("folder_id", folderId)
+    .eq("workspace_id", workspaceId);
 
   if (filesError) throw new Error(filesError.message);
 
@@ -281,20 +362,33 @@ async function deleteFolderRecursive(folderId: string) {
     }
   }
 
-  const { error: deleteFilesError } = await supabase.from("file_objects").delete().eq("folder_id", folderId);
+  const { error: deleteFilesError } = await supabase
+    .from("file_objects")
+    .delete()
+    .eq("folder_id", folderId)
+    .eq("workspace_id", workspaceId);
   if (deleteFilesError) throw new Error(deleteFilesError.message);
 
-  const { error: deleteFolderError } = await supabase.from("file_folders").delete().eq("id", folderId);
+  const { error: deleteFolderError } = await supabase
+    .from("file_folders")
+    .delete()
+    .eq("id", folderId)
+    .eq("workspace_id", workspaceId);
   if (deleteFolderError) throw new Error(deleteFolderError.message);
 }
 
-export async function deleteFolder(id: string) {
-  await deleteFolderRecursive(id);
+export async function deleteFolder(id: string, scope?: FilesWorkspaceScope) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+  const existing = await getFolderById(id, { workspaceId });
+  if (!existing) throw new Error("Folder not found.");
+  await deleteFolderRecursive(id, workspaceId);
 }
 
 function buildStoragePath(folderId: string | null, fileName: string) {
   const objectId = crypto.randomUUID();
-  return `objects/${folderId ?? "root"}/${objectId}-${fileName}`;
+  const extension = getFileExtension(fileName);
+  const safeSuffix = extension ? `.${extension}` : "";
+  return `objects/${folderId ?? "root"}/${objectId}${safeSuffix}`;
 }
 
 function assertUploadableFile(name: string, size: number) {
@@ -313,12 +407,22 @@ function assertUploadableFile(name: string, size: number) {
   }
 }
 
-export async function prepareFileUpload(options: {
-  name: string;
-  size: number;
-  folderId: string | null;
-}) {
+export async function prepareFileUpload(
+  options: {
+    name: string;
+    size: number;
+    folderId: string | null;
+  },
+  scope?: FilesWorkspaceScope,
+) {
   assertUploadableFile(options.name, options.size);
+
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+
+  if (options.folderId) {
+    const folder = await getFolderById(options.folderId, { workspaceId });
+    if (!folder) throw new Error("Folder not found.");
+  }
 
   const supabase = requireFilesSupabase();
   const storagePath = buildStoragePath(options.folderId, options.name);
@@ -336,15 +440,25 @@ export async function prepareFileUpload(options: {
   };
 }
 
-export async function completeFileUpload(options: {
-  name: string;
-  storagePath: string;
-  folderId: string | null;
-  categoryId: string | null;
-  mimeType: string | null;
-  size: number;
-}) {
+export async function completeFileUpload(
+  options: {
+    name: string;
+    storagePath: string;
+    folderId: string | null;
+    categoryId: string | null;
+    mimeType: string | null;
+    size: number;
+  },
+  scope?: FilesWorkspaceScope,
+) {
   assertUploadableFile(options.name, options.size);
+
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+
+  if (options.folderId) {
+    const folder = await getFolderById(options.folderId, { workspaceId });
+    if (!folder) throw new Error("Folder not found.");
+  }
 
   const supabase = requireFilesSupabase();
   const extension = getFileExtension(options.name);
@@ -359,6 +473,7 @@ export async function completeFileUpload(options: {
       mime_type: options.mimeType,
       extension: extension || null,
       size_bytes: options.size,
+      workspace_id: workspaceId,
     })
     .select("*")
     .single();
@@ -371,12 +486,22 @@ export async function completeFileUpload(options: {
   return mapFile(data as DbFile);
 }
 
-export async function uploadFile(options: {
-  file: File;
-  folderId: string | null;
-  categoryId: string | null;
-}) {
+export async function uploadFile(
+  options: {
+    file: File;
+    folderId: string | null;
+    categoryId: string | null;
+  },
+  scope?: FilesWorkspaceScope,
+) {
   assertUploadableFile(options.file.name, options.file.size);
+
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+
+  if (options.folderId) {
+    const folder = await getFolderById(options.folderId, { workspaceId });
+    if (!folder) throw new Error("Folder not found.");
+  }
 
   const supabase = requireFilesSupabase();
   const storagePath = buildStoragePath(options.folderId, options.file.name);
@@ -391,21 +516,42 @@ export async function uploadFile(options: {
 
   if (uploadError) throw new Error(uploadError.message);
 
-  return completeFileUpload({
-    name: options.file.name,
-    storagePath,
-    folderId: options.folderId,
-    categoryId: options.categoryId,
-    mimeType: options.file.type || null,
-    size: options.file.size,
-  });
+  return completeFileUpload(
+    {
+      name: options.file.name,
+      storagePath,
+      folderId: options.folderId,
+      categoryId: options.categoryId,
+      mimeType: options.file.type || null,
+      size: options.file.size,
+    },
+    { workspaceId },
+  );
 }
 
 export async function updateFile(
   id: string,
   updates: { name?: string; folderId?: string | null; categoryId?: string | null },
+  scope?: FilesWorkspaceScope,
 ) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("file_objects")
+    .select("id")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+  if (!existing) throw new Error("File not found.");
+
+  if (updates.folderId) {
+    const folder = await getFolderById(updates.folderId, { workspaceId });
+    if (!folder) throw new Error("Folder not found.");
+  }
+
   const payload: Record<string, string | null> = {
     updated_at: new Date().toISOString(),
   };
@@ -421,6 +567,7 @@ export async function updateFile(
     .from("file_objects")
     .update(payload)
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .select("*")
     .single();
 
@@ -428,12 +575,14 @@ export async function updateFile(
   return mapFile(data as DbFile);
 }
 
-export async function deleteFile(id: string) {
+export async function deleteFile(id: string, scope?: FilesWorkspaceScope) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   const { data, error } = await supabase
     .from("file_objects")
     .select("storage_path")
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .single();
 
   if (error) throw new Error(error.message);
@@ -452,16 +601,22 @@ export async function deleteFile(id: string) {
     if (!missingObject) throw new Error(storageError.message);
   }
 
-  const { error: deleteError } = await supabase.from("file_objects").delete().eq("id", id);
+  const { error: deleteError } = await supabase
+    .from("file_objects")
+    .delete()
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
   if (deleteError) throw new Error(deleteError.message);
 }
 
-export async function getFileDownloadUrl(id: string) {
+export async function getFileDownloadUrl(id: string, scope?: FilesWorkspaceScope) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   const { data, error } = await supabase
     .from("file_objects")
     .select("storage_path, name, mime_type")
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .single();
 
   if (error) throw new Error(error.message);
@@ -480,9 +635,41 @@ export async function getFileDownloadUrl(id: string) {
   };
 }
 
-export async function listAllFolders(): Promise<FileFolder[]> {
+export async function downloadFileBuffer(id: string, scope?: FilesWorkspaceScope) {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
-  const { data, error } = await supabase.from("file_folders").select("*").order("name");
+  const { data, error } = await supabase
+    .from("file_objects")
+    .select("storage_path, name, mime_type")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const file = data as DbFile;
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from(INTERNAL_FILES_BUCKET)
+    .download(file.storage_path);
+
+  if (downloadError) throw new Error(downloadError.message);
+
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  return {
+    buffer,
+    name: file.name,
+    mimeType: file.mime_type,
+  };
+}
+
+export async function listAllFolders(scope?: FilesWorkspaceScope): Promise<FileFolder[]> {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+  const supabase = requireFilesSupabase();
+  const { data, error } = await supabase
+    .from("file_folders")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("name");
   if (error) throw new Error(error.message);
   return (data as DbFolder[]).map(mapFolder);
 }

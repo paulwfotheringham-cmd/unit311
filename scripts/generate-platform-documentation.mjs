@@ -462,7 +462,7 @@ const children = [
   ),
   h2("12.3 Deployment Commands"),
   bullet("npm run build — production build"),
-  bullet("npx vercel --prod — deploy to Vercel production"),
+  bullet("Git push to Unit311central/unit311central main (CLI vercel --prod disabled)"),
   bullet("npm run db:* — various migration and seed scripts"),
   h2("12.4 Mobile"),
   p("Capacitor Android app in mobile/ loads https://barcelonadronecenter.vercel.app. GitHub Actions workflow builds APK artifacts."),

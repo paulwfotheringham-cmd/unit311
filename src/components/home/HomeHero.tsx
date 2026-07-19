@@ -1,7 +1,6 @@
-import Link from "next/link";
 import HeroVideoBackground from "./HeroVideoBackground";
 import HomeBrandWordmark from "./HomeBrandWordmark";
-import { SITE_DESCRIPTION, SITE_HERO_LINE, SITE_TAGLINE } from "@/lib/site";
+import HomeHeroActions from "./HomeHeroActions";
 
 export default function HomeHero() {
   return (
@@ -9,7 +8,16 @@ export default function HomeHero() {
       <HeroVideoBackground />
 
       <div
-        className="pointer-events-none absolute inset-0 z-[1]"
+        className="pointer-events-none absolute inset-0 z-[1] sm:hidden"
+        aria-hidden
+        style={{
+          background:
+            "linear-gradient(to top, rgba(2, 6, 23, 0.96) 0%, rgba(2, 6, 23, 0.82) 38%, rgba(2, 6, 23, 0.45) 68%, rgba(2, 6, 23, 0.2) 100%)",
+        }}
+      />
+
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] hidden sm:block"
         aria-hidden
         style={{
           background:
@@ -17,45 +25,28 @@ export default function HomeHero() {
         }}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
-        <div className="mx-auto flex h-24 max-w-[1400px] items-center px-5 sm:px-8 lg:h-28 lg:px-10">
-          <div className="pointer-events-auto w-full max-w-[640px]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden pt-[max(0px,env(safe-area-inset-top))] lg:block">
+        <div className="mx-auto flex h-28 max-w-[1400px] items-center px-10">
+          <div className="pointer-events-auto max-w-[640px]">
             <HomeBrandWordmark />
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-5 pb-16 pt-24 sm:px-8 sm:pb-20 sm:pt-[104px] lg:items-center lg:px-10 lg:pb-24 lg:pt-[120px]">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-4 pb-12 pt-[3.75rem] sm:px-8 sm:pb-20 sm:pt-[6.5rem] lg:items-center lg:px-10 lg:pb-24 lg:pt-[120px]">
         <div className="relative max-w-[640px]">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/55 sm:text-sm">
-            UNIT311 CENTRAL
-          </p>
-
-          <h1 className="text-[2rem] font-bold leading-[0.95] tracking-[-0.03em] text-white sm:text-[2.75rem] lg:text-[3.35rem] xl:text-[3.75rem]">
-            <span className="mb-3 block sm:mb-4">ACCELERATE YOUR</span>
-            <span className="block">BUSINESS</span>
+          <h1 className="text-[1.75rem] font-bold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.75rem] sm:leading-[0.95] lg:text-[3.35rem] xl:text-[3.75rem]">
+            Connect your business into a single operational platform
           </h1>
 
-          <p className="mb-6 mt-5 text-lg font-semibold tracking-tight text-[#3b82f6] sm:mb-8 sm:text-xl">
-            {SITE_TAGLINE}
+          <p className="mt-5 max-w-[540px] text-[15px] font-medium leading-[1.65] text-white/88 sm:mt-6 sm:text-[17px] sm:leading-[1.7]">
+            Bring your people, information and day-to-day business functions together, fully integrated
+            into a single secure platform. Reduce your costs and complexity, integrate your external
+            core business applications and give every employee and leaders instant access to trusted
+            information that helps your organisation operate, grow and make better decisions.
           </p>
 
-          <p className="text-[15px] font-medium leading-[1.65] text-white/88 sm:text-[17px]">
-            {SITE_HERO_LINE}
-          </p>
-
-          <p className="mt-4 max-w-[540px] text-base leading-[1.7] text-white/70 sm:text-[17px]">
-            {SITE_DESCRIPTION}
-          </p>
-
-          <div className="mt-8">
-            <Link
-              href="/contact"
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-[#0b2d63] transition-colors hover:bg-white/90"
-            >
-              Get Started
-            </Link>
-          </div>
+          <HomeHeroActions />
         </div>
       </div>
     </section>

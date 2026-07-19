@@ -8,7 +8,7 @@ import {
   type InvoiceStatus,
 } from "@/lib/billing-data";
 import { cn } from "@/lib/utils";
-import { CreditCard, Download, Receipt, Sparkles } from "lucide-react";
+import { CreditCard, Download, Receipt } from "lucide-react";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -36,7 +36,7 @@ export default function BillingWorkspace() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/15 text-violet-200">
-                <Sparkles className="h-5 w-5" />
+                <CreditCard className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-300/80">

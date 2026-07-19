@@ -4,77 +4,43 @@ import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-const LOGO_SRC = "/images/unit311central.png";
-const LOGO_ASPECT = 1536 / 1024;
+export const LOGO_SRC = "/images/unit311central.png";
+export const LOGO_HERO_SRC = "/images/unit311central-hero.png";
+export const LOGO_ASPECT = 198 / 90;
+export const LOGO_STANDARD_HEIGHT = 72;
+export const LOGO_HOME_HERO_HEIGHT = 151;
+export const LOGO_SIDEBAR_HEIGHT = 40;
+export const LOGO_FOOTER_HEIGHT = 80;
 
 type LogoProps = {
   className?: string;
   height?: number;
-  onDark?: boolean;
-  href?: string;
-  wordmark?: boolean;
-  heroAlign?: boolean;
+  href?: string | null;
+  variant?: "default" | "hero";
 };
 
 export default function Logo({
   className = "",
-  height = 32,
-  onDark = false,
+  height = LOGO_STANDARD_HEIGHT,
   href = "/",
-  wordmark = false,
-  heroAlign = false,
+  variant = "default",
 }: LogoProps) {
-  if (wordmark) {
-    const wordmarkSize = Math.round(height * 0.48);
-
-    const content = (
-      <span
-        className={cn(
-          heroAlign
-            ? "inline-block font-semibold uppercase leading-none tracking-[0.28em]"
-            : "inline-flex items-center leading-none",
-          className,
-        )}
-        style={heroAlign ? { fontSize: wordmarkSize } : undefined}
-      >
-        <span
-          className={cn(!heroAlign && "font-semibold tracking-[-0.03em]")}
-          style={heroAlign ? undefined : { fontSize: wordmarkSize }}
-        >
-          <span className={onDark ? "!text-white" : "text-[#0b2d63]"}>UNIT</span>
-          <span className={onDark ? "text-[#60a5fa] !text-[#60a5fa]" : "text-[#2563eb]"}>311</span>
-        </span>
-      </span>
-    );
-
-    if (!href) return content;
-
-    return (
-      <Link
-        href={href}
-        className={cn("inline-flex shrink-0 items-center", onDark && "text-white")}
-        aria-label={SITE_NAME}
-      >
-        {content}
-      </Link>
-    );
-  }
-
   const width = Math.round(height * LOGO_ASPECT);
+  const src = variant === "hero" ? LOGO_HERO_SRC : LOGO_SRC;
 
   const content = (
     <Image
-      src={LOGO_SRC}
+      src={src}
       alt={SITE_NAME}
       width={width}
       height={height}
       className={cn("h-auto w-auto object-contain object-left", className)}
       style={{ height, width: "auto", maxWidth: width }}
-      priority={false}
+      priority={variant === "hero"}
     />
   );
 
-  if (!href) {
+  if (href === null || href === "") {
     return content;
   }
 

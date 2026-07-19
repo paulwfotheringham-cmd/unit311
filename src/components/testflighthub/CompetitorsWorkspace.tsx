@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useState, Fragment, startTransition } from "react";
 
 import {
   COMPETITOR_REGIONS,
@@ -170,23 +170,29 @@ export default function CompetitorsWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadCompetitors();
+    startTransition(() => {
+      void loadCompetitors();
+    });
   }, [loadCompetitors]);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(CUSTOM_REGIONS_STORAGE_KEY);
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as RegionOption[];
-      if (Array.isArray(parsed)) setCustomRegions(parsed);
-    } catch {
-      setCustomRegions([]);
-    }
+    startTransition(() => {
+      try {
+        const stored = window.localStorage.getItem(CUSTOM_REGIONS_STORAGE_KEY);
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as RegionOption[];
+        if (Array.isArray(parsed)) setCustomRegions(parsed);
+      } catch {
+        setCustomRegions([]);
+      }
+    });
   }, []);
 
   useEffect(() => {
-    setEditingId(null);
-    setDraft(null);
+    startTransition(() => {
+      setEditingId(null);
+      setDraft(null);
+    });
   }, [selectedRegion]);
 
   function startEdit(competitor: Competitor) {

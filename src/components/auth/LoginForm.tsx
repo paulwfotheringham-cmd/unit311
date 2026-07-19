@@ -1,7 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { navigateRedirectPath } from "@/lib/navigate-redirect";
 
 type SavedLogin = {
   username: string;
@@ -65,9 +67,11 @@ export default function LoginForm({
     const saved = loadSavedLogin(storageKey);
     if (!saved) return;
 
-    setUsername(saved.username);
-    setPassword(saved.password);
-    setRememberLogin(true);
+    startTransition(() => {
+      setUsername(saved.username);
+      setPassword(saved.password);
+      setRememberLogin(true);
+    });
   }, [storageKey]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -92,8 +96,7 @@ export default function LoginForm({
         rememberLogin ? { username: username.trim(), password } : null,
       );
 
-      router.push(data.redirectPath);
-      router.refresh();
+      navigateRedirectPath(data.redirectPath, router);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to sign in");
     } finally {

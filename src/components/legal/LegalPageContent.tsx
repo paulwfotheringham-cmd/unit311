@@ -1,6 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import MarketingPageShell from "@/components/layout/MarketingPageShell";
+import {
+  marketingEyebrow,
+  marketingFadeIn,
+  marketingLegalLink,
+  marketingPageIntro,
+  marketingPageTitle,
+  MARKETING_CONTENT_CLASS,
+} from "@/lib/marketing-ui";
+
 type LegalPageContentProps = {
   title: string;
   intro: string;
@@ -9,30 +19,22 @@ type LegalPageContentProps = {
 
 export default function LegalPageContent({ title, intro, children }: LegalPageContentProps) {
   return (
-    <section className="bg-white py-16 sm:py-20 lg:py-24">
-      <div className="mx-auto max-w-3xl px-5 sm:px-8 lg:px-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#2563eb]">
-          Unit311 Central
-        </p>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#1a2b4a] sm:text-4xl">
-          {title}
-        </h1>
-        <p className="mt-5 text-[15px] leading-relaxed text-[#1a2b4a]/70 sm:text-[17px]">
-          {intro}
-        </p>
+    <MarketingPageShell contentClassName={MARKETING_CONTENT_CLASS}>
+      <div className={`max-w-3xl ${marketingFadeIn}`}>
+        <p className={marketingEyebrow}>Unit311 Central</p>
+        <h1 className={`mt-4 ${marketingPageTitle}`}>{title}</h1>
+        <p className={marketingPageIntro}>{intro}</p>
 
-        <div className="prose-legal mt-10 space-y-6 text-[15px] leading-relaxed text-[#1a2b4a]/80">
-          {children}
-        </div>
+        <div className="prose-legal mt-10 space-y-8">{children}</div>
 
-        <p className="mt-12 text-sm text-[#1a2b4a]/55">
+        <p className="mt-12 text-sm text-white/55">
           Questions?{" "}
-          <Link href="/contact" className="font-medium text-[#2563eb] hover:underline">
+          <Link href="/contact" className={marketingLegalLink}>
             Contact us
           </Link>
           .
         </p>
       </div>
-    </section>
+    </MarketingPageShell>
   );
 }

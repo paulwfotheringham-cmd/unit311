@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   formatExternalUserLastLogin,
@@ -96,21 +96,25 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
   }, [syncUsers]);
 
   useEffect(() => {
-    void loadUsers();
+    startTransition(() => {
+      void loadUsers();
+    });
   }, [loadUsers]);
 
   useEffect(() => {
-    if (!selectedUserId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedUserId) return;
-    const user = users.find((item) => item.id === selectedUserId);
-    if (user) {
-      snapshottedIdRef.current = selectedUserId;
-      setSavedSnapshot({ ...user });
-    }
+    startTransition(() => {
+      if (!selectedUserId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedUserId) return;
+      const user = users.find((item) => item.id === selectedUserId);
+      if (user) {
+        snapshottedIdRef.current = selectedUserId;
+        setSavedSnapshot({ ...user });
+      }
+    });
   }, [selectedUserId, users]);
 
   function patchSelected(patch: Partial<ExternalUser>) {

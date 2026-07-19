@@ -1,8 +1,10 @@
 export const FOUNDER_SESSION_TIMEZONE = "Europe/London";
 export const FOUNDER_SLOT_MINUTES = 30;
 export const FOUNDER_DAY_START_HOUR = 9;
-export const FOUNDER_DAY_END_HOUR = 18;
-export const FOUNDER_BOOKING_HORIZON_DAYS = 28;
+export const FOUNDER_DAY_LAST_SLOT_HOUR = 18;
+/** @deprecated Use FOUNDER_DAY_LAST_SLOT_HOUR — kept for compatibility */
+export const FOUNDER_DAY_END_HOUR = FOUNDER_DAY_LAST_SLOT_HOUR + 1;
+export const FOUNDER_BOOKING_HORIZON_MONTHS = 6;
 
 export type FounderSessionSlot = {
   startsAt: string;
@@ -104,14 +106,28 @@ export function isWeekdayDateKey(dateKey: string) {
   return weekday !== "Sat" && weekday !== "Sun";
 }
 
+export function getFounderBookingMonthBounds(from = new Date()) {
+  const todayKey = londonDateKey(from);
+  const parts = getLondonParts(from);
+  const min = { year: parts.year, month: parts.month };
+  const maxAnchor = new Date(Date.UTC(parts.year, parts.month - 1 + FOUNDER_BOOKING_HORIZON_MONTHS, 1));
+  const max = { year: maxAnchor.getUTCFullYear(), month: maxAnchor.getUTCMonth() + 1 };
+  const lastDayOfMaxMonth = new Date(Date.UTC(max.year, max.month, 0)).getUTCDate();
+  const maxDateKey = `${max.year}-${String(max.month).padStart(2, "0")}-${String(lastDayOfMaxMonth).padStart(2, "0")}`;
+
+  return { min, max, todayKey, maxDateKey };
+}
+
 export function listBookableDateKeys(from = new Date()) {
+  const { todayKey, maxDateKey } = getFounderBookingMonthBounds(from);
   const keys: string[] = [];
   const cursor = new Date(from);
   cursor.setUTCHours(0, 0, 0, 0);
 
-  while (keys.length < FOUNDER_BOOKING_HORIZON_DAYS) {
+  while (true) {
     const key = londonDateKey(cursor);
-    if (isWeekdayDateKey(key) && !keys.includes(key)) {
+    if (key > maxDateKey) break;
+    if (key >= todayKey && isWeekdayDateKey(key) && !keys.includes(key)) {
       keys.push(key);
     }
     cursor.setUTCDate(cursor.getUTCDate() + 1);
@@ -126,7 +142,7 @@ export function buildSlotsForDateKey(dateKey: string): FounderSessionSlot[] {
   const slots: FounderSessionSlot[] = [];
   for (
     let minutes = FOUNDER_DAY_START_HOUR * 60;
-    minutes < FOUNDER_DAY_END_HOUR * 60;
+    minutes <= FOUNDER_DAY_LAST_SLOT_HOUR * 60;
     minutes += FOUNDER_SLOT_MINUTES
   ) {
     const wholeHour = Math.floor(minutes / 60);

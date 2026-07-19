@@ -1,14 +1,32 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import Footer from "./Footer";
+
+function detectInternalAppHost() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname.toLowerCase();
+  const onInternalHost =
+    host === "internal.unit311central.com" || host === "internal.localhost";
+  const onCustomerHost =
+    host.endsWith(".unit311central.com") &&
+    host !== "unit311central.com" &&
+    host !== "www.unit311central.com" &&
+    host !== "internal.unit311central.com";
+  return onInternalHost || onCustomerHost;
+}
 
 export default function FooterGate() {
   const pathname = usePathname();
+  const [isInternalAppHost] = useState(detectInternalAppHost);
 
   if (
-    pathname === "/login" ||
+    isInternalAppHost ||
+    pathname?.startsWith("/ws/") ||
     pathname === "/clientlogin" ||
+    pathname?.startsWith("/meet/") ||
+    pathname?.startsWith("/executivecall/") ||
     pathname?.startsWith("/client/") ||
     pathname?.startsWith("/test1") ||
     pathname?.startsWith("/testflighthub") ||

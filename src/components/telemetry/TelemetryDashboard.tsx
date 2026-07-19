@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import { Download, Search } from "lucide-react";
 
 import type { TelemetryRow } from "@/lib/telemetry";
@@ -131,14 +131,20 @@ export default function TelemetryDashboard() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-    const interval = setInterval(() => {
+    startTransition(() => {
       void refresh();
+    });
+    const interval = setInterval(() => {
+      startTransition(() => {
+        void refresh();
+      });
     }, REFRESH_INTERVAL_MS);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void refresh();
+        startTransition(() => {
+          void refresh();
+        });
       }
     };
 
@@ -173,12 +179,16 @@ export default function TelemetryDashboard() {
     null;
 
   useEffect(() => {
-    setPage(1);
+    startTransition(() => {
+      setPage(1);
+    });
   }, [searchQuery, statusFilter]);
 
   useEffect(() => {
     if (!selectedRecord) {
-      setSelectedPath([]);
+      startTransition(() => {
+        setSelectedPath([]);
+      });
       return;
     }
 
@@ -192,7 +202,11 @@ export default function TelemetryDashboard() {
       }
     }
 
-    void loadPath();
+    startTransition(() => {
+
+      void loadPath();
+
+    });
 
     return () => {
       cancelled = true;

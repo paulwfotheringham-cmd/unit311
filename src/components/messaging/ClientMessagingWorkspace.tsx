@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   formatMessageTime,
@@ -132,7 +132,9 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
       }
     }
 
-    void bootstrap();
+    startTransition(() => {
+      void bootstrap();
+    });
     return () => {
       cancelled = true;
     };
@@ -140,8 +142,12 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
 
   useEffect(() => {
     if (!activeRoom) return;
-    void loadMessages(activeRoom);
-    void markRead(activeRoom);
+    startTransition(() => {
+      void loadMessages(activeRoom);
+    });
+    startTransition(() => {
+      void markRead(activeRoom);
+    });
   }, [activeRoom, loadMessages, markRead]);
 
   useEffect(() => {
@@ -271,8 +277,10 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
       }
     }
 
-    setRealtimeStatus("connecting");
-    void connectRealtime();
+    startTransition(() => {
+      setRealtimeStatus("connecting");
+      void connectRealtime();
+    });
 
     return () => {
       cancelled = true;
@@ -283,7 +291,9 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      void loadChannels().catch(() => undefined);
+      startTransition(() => {
+        void loadChannels().catch(() => undefined);
+      });
     }, 15000);
     return () => window.clearInterval(timer);
   }, [loadChannels]);

@@ -246,7 +246,7 @@ export default function Unit311WorkspacePreview({
         <span className={cn("rounded-full bg-[#febc2e]", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
         <span className={cn("rounded-full bg-[#28c840]", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
         <p className={cn("ml-2 text-white/45", compact ? "text-[9px]" : "text-[11px]")}>
-          unit311central.com/internaldashboard
+          internal.unit311central.com
         </p>
       </div>
 

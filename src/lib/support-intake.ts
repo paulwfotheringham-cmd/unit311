@@ -16,9 +16,10 @@ import {
   nextPromptForStep,
   parseClientPriorityAnswer,
 } from "@/lib/support-intake-prompts";
+import type { SupportWorkspaceScope } from "@/lib/support-workspace";
 import { isWhatsAppConfigured, normalizeWhatsAppPhone, sendWhatsAppMessage } from "@/lib/whatsapp/client";
 
-export type WhatsAppIntakeOptions = {
+export type WhatsAppIntakeOptions = SupportWorkspaceScope & {
   phone?: string | null;
   suppressWhatsApp?: boolean;
 };
@@ -51,6 +52,10 @@ function normalizeClientPhone(phone?: string | null) {
   return normalizeWhatsAppPhone(phone);
 }
 
+function scopeFromOptions(options: WhatsAppIntakeOptions): SupportWorkspaceScope {
+  return { workspaceId: options.workspaceId };
+}
+
 export function isSupportTicketWhatsAppCommand(text: string) {
   return isOpenTicketCommand(text);
 }
@@ -69,21 +74,26 @@ async function maybeSendClientReply(
   }
 }
 
-async function attachClientPhone(ticket: SupportTicket, phone?: string | null) {
+async function attachClientPhone(
+  ticket: SupportTicket,
+  phone: string | null | undefined,
+  scope: SupportWorkspaceScope,
+) {
   const clientPhone = normalizeClientPhone(phone);
   if (!clientPhone) return ticket;
-  return updateSupportTicket(ticket.id, { clientPhone });
+  return updateSupportTicket(ticket.id, { clientPhone }, scope);
 }
 
 async function completeTicketIntake(
   ticket: SupportTicket,
-  phone?: string | null,
-  suppressWhatsApp = false,
+  phone: string | null | undefined,
+  suppressWhatsApp: boolean,
+  scope: SupportWorkspaceScope,
 ) {
-  ticket = await attachClientPhone(ticket, phone);
-  const channelMessage = await postTicketToSupportChannel(ticket);
-  const assignmentPrompt = await postAssignmentPromptToSupportChannel(ticket.id);
-  await clearWhatsAppSupportSession(phone);
+  ticket = await attachClientPhone(ticket, phone, scope);
+  const channelMessage = await postTicketToSupportChannel(ticket, scope);
+  const assignmentPrompt = await postAssignmentPromptToSupportChannel(ticket.id, scope);
+  await clearWhatsAppSupportSession(phone, scope);
   const reply = CLIENT_INTAKE_PROMPTS.received;
   const whatsappAck = await maybeSendClientReply(reply, ticket.clientPhone ?? phone, suppressWhatsApp);
 
@@ -95,20 +105,30 @@ async function completeTicketIntake(
   };
 }
 
-async function processOpenNewTicket(phone?: string | null, suppressWhatsApp = false) {
-  const ticket = await createSupportTicket({
-    name: "(collecting)",
-    organisation: "",
-    priority: "low",
-    description: "",
-    clientPhone: normalizeClientPhone(phone),
-  });
+async function processOpenNewTicket(
+  phone: string | null | undefined,
+  suppressWhatsApp: boolean,
+  scope: SupportWorkspaceScope,
+) {
+  const ticket = await createSupportTicket(
+    {
+      name: "(collecting)",
+      organisation: "",
+      priority: "low",
+      description: "",
+      clientPhone: normalizeClientPhone(phone),
+    },
+    scope,
+  );
 
-  await upsertWhatsAppSupportSession({
-    phone,
-    ticketId: ticket.id,
-    step: "awaiting_name",
-  });
+  await upsertWhatsAppSupportSession(
+    {
+      phone,
+      ticketId: ticket.id,
+      step: "awaiting_name",
+    },
+    scope,
+  );
 
   const reply = CLIENT_INTAKE_PROMPTS.name;
   const whatsappAck = await maybeSendClientReply(reply, phone, suppressWhatsApp);
@@ -124,14 +144,15 @@ async function processOpenNewTicket(phone?: string | null, suppressWhatsApp = fa
 
 async function processSessionStep(
   text: string,
-  phone?: string | null,
-  suppressWhatsApp = false,
+  phone: string | null | undefined,
+  suppressWhatsApp: boolean,
+  scope: SupportWorkspaceScope,
 ): Promise<WhatsAppIntakeResult | null> {
-  const session = await getWhatsAppSupportSession(phone);
+  const session = await getWhatsAppSupportSession(phone, scope);
   if (!session) return null;
 
   if (session.step === "awaiting_assignment") {
-    await clearWhatsAppSupportSession(phone);
+    await clearWhatsAppSupportSession(phone, scope);
     return { mode: "ignored", reason: "already_submitted" };
   }
 
@@ -139,12 +160,15 @@ async function processSessionStep(
 
   if (session.step === "awaiting_name") {
     const name = requireClientAnswer(trimmed, "name");
-    const ticket = await updateSupportTicket(session.ticketId, { name });
-    await upsertWhatsAppSupportSession({
-      phone,
-      ticketId: ticket.id,
-      step: "awaiting_organisation",
-    });
+    const ticket = await updateSupportTicket(session.ticketId, { name }, scope);
+    await upsertWhatsAppSupportSession(
+      {
+        phone,
+        ticketId: ticket.id,
+        step: "awaiting_organisation",
+      },
+      scope,
+    );
     const reply = CLIENT_INTAKE_PROMPTS.organisation;
     const whatsappAck = await maybeSendClientReply(reply, phone, suppressWhatsApp);
     return {
@@ -158,12 +182,15 @@ async function processSessionStep(
 
   if (session.step === "awaiting_organisation") {
     const organisation = requireClientAnswer(trimmed, "organisation name");
-    const ticket = await updateSupportTicket(session.ticketId, { organisation });
-    await upsertWhatsAppSupportSession({
-      phone,
-      ticketId: ticket.id,
-      step: "awaiting_priority",
-    });
+    const ticket = await updateSupportTicket(session.ticketId, { organisation }, scope);
+    await upsertWhatsAppSupportSession(
+      {
+        phone,
+        ticketId: ticket.id,
+        step: "awaiting_priority",
+      },
+      scope,
+    );
     const reply = CLIENT_INTAKE_PROMPTS.priority;
     const whatsappAck = await maybeSendClientReply(reply, phone, suppressWhatsApp);
     return {
@@ -179,15 +206,22 @@ async function processSessionStep(
     const priorityAnswer = requireClientAnswer(trimmed, "priority");
     const priority = parseClientPriorityAnswer(priorityAnswer) ?? "medium";
 
-    const ticket = await updateSupportTicket(session.ticketId, {
-      priority,
-      clientPriorityLabel: priorityAnswer,
-    });
-    await upsertWhatsAppSupportSession({
-      phone,
-      ticketId: ticket.id,
-      step: "awaiting_description",
-    });
+    const ticket = await updateSupportTicket(
+      session.ticketId,
+      {
+        priority,
+        clientPriorityLabel: priorityAnswer,
+      },
+      scope,
+    );
+    await upsertWhatsAppSupportSession(
+      {
+        phone,
+        ticketId: ticket.id,
+        step: "awaiting_description",
+      },
+      scope,
+    );
     const reply = CLIENT_INTAKE_PROMPTS.description;
     const whatsappAck = await maybeSendClientReply(reply, phone, suppressWhatsApp);
     return {
@@ -201,8 +235,8 @@ async function processSessionStep(
 
   if (session.step === "awaiting_description") {
     const description = requireClientAnswer(trimmed, "problem description");
-    const ticket = await updateSupportTicket(session.ticketId, { description });
-    const completion = await completeTicketIntake(ticket, phone, suppressWhatsApp);
+    const ticket = await updateSupportTicket(session.ticketId, { description }, scope);
+    const completion = await completeTicketIntake(ticket, phone, suppressWhatsApp, scope);
     return {
       mode: "submitted",
       ticket,
@@ -218,25 +252,25 @@ export async function processSupportTicketFromWhatsApp(
   options: WhatsAppIntakeOptions = {},
 ): Promise<WhatsAppIntakeResult> {
   const phone = options.phone ?? null;
+  const scope = scopeFromOptions(options);
   const trimmed = text.trim();
   if (!trimmed) {
     return { mode: "ignored", reason: "empty_message" };
   }
 
   const normalized = preserveClientAnswer(trimmed).replace(/\s+/g, " ");
-
   const suppressWhatsApp = options.suppressWhatsApp ?? false;
 
   if (isOpenTicketCommand(normalized)) {
-    return processOpenNewTicket(phone, suppressWhatsApp);
+    return processOpenNewTicket(phone, suppressWhatsApp, scope);
   }
 
-  const sessionResult = await processSessionStep(normalized, phone, suppressWhatsApp);
+  const sessionResult = await processSessionStep(normalized, phone, suppressWhatsApp, scope);
   if (sessionResult) {
     return sessionResult;
   }
 
-  const session = await getWhatsAppSupportSession(phone);
+  const session = await getWhatsAppSupportSession(phone, scope);
   if (session) {
     const hint = nextPromptForStep(session.step);
     throw new Error(hint ? `Please answer: ${hint}` : "Unexpected message for the current ticket step.");

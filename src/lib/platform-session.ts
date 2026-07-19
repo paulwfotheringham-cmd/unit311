@@ -6,6 +6,8 @@ import {
   type PlatformSession,
 } from "@/lib/platform-auth";
 
+export type { PlatformSession };
+
 export async function getPlatformSession(): Promise<PlatformSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(PLATFORM_SESSION_COOKIE)?.value;

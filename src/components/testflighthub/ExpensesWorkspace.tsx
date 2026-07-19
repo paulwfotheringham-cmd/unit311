@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   buildOutstandingByPayableDate,
@@ -8,17 +9,33 @@ import {
   EXPENSE_CURRENCY_OPTIONS,
   expenseFieldsEqual,
   formatExpenseAmount,
-  formatExpensePayableDate,
-  getExpensePayableDate,
   getInternalUserById,
+  inferExpenseCategory,
   INTERNAL_EXPENSE_USERS,
   sumOutstandingExpenses,
   type ExpenseCurrency,
   type FinancialExpense,
 } from "@/lib/expenses-data";
 import { ChartTooltip } from "@/components/dashboard/ChartTooltip";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import {
+  buildExpensesDashboardCatalog,
+  DEFAULT_EXPENSES_TILE_LAYOUT,
+} from "@/lib/view-dashboard-tile-catalogs";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ChevronDown, ChevronUp, Loader2, Pencil, Plus, Receipt, Save, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Eye,
+  Loader2,
+  Pencil,
+  Plus,
+  Receipt,
+  Save,
+  Trash2,
+} from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -72,17 +89,13 @@ function stepExpenseAmount(current: number, delta: number) {
   return Math.max(0, Math.round((current + delta) * 100) / 100);
 }
 
-type ExpenseReportMode = "total" | "byPerson" | "byCategory";
-
-function inferExpenseCategory(purpose: string) {
-  const text = purpose.toLowerCase();
-  if (/travel|flight|hotel|taxi|mileage|fuel/.test(text)) return "Travel";
-  if (/software|subscription|license|saas/.test(text)) return "Software";
-  if (/equipment|hardware|drone|camera|sensor/.test(text)) return "Equipment";
-  if (/meal|food|restaurant|entertainment/.test(text)) return "Meals & entertainment";
-  if (/office|supplies|stationery/.test(text)) return "Office";
-  return "General";
+function journalStatusLabel(expense: FinancialExpense) {
+  if (expense.journalEntryId) return "Posted";
+  if (expense.paymentJournalEntryId) return "Paid journal";
+  return "—";
 }
+
+type ExpenseReportMode = "total" | "byPerson" | "byCategory";
 
 type ExpenseReportRow = {
   label: string;
@@ -113,7 +126,7 @@ function buildExpenseReport(expenses: FinancialExpense[], mode: ExpenseReportMod
     const label =
       mode === "byPerson"
         ? expense.submitterName
-        : inferExpenseCategory(expense.purposeDescription);
+        : expense.categoryAccountCode || inferExpenseCategory(expense.purposeDescription);
     const current = buckets.get(label) ?? { count: 0, paid: 0, unpaid: 0 };
     buckets.set(label, {
       count: current.count + 1,
@@ -186,6 +199,11 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
     [reportData],
   );
 
+  const expensesDashboardCatalog = useMemo(
+    () => buildExpensesDashboardCatalog(expenses),
+    [expenses],
+  );
+
   const loadExpenses = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -211,21 +229,25 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
   }, []);
 
   useEffect(() => {
-    void loadExpenses();
+    startTransition(() => {
+      void loadExpenses();
+    });
   }, [loadExpenses]);
 
   useEffect(() => {
-    if (!selectedId || selectedId === "__draft__") {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedId) return;
-    const entry = expenses.find((item) => item.id === selectedId);
-    if (entry) {
-      snapshottedIdRef.current = selectedId;
-      setSavedSnapshot({ ...entry });
-    }
+    startTransition(() => {
+      if (!selectedId || selectedId === "__draft__") {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedId) return;
+      const entry = expenses.find((item) => item.id === selectedId);
+      if (entry) {
+        snapshottedIdRef.current = selectedId;
+        setSavedSnapshot({ ...entry });
+      }
+    });
   }, [selectedId, expenses]);
 
   async function saveExpense(expense: FinancialExpense, isNew: boolean) {
@@ -244,6 +266,9 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
             currency: expense.currency,
             dateSubmitted: expense.dateSubmitted,
             paid: expense.paid,
+            supplier: expense.supplier,
+            categoryAccountCode: expense.categoryAccountCode,
+            expenseDate: expense.expenseDate,
           }),
         });
 
@@ -270,6 +295,9 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
           currency: expense.currency,
           dateSubmitted: expense.dateSubmitted,
           paid: expense.paid,
+          supplier: expense.supplier,
+          categoryAccountCode: expense.categoryAccountCode,
+          expenseDate: expense.expenseDate,
         }),
       });
 
@@ -321,6 +349,14 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
     setIsEditing(true);
   }
 
+  function handleOpenExpense(expense: FinancialExpense) {
+    setError(null);
+    setSaveMessage(null);
+    setNewDraft(null);
+    setSelectedId(expense.id);
+    setIsEditing(false);
+  }
+
   function handleEditExpense(expense: FinancialExpense) {
     setError(null);
     setSaveMessage(null);
@@ -334,6 +370,34 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
     setError(null);
     setSaveMessage(null);
     await saveExpense(selected, selected.id === "__draft__");
+  }
+
+  async function handleMarkPaid(expense: FinancialExpense) {
+    if (expense.paid) return;
+
+    setBusy(true);
+    setError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await fetch(`/api/financials/expenses/${expense.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paid: true }),
+      });
+      const data = await readApiJson<{ expense?: FinancialExpense; error?: string }>(response);
+      if (!response.ok || !data.expense) throw new Error(data.error ?? "Failed to mark paid");
+
+      snapshottedIdRef.current = null;
+      await loadExpenses();
+      setSelectedId(expense.id);
+      setIsEditing(false);
+      setSaveMessage("Marked as paid");
+    } catch (markError) {
+      setError(markError instanceof Error ? markError.message : "Failed to mark paid");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleDeleteExpense() {
@@ -372,6 +436,13 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
 
   return (
     <div className="space-y-6">
+      <DashboardTopTilesBar
+        storageKey="unit311-expenses-dashboard-tiles"
+        catalog={expensesDashboardCatalog}
+        defaultLayout={DEFAULT_EXPENSES_TILE_LAYOUT}
+        title="Expenses key details"
+        showCustomizeHint={false}
+      />
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -539,15 +610,16 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-white/[0.08] text-[9px] font-medium uppercase tracking-[0.12em] text-white/35">
-                  <th className="px-3 py-2.5 font-medium">Name</th>
-                  <th className="px-3 py-2.5 font-medium">Purpose</th>
+                  <th className="px-3 py-2.5 font-medium">Supplier</th>
+                  <th className="px-3 py-2.5 font-medium">Category</th>
                   <th className="px-3 py-2.5 font-medium">Amount</th>
-                  <th className="px-3 py-2.5 font-medium">Submitted</th>
-                  <th className="px-3 py-2.5 font-medium">Payable</th>
-                  <th className="px-3 py-2.5 font-medium">Paid</th>
+                  <th className="px-3 py-2.5 font-medium">Currency</th>
+                  <th className="px-3 py-2.5 font-medium">Expense Date</th>
+                  <th className="px-3 py-2.5 font-medium">Payment Status</th>
+                  <th className="px-3 py-2.5 font-medium">Journal Status</th>
                   <th className="px-3 py-2.5 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -563,17 +635,17 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
                       )}
                     >
                       <td className="px-3 py-2.5 font-medium text-white/90">
-                        {expense.submitterName}
+                        {expense.supplier || expense.submitterName}
                       </td>
-                      <td className="max-w-[220px] truncate px-3 py-2.5 text-white/65">
-                        {expense.purposeDescription}
+                      <td className="px-3 py-2.5 font-mono text-white/65">
+                        {expense.categoryAccountCode || "—"}
                       </td>
                       <td className="px-3 py-2.5 font-mono text-white/80">
                         {formatExpenseAmount(expense.amount, expense.currency)}
                       </td>
-                      <td className="px-3 py-2.5 text-white/55">{expense.dateSubmitted}</td>
+                      <td className="px-3 py-2.5 text-white/55">{expense.currency}</td>
                       <td className="px-3 py-2.5 text-white/55">
-                        {expense.paid ? "—" : formatExpensePayableDate(getExpensePayableDate(expense))}
+                        {expense.expenseDate || expense.dateSubmitted}
                       </td>
                       <td className="px-3 py-2.5">
                         <span
@@ -587,16 +659,47 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
                           {expense.paid ? "Paid" : "Unpaid"}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-right">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleEditExpense(expense)}
-                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 px-2.5 text-xs text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
+                      <td className="px-3 py-2.5 text-white/65">{journalStatusLabel(expense)}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleOpenExpense(expense)}
+                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 px-2.5 text-xs text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Open
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => handleEditExpense(expense)}
+                            className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 px-2.5 text-xs text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          {expense.journalEntryId ? (
+                            <Link
+                              href={`?view=general-ledger&journal=${encodeURIComponent(expense.journalEntryId)}`}
+                              className="inline-flex h-8 items-center gap-1 rounded-lg border border-sky-500/30 px-2.5 text-xs text-sky-300 transition-colors hover:border-sky-400/50 hover:bg-sky-500/10"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              View Journal
+                            </Link>
+                          ) : null}
+                          {!expense.paid ? (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void handleMarkPaid(expense)}
+                              className="inline-flex h-8 items-center gap-1 rounded-lg border border-emerald-500/30 px-2.5 text-xs text-emerald-200 transition-colors hover:border-emerald-400/50 hover:bg-emerald-500/10 disabled:opacity-50"
+                            >
+                              Mark Paid
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -607,6 +710,79 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
         )}
       </section>
 
+      {selected && !isEditing && selected.id !== "__draft__" ? (
+        <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
+                Expense detail
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-white">
+                {selected.supplier || selected.submitterName || "Expense entry"}
+              </h2>
+              <p className="mt-1 text-sm text-white/50">{selected.purposeDescription || "—"}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => handleEditExpense(selected)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+              {selected.journalEntryId ? (
+                <Link
+                  href={`?view=general-ledger&journal=${encodeURIComponent(selected.journalEntryId)}`}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View Journal
+                </Link>
+              ) : null}
+              {!selected.paid ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void handleMarkPaid(selected)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-200 transition-colors hover:border-emerald-400/60 hover:bg-emerald-500/25 disabled:opacity-50"
+                >
+                  Mark Paid
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-white/10 bg-[#0b1524]/70 px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">Category</p>
+              <p className="mt-1 font-mono text-sm text-white/85">
+                {selected.categoryAccountCode || "—"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#0b1524]/70 px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">Amount</p>
+              <p className="mt-1 font-mono text-sm text-white/85">
+                {formatExpenseAmount(selected.amount, selected.currency)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#0b1524]/70 px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">Expense date</p>
+              <p className="mt-1 text-sm text-white/85">
+                {selected.expenseDate || selected.dateSubmitted}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#0b1524]/70 px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">Status</p>
+              <p className="mt-1 text-sm text-white/85">
+                {selected.paid ? "Paid" : "Unpaid"} · {journalStatusLabel(selected)}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {selected && isEditing ? (
         <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -615,7 +791,7 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
                 {selected.id === "__draft__" ? "New expense" : "Edit expense"}
               </p>
               <h2 className="mt-1 text-lg font-semibold text-white">
-                {selected.submitterName || "Expense entry"}
+                {selected.supplier || selected.submitterName || "Expense entry"}
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -667,6 +843,42 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <FieldLabel>Supplier</FieldLabel>
+              <input
+                className={inputClassName()}
+                value={selected.supplier ?? ""}
+                onChange={(event) =>
+                  patchSelected({ supplier: event.target.value.trim() ? event.target.value : null })
+                }
+                disabled={busy}
+                placeholder="Supplier name"
+              />
+            </div>
+            <div>
+              <FieldLabel>Category account code</FieldLabel>
+              <input
+                className={inputClassName()}
+                value={selected.categoryAccountCode ?? "5090"}
+                onChange={(event) =>
+                  patchSelected({
+                    categoryAccountCode: event.target.value.trim() ? event.target.value : "5090",
+                  })
+                }
+                disabled={busy}
+                placeholder="5090"
+              />
+            </div>
+            <div>
+              <FieldLabel>Expense date</FieldLabel>
+              <input
+                type="date"
+                className={inputClassName()}
+                value={selected.expenseDate || selected.dateSubmitted}
+                onChange={(event) => patchSelected({ expenseDate: event.target.value })}
+                disabled={busy}
+              />
             </div>
             <div>
               <FieldLabel>Date submitted</FieldLabel>
@@ -761,9 +973,10 @@ export default function ExpensesWorkspace({ onBackToFinancials }: ExpensesWorksp
           </div>
         </section>
       ) : (
-        !loading && (
+        !loading &&
+        !(selected && !isEditing) && (
           <section className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/45">
-            Select Edit on an expense or create a new one to update details.
+            Select Open or Edit on an expense, or create a new one.
           </section>
         )
       )}

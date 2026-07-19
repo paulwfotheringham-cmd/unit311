@@ -6,6 +6,7 @@ export type ActionItem = {
   task: string;
   assignedTo: string;
   due: string;
+  href?: string;
 };
 
 export type WeekEntry = {

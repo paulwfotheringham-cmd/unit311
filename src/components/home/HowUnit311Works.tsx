@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fragment, type CSSProperties, type ReactNode } from "react";
+import { Fragment, type CSSProperties } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -8,6 +8,7 @@ import {
   Rocket,
   Settings2,
 } from "lucide-react";
+import HomeSectionTitle from "./HomeSectionTitle";
 
 const ONBOARDING_STEPS = [
   {
@@ -67,18 +68,6 @@ const ONBOARDING_STEPS = [
 ] as const;
 
 type Step = (typeof ONBOARDING_STEPS)[number];
-
-function SectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-center gap-4 sm:gap-6">
-      <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
-      <p className="text-center text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
-        {children}
-      </p>
-      <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
-    </div>
-  );
-}
 
 function StepCard({ step, title, description, icon: Icon, accent, phase }: Step) {
   return (
@@ -219,7 +208,7 @@ export default function HowUnit311Works() {
   return (
     <section
       id="how-it-works"
-      className="relative scroll-mt-28 overflow-hidden bg-[#030712] py-16 sm:py-20 lg:py-24"
+      className="relative scroll-mt-24 overflow-x-hidden bg-[#030712] py-14 sm:scroll-mt-28 sm:py-20 lg:py-24"
     >
       <div
         className="pointer-events-none absolute inset-0"
@@ -240,15 +229,15 @@ export default function HowUnit311Works() {
         }}
       />
 
-      <div className="relative mx-auto max-w-[1760px] px-5 sm:px-8 lg:px-10">
-        <SectionTitle>How Unit311 Works</SectionTitle>
+      <div className="relative mx-auto max-w-[1760px] px-4 sm:px-8 lg:px-10">
+        <HomeSectionTitle>How Unit311 Works</HomeSectionTitle>
 
-        <p className="mx-auto mt-5 max-w-3xl text-center text-[15px] leading-relaxed text-white/60 sm:text-[17px]">
+        <p className="mx-auto mt-4 max-w-3xl text-balance text-center text-sm leading-relaxed text-white/60 sm:mt-5 sm:text-[15px] md:text-[17px]">
           A simple onboarding process designed for growing businesses. We believe technology should
           be tailored to your business - not the other way around.
         </p>
 
-        <div className="mx-auto mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-2 sm:mt-8 sm:gap-3">
           {(["Discover", "Commit", "Build", "Launch", "Grow"] as const).map((label, index) => (
             <span
               key={label}
@@ -268,10 +257,10 @@ export default function HowUnit311Works() {
         <DesktopTimeline />
         <MobileTimeline />
 
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-center text-sm text-white/45">
+        <div className="mt-10 flex flex-col items-stretch gap-3 text-center text-sm text-white/45 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
           <Link
             href="/book"
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-[#0b2d63] shadow-[0_8px_24px_rgba(255,255,255,0.12)] transition-colors hover:bg-white/95"
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-[#0b2d63] shadow-[0_8px_24px_rgba(255,255,255,0.12)] transition-colors hover:bg-white/95 sm:w-auto"
           >
             Book a founder session
           </Link>

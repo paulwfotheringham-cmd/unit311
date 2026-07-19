@@ -1,8 +1,10 @@
 # Unit311 Central — Architecture
 
-This document is the high-level system overview. The detailed workspace / tenancy specification is:
+This document is the high-level system overview. Detailed specifications:
 
-**[docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md)** (source of truth for `workspaces`, `workspace_id`, and provisioning).
+- **[docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md)** — `workspaces`, `workspace_id`, and provisioning
+- **[docs/VERCEL_ARCHITECTURE.md](./docs/VERCEL_ARCHITECTURE.md)** — Vercel deployment, domains, middleware, host routing (diagrams under `public/architecture/`)
+- **[docs/GITHUB_ARCHITECTURE.md](./docs/GITHUB_ARCHITECTURE.md)** — repository layout, modules, branch/hygiene (diagrams under `public/architecture/`)
 
 ## Goals
 

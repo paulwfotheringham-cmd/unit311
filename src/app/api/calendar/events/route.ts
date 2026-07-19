@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import type { CalendarEventType } from "@/lib/calendar-data";
 import { createCalendarEvent, listCalendarEvents } from "@/lib/internal-calendar-service";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +14,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const from = request.nextUrl.searchParams.get("from") ?? undefined;
     const to = request.nextUrl.searchParams.get("to") ?? undefined;
-    const events = await listCalendarEvents(from, to);
+    const events = await listCalendarEvents(from, to, { workspaceId: workspace.id });
     return NextResponse.json({ events });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load calendar events";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -28,6 +36,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const body = (await request.json()) as {
       title?: string;
       eventType?: CalendarEventType;
@@ -48,19 +58,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
     }
 
-    const event = await createCalendarEvent({
-      title: body.title,
-      eventType: body.eventType,
-      startsAt: body.startsAt,
-      endsAt: body.endsAt,
-      clientName: body.clientName,
-      location: body.location,
-      notes: body.notes,
-    });
+    const event = await createCalendarEvent(
+      {
+        title: body.title,
+        eventType: body.eventType,
+        startsAt: body.startsAt,
+        endsAt: body.endsAt,
+        clientName: body.clientName,
+        location: body.location,
+        notes: body.notes,
+      },
+      { workspaceId: workspace.id },
+    );
 
     return NextResponse.json({ event });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create calendar event";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -488,10 +488,6 @@ export default function SocialWorkspace() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">Social publishing</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/50">
-              Draft and schedule content for LinkedIn and Instagram. Connect account credentials
-              in Settings when you are ready to go live.
-            </p>
           </div>
         </div>
       </section>

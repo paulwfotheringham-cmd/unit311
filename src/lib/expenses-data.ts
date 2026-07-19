@@ -11,6 +11,15 @@ export type FinancialExpense = {
   currency: ExpenseCurrency;
   dateSubmitted: string;
   paid: boolean;
+  supplier: string | null;
+  categoryAccountCode: string | null;
+  expenseDate: string;
+  paymentMethod: string | null;
+  wiseBalanceId: number | null;
+  attachmentPath: string | null;
+  reference: string | null;
+  journalEntryId: string | null;
+  paymentJournalEntryId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -38,6 +47,15 @@ type DbExpense = {
   currency: string;
   date_submitted: string;
   paid: boolean;
+  supplier?: string | null;
+  category_account_code?: string | null;
+  expense_date?: string | null;
+  payment_method?: string | null;
+  wise_balance_id?: number | null;
+  attachment_path?: string | null;
+  reference?: string | null;
+  journal_entry_id?: string | null;
+  payment_journal_entry_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -52,9 +70,28 @@ export function mapFinancialExpense(row: DbExpense): FinancialExpense {
     currency: row.currency as ExpenseCurrency,
     dateSubmitted: row.date_submitted,
     paid: row.paid,
+    supplier: row.supplier ?? null,
+    categoryAccountCode: row.category_account_code ?? null,
+    expenseDate: row.expense_date ?? row.date_submitted,
+    paymentMethod: row.payment_method ?? null,
+    wiseBalanceId: row.wise_balance_id ?? null,
+    attachmentPath: row.attachment_path ?? null,
+    reference: row.reference ?? null,
+    journalEntryId: row.journal_entry_id ?? null,
+    paymentJournalEntryId: row.payment_journal_entry_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+export function inferExpenseCategory(purpose: string) {
+  const text = purpose.toLowerCase();
+  if (/travel|flight|hotel|taxi|mileage|fuel/.test(text)) return "Travel";
+  if (/software|subscription|license|saas/.test(text)) return "Software";
+  if (/equipment|hardware|drone|camera|sensor/.test(text)) return "Equipment";
+  if (/meal|food|restaurant|entertainment/.test(text)) return "Meals & entertainment";
+  if (/office|supplies|stationery/.test(text)) return "Office";
+  return "General";
 }
 
 export function createBlankExpenseInput(): Omit<
@@ -70,6 +107,15 @@ export function createBlankExpenseInput(): Omit<
     currency: "EUR",
     dateSubmitted: new Date().toISOString().slice(0, 10),
     paid: false,
+    supplier: null,
+    categoryAccountCode: "5090",
+    expenseDate: new Date().toISOString().slice(0, 10),
+    paymentMethod: null,
+    wiseBalanceId: null,
+    attachmentPath: null,
+    reference: null,
+    journalEntryId: null,
+    paymentJournalEntryId: null,
   };
 }
 
@@ -81,7 +127,10 @@ export function expenseFieldsEqual(a: FinancialExpense, b: FinancialExpense) {
     a.amount === b.amount &&
     a.currency === b.currency &&
     a.dateSubmitted === b.dateSubmitted &&
-    a.paid === b.paid
+    a.paid === b.paid &&
+    a.supplier === b.supplier &&
+    a.categoryAccountCode === b.categoryAccountCode &&
+    a.expenseDate === b.expenseDate
   );
 }
 

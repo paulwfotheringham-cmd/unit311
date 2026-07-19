@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
+import ExecutiveAssistantPanel, {
+  ExecutiveAssistantTriggerButton,
+} from "@/components/executive-assistant/ExecutiveAssistantPanel";
 import {
   internalViewTitles,
   isInternalOperationsView,
   type InternalOperationsView,
 } from "@/lib/internal-operations-data";
+import { isInternalDomainHost } from "@/lib/app-domains";
 import {
   surveyViewTitles,
   type SurveyOperationsBasePath,
@@ -37,10 +41,23 @@ export default function SurveyOperationsShell({
   basePath = "/testflighthub",
 }: SurveyOperationsShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const pathname = usePathname() ?? "";
+  const [isInternalHost] = useState(() => {
+    if (typeof window === "undefined") return true;
+    if (isInternalDomainHost(window.location.hostname)) return true;
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return !host.includes(".") || host === "localhost";
+    }
+    return false;
+  });
 
   useEffect(() => {
-    setMobileNavOpen(false);
+    startTransition(() => {
+      setMobileNavOpen(false);
+      setAssistantOpen(false);
+    });
   }, [pathname, activeView]);
 
   useEffect(() => {
@@ -64,15 +81,26 @@ export default function SurveyOperationsShell({
   const resolvedTitle =
     activeView != null
       ? mode === "internal" && isInternalOperationsView(activeView)
-        ? internalViewTitles[activeView].title
+        ? activeView === "billing" && !isInternalHost
+          ? "Billing"
+          : internalViewTitles[activeView].title
         : surveyViewTitles[activeView as SurveyOperationsView].title
       : title;
   const resolvedSubtitle =
     activeView != null
       ? mode === "internal" && isInternalOperationsView(activeView)
-        ? internalViewTitles[activeView].subtitle
+        ? activeView === "billing" && !isInternalHost
+          ? "Your subscription"
+          : internalViewTitles[activeView].subtitle
         : surveyViewTitles[activeView as SurveyOperationsView].subtitle
       : subtitle;
+
+  // Home already embeds the Assistant panel for internal hosts — keep header clean there.
+  const showAssistantTrigger = !(
+    mode === "internal" &&
+    isInternalHost &&
+    activeView === "home"
+  );
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0">
@@ -106,7 +134,7 @@ export default function SurveyOperationsShell({
           />
         )}
 
-        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-xl sm:px-4 md:px-5 lg:h-16 lg:px-8">
+        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-xl sm:px-4 md:px-5 lg:h-16 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -125,12 +153,24 @@ export default function SurveyOperationsShell({
               </h1>
             </div>
           </div>
+
+          {showAssistantTrigger ? (
+            <ExecutiveAssistantTriggerButton onClick={() => setAssistantOpen(true)} />
+          ) : null}
         </header>
 
-      <div className="safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]">
-        {children}
+        <div className="safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]">
+          {children}
+        </div>
       </div>
-      </div>
+
+      <ExecutiveAssistantPanel
+        variant="drawer"
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        activeView={activeView ?? "home"}
+        mode={mode}
+      />
     </div>
   );
 }

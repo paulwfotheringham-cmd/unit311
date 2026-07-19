@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { fromUrl } from "geotiff";
 
 import type { ElevationRange } from "@/lib/elevation-colormap";
@@ -18,8 +18,10 @@ export function useDsmElevationRange(geotiffUrl: string | null) {
 
   useEffect(() => {
     if (!geotiffUrl) {
-      setRange(null);
-      setLoading(false);
+      startTransition(() => {
+        setRange(null);
+        setLoading(false);
+      });
       return;
     }
 
@@ -27,8 +29,6 @@ export function useDsmElevationRange(geotiffUrl: string | null) {
     let cancelled = false;
 
     async function loadRange() {
-      setLoading(true);
-
       try {
         const tiff = await fromUrl(url, { allowFullFile: false });
         const image = await tiff.getImage();
@@ -68,7 +68,10 @@ export function useDsmElevationRange(geotiffUrl: string | null) {
       }
     }
 
-    void loadRange();
+    startTransition(() => {
+      setLoading(true);
+      void loadRange();
+    });
 
     return () => {
       cancelled = true;

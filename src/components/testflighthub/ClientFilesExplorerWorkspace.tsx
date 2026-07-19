@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 
 import type { ManagedClient } from "@/lib/client-management-data";
 import { clientStatusClass } from "@/lib/client-management-data";
@@ -54,7 +54,9 @@ export default function ClientFilesExplorerWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadClients();
+    startTransition(() => {
+      void loadClients();
+    });
   }, [loadClients]);
 
   const filteredClients = useMemo(() => {
@@ -127,7 +129,11 @@ export default function ClientFilesExplorerWorkspace() {
         ) : (
           <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
             {filteredClients.length === 0 ? (
-              <p className="text-sm text-white/45">No clients match your search.</p>
+              <p className="text-sm text-white/45">
+                {clients.length === 0
+                  ? "No clients in this workspace yet."
+                  : "No clients match your search."}
+              </p>
             ) : (
               filteredClients.map((client) => {
                 const selected = client.id === selectedClientId;

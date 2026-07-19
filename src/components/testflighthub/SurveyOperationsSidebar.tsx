@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
-import Logo from "@/components/layout/Logo";
+import Logo, { LOGO_SIDEBAR_HEIGHT } from "@/components/layout/Logo";
 import {
   getInternalNavHref,
   internalSurveyNavSections,
@@ -14,6 +14,7 @@ import {
   type InternalNavItem,
   type InternalOperationsView,
 } from "@/lib/internal-operations-data";
+import { isInternalDomainHost } from "@/lib/app-domains";
 import {
   getSurveyNavHref,
   isSurveyNavItemActive,
@@ -27,6 +28,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Binoculars,
+  Bot,
   Briefcase,
   Building2,
   Compass,
@@ -36,9 +38,11 @@ import {
   FlaskConical,
   FolderKanban,
   FolderOpen,
+  Globe,
   GraduationCap,
   Handshake,
   History,
+  KeyRound,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -59,9 +63,12 @@ import {
   ScrollText,
   Settings,
   Share2,
+  ShieldCheck,
   Target,
   Truck,
+  Video,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
 
@@ -70,6 +77,7 @@ const iconMap = {
   ArrowDownLeft,
   ArrowUpRight,
   Binoculars,
+  Bot,
   Briefcase,
   Building2,
   Compass,
@@ -84,13 +92,17 @@ const iconMap = {
   ScrollText,
   Settings,
   Share2,
+  ShieldCheck,
   Truck,
+  Video,
   FlaskConical,
   FolderKanban,
   FolderOpen,
+  Globe,
   GraduationCap,
   Handshake,
   History,
+  KeyRound,
   Landmark,
   Layers,
   LifeBuoy,
@@ -102,6 +114,7 @@ const iconMap = {
   Film,
   PenLine,
   Pickaxe,
+  Wrench,
 } as const;
 
 const childNavItemClass = (active: boolean) =>
@@ -144,16 +157,38 @@ export default function SurveyOperationsSidebar({
   basePath = "/testflighthub",
 }: SurveyOperationsSidebarProps) {
   const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
   const resolvedActiveView = (activeView as InternalOperationsView | undefined) ?? "home";
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const internalNavSections = internalSurveyNavSections;
+  const internalBasePath = basePath;
+  const [isInternalOpsHost] = useState(() => {
+    if (mode !== "internal") return false;
+    if (basePath === "/dashboard") return false;
+    if (typeof window !== "undefined" && isInternalDomainHost(window.location.hostname)) {
+      return true;
+    }
+    return basePath === "/" || basePath === "/internaldashboard" || basePath === "/internaldashboard_grants";
+  });
+
+  function childNavLabel(child: InternalNavChildItem) {
+    if (child.view === "billing" && isInternalOpsHost) return "Platform Billing";
+    return child.label;
+  }
 
   useEffect(() => {
     const autoExpanded: Record<string, boolean> = {};
-    internalSurveyNavSections.forEach((section) => {
+    internalNavSections.forEach((section) => {
       section.items.forEach((item) => {
         if (
           item.children?.some((child) =>
-            isInternalNavChildActive(child, resolvedActiveView, pathname),
+            isInternalNavChildActive(
+              child,
+              resolvedActiveView,
+              pathname,
+              internalBasePath,
+              searchParams,
+            ),
           )
         ) {
           autoExpanded[item.label] = true;
@@ -161,14 +196,15 @@ export default function SurveyOperationsSidebar({
       });
     });
     if (Object.keys(autoExpanded).length > 0) {
-      setExpandedParents((current) => ({ ...current, ...autoExpanded }));
+      startTransition(() => {
+        setExpandedParents((current) => ({ ...current, ...autoExpanded }));
+      });
     }
-  }, [resolvedActiveView, pathname]);
+  }, [internalNavSections, resolvedActiveView, pathname, searchParams, internalBasePath]);
 
   const inAppNavigation =
     isSurveyOperationsDashboardPath(pathname, basePath) && onViewChange != null;
   const logoHref = mode === "internal" ? basePath : basePath;
-  const internalBasePath = basePath;
 
   function renderNavItem(
     item: { label: string; icon: string },
@@ -178,7 +214,7 @@ export default function SurveyOperationsSidebar({
     href: string,
     compact = false,
   ) {
-    const Icon = iconMap[item.icon as keyof typeof iconMap];
+    const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
     const content = (
       <>
         <Icon
@@ -219,8 +255,15 @@ export default function SurveyOperationsSidebar({
   }
 
   function renderInternalChildItem(child: InternalNavChildItem) {
-    const active = isInternalNavChildActive(child, resolvedActiveView, pathname, internalBasePath);
-    const navHref = child.href ?? getInternalNavHref(child.view ?? "home", internalBasePath);
+    const active = isInternalNavChildActive(
+      child,
+      resolvedActiveView,
+      pathname,
+      internalBasePath,
+      searchParams,
+    );
+    const navHref =
+      child.href ?? getInternalNavHref(child.view ?? "home", internalBasePath, child.query);
 
     if (child.href) {
       return (
@@ -231,12 +274,12 @@ export default function SurveyOperationsSidebar({
           onClick={onClose}
           className={childNavItemClass(active)}
         >
-          <span className="truncate">{child.label}</span>
+          <span className="truncate">{childNavLabel(child)}</span>
         </Link>
       );
     }
 
-    if (inAppNavigation && child.view) {
+    if (inAppNavigation && child.view && !child.query) {
       return (
         <button
           key={child.label}
@@ -248,7 +291,7 @@ export default function SurveyOperationsSidebar({
           }}
           className={childNavItemClass(active)}
         >
-          <span className="truncate">{child.label}</span>
+          <span className="truncate">{childNavLabel(child)}</span>
         </button>
       );
     }
@@ -261,19 +304,25 @@ export default function SurveyOperationsSidebar({
         onClick={onClose}
         className={childNavItemClass(active)}
       >
-        <span className="truncate">{child.label}</span>
+        <span className="truncate">{childNavLabel(child)}</span>
       </Link>
     );
   }
 
   function renderInternalNavItemBlock(item: InternalNavItem) {
-    const active = isInternalNavItemActive(pathname, item, resolvedActiveView, internalBasePath);
+    const active = isInternalNavItemActive(
+      pathname,
+      item,
+      resolvedActiveView,
+      internalBasePath,
+      searchParams,
+    );
     const hasChildren = (item.children?.length ?? 0) > 0;
     const expanded = expandedParents[item.label] ?? active;
 
     if (item.indented && (item.view || item.href)) {
       const navHref = item.href ?? getInternalNavHref(item.view as InternalOperationsView, internalBasePath);
-      const Icon = iconMap[item.icon as keyof typeof iconMap];
+      const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
       const linkActive = item.href
         ? pathname === item.href || pathname.startsWith(`${item.href}/`)
         : active;
@@ -311,7 +360,7 @@ export default function SurveyOperationsSidebar({
     }
 
     if (hasChildren) {
-      const Icon = iconMap[item.icon as keyof typeof iconMap];
+      const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
       const Chevron = expanded ? ChevronDown : ChevronRight;
 
       return (
@@ -340,6 +389,10 @@ export default function SurveyOperationsSidebar({
       );
     }
 
+    if (item.href && !item.view) {
+      return renderNavItem(item, active, () => undefined, true, item.href, true);
+    }
+
     const navHref = getInternalNavHref(item.view as InternalOperationsView, internalBasePath);
 
     if (inAppNavigation) {
@@ -359,7 +412,7 @@ export default function SurveyOperationsSidebar({
     return renderNavItem(item, active, () => undefined, true, navHref, true);
   }
 
-  function renderInternalSection(section: (typeof internalSurveyNavSections)[number]) {
+  function renderInternalSection(section: (typeof internalNavSections)[number]) {
     return (
       <div key={section.label ?? "home"}>
         {section.label ? <p className={sectionHeaderClass}>{section.label}</p> : null}
@@ -394,18 +447,20 @@ export default function SurveyOperationsSidebar({
           isInternalCompact ? "px-2.5 pb-2 pt-2 lg:px-3" : "px-3 pb-4 pt-2.5 lg:px-3.5 lg:pb-5 lg:pt-3",
         )}
       >
-        <div
-          className={cn(
-            "min-w-0 flex-1 rounded-lg bg-white",
-            isInternalCompact ? "px-2 py-1" : "px-2.5 py-1.5",
-          )}
-        >
-          <Logo
-            height={isInternalCompact ? 24 : 30}
-            href={logoHref}
-            className="block w-full max-w-none"
-          />
-        </div>
+        {mode === "internal" ? (
+          <div className="min-w-0 flex-1 overflow-visible">
+            <Logo
+              variant="hero"
+              height={LOGO_SIDEBAR_HEIGHT}
+              href={logoHref}
+              className="drop-shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+            />
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1 rounded-lg bg-white px-2.5 py-1.5">
+            <Logo height={30} href={logoHref} className="block w-full max-w-none" />
+          </div>
+        )}
         <button
           type="button"
           className="ml-2 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 md:hidden"
@@ -424,7 +479,7 @@ export default function SurveyOperationsSidebar({
       >
         {mode === "internal" ? (
           <div className="space-y-3 lg:space-y-2.5">
-            {internalSurveyNavSections.map((section) => renderInternalSection(section))}
+            {internalNavSections.map((section) => renderInternalSection(section))}
           </div>
         ) : (
           <div className="space-y-1">

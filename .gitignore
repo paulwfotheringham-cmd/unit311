@@ -73,7 +73,11 @@ next-env.d.ts
 scripts/_*.mjs
 scripts/dump-*.mjs
 scripts/inspect-vercel-*.mjs
+scripts/find-usable-secrets.mjs
+scripts/probe-*.mjs
+body.json
 
 # OS / trash
 $RECYCLE.BIN/
 Desktop.ini
+.env*

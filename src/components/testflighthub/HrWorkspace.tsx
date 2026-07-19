@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   createBlankEmployeeInput,
@@ -19,6 +19,11 @@ import {
 } from "@/lib/hr-data";
 import { cn } from "@/lib/utils";
 import HrDashboardPanel from "./HrDashboardPanel";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import {
+  DEFAULT_HR_TILE_LAYOUT,
+  HR_DASHBOARD_TILES,
+} from "@/lib/view-dashboard-tile-catalogs";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
 import { Briefcase, FileText, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
 
@@ -346,7 +351,7 @@ function DocumentCard({
   );
 }
 
-export default function HrWorkspace() {
+export default function HrWorkspace({ mode = "employees" }: { mode?: "dashboard" | "employees" }) {
   const [employees, setEmployees] = useState<HrEmployee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -429,21 +434,25 @@ export default function HrWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadEmployees();
+    startTransition(() => {
+      void loadEmployees();
+    });
   }, [loadEmployees]);
 
   useEffect(() => {
-    if (!selectedEmployeeId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedEmployeeId) return;
-    const employee = employees.find((item) => item.id === selectedEmployeeId);
-    if (employee) {
-      snapshottedIdRef.current = selectedEmployeeId;
-      setSavedSnapshot({ ...employee, documents: { ...employee.documents } });
-    }
+    startTransition(() => {
+      if (!selectedEmployeeId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedEmployeeId) return;
+      const employee = employees.find((item) => item.id === selectedEmployeeId);
+      if (employee) {
+        snapshottedIdRef.current = selectedEmployeeId;
+        setSavedSnapshot({ ...employee, documents: { ...employee.documents } });
+      }
+    });
   }, [selectedEmployeeId, employees]);
 
   async function saveEmployee(employee: HrEmployee) {
@@ -577,6 +586,60 @@ export default function HrWorkspace() {
 
   return (
     <div className="space-y-6">
+      {mode === "dashboard" ? (
+        <>
+          <DashboardTopTilesBar
+            storageKey="unit311-hr-dashboard-tiles"
+            catalog={HR_DASHBOARD_TILES}
+            defaultLayout={DEFAULT_HR_TILE_LAYOUT}
+            title="HR key details"
+            showCustomizeHint={false}
+          />
+          <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/10">
+                  <Briefcase className="h-5 w-5 text-violet-300" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a78bfa]">
+                    People
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-semibold text-white">Human Resources</h2>
+                  <p className="mt-1 text-sm text-white/55">
+                    {employees.length} employees · {formatSalary(totalPayroll)} annual payroll
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {error && (
+            <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {error}
+              {error.includes("hr_employees") && (
+                <span className="mt-2 block text-xs text-red-200/80">
+                  Run{" "}
+                  <span className="font-mono">supabase/migrations/024_create_hr_employees.sql</span> in
+                  Supabase.
+                </span>
+              )}
+            </p>
+          )}
+
+          {loading ? (
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading employees…
+            </div>
+          ) : (
+            <HrDashboardPanel employees={employees} />
+          )}
+        </>
+      ) : null}
+
+      {mode === "employees" ? (
+        <>
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -587,7 +650,7 @@ export default function HrWorkspace() {
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a78bfa]">
                 People
               </p>
-              <h2 className="mt-0.5 text-lg font-semibold text-white">Human Resources</h2>
+              <h2 className="mt-0.5 text-lg font-semibold text-white">Employees</h2>
               <p className="mt-1 text-sm text-white/55">
                 {employees.length} employees · {formatSalary(totalPayroll)} annual payroll
               </p>
@@ -595,8 +658,6 @@ export default function HrWorkspace() {
           </div>
         </div>
       </section>
-
-      {!loading && <HrDashboardPanel employees={employees} />}
 
       {error && (
         <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -869,6 +930,8 @@ export default function HrWorkspace() {
           </section>
         </div>
       )}
+        </>
+      ) : null}
     </div>
   );
 }

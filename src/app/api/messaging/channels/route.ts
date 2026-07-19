@@ -12,12 +12,24 @@ import {
   localMarkChannelRead,
   localUpdateChannelMembers,
 } from "@/lib/internal-messaging-local-store";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
+function authErrorStatus(message: string) {
+  return message.includes("Authentication required") || message.includes("Workspace context")
+    ? 401
+    : 500;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const scope = { workspaceId: workspace.id };
+
     const viewerType = request.nextUrl.searchParams.get("viewerType");
     const operatorId = request.nextUrl.searchParams.get("operatorId") ?? undefined;
     const clientKey = request.nextUrl.searchParams.get("clientKey") ?? undefined;
@@ -49,38 +61,51 @@ export async function GET(request: NextRequest) {
       if (!clientKey) {
         return NextResponse.json({ error: "clientKey is required." }, { status: 400 });
       }
-      const channels = await listChannelsForViewer({
-        viewerType: "client",
-        clientKey,
-        viewerKey,
-      });
+      const channels = await listChannelsForViewer(
+        {
+          viewerType: "client",
+          clientKey,
+          viewerKey,
+        },
+        scope,
+      );
       return NextResponse.json({ channels });
     }
 
     if (viewerType === "internal") {
       const resolvedOperatorId = operatorId ?? "user-1";
-      const channels = await listChannelsForViewer({
-        viewerType: "internal",
-        operatorId: resolvedOperatorId,
-        viewerKey: operatorId ?? viewerKey ?? resolvedOperatorId,
-      });
+      const channels = await listChannelsForViewer(
+        {
+          viewerType: "internal",
+          operatorId: resolvedOperatorId,
+          viewerKey: operatorId ?? viewerKey ?? resolvedOperatorId,
+        },
+        scope,
+      );
       return NextResponse.json({ channels });
     }
 
-    const channels = await listChannelsForViewer({
-      viewerType: "internal",
-      operatorId: operatorId ?? "user-1",
-      viewerKey: viewerKey,
-    });
+    const channels = await listChannelsForViewer(
+      {
+        viewerType: "internal",
+        operatorId: operatorId ?? "user-1",
+        viewerKey: viewerKey,
+      },
+      scope,
+    );
     return NextResponse.json({ channels });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load channels";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: authErrorStatus(message) });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const scope = { workspaceId: workspace.id };
+
     const body = (await request.json()) as {
       name?: string;
       channelType?: "internal" | "client";
@@ -98,17 +123,20 @@ export async function POST(request: NextRequest) {
     }
 
     const channel = isSupabaseConfigured()
-      ? await createChannel({
-          name: body.name,
-          channelType: body.channelType ?? "internal",
-          clientKey: body.clientKey ?? null,
-          createdByOperatorId: body.createdByOperatorId,
-          createdByOperatorName: body.createdByOperatorName,
-          memberOperatorIds: body.memberOperatorIds ?? [],
-          memberClientUsernames: body.memberClientUsernames,
-          description: body.description,
-          isPrivate: body.isPrivate,
-        })
+      ? await createChannel(
+          {
+            name: body.name,
+            channelType: body.channelType ?? "internal",
+            clientKey: body.clientKey ?? null,
+            createdByOperatorId: body.createdByOperatorId,
+            createdByOperatorName: body.createdByOperatorName,
+            memberOperatorIds: body.memberOperatorIds ?? [],
+            memberClientUsernames: body.memberClientUsernames,
+            description: body.description,
+            isPrivate: body.isPrivate,
+          },
+          scope,
+        )
       : localCreateChannel({
           name: body.name,
           channelType: body.channelType ?? "internal",
@@ -124,12 +152,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ channel, source: isSupabaseConfigured() ? "supabase" : "local" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create channel";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: authErrorStatus(message) });
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
+    const scope = { workspaceId: workspace.id };
+
     const body = (await request.json()) as {
       channelId?: string;
       memberOperatorIds?: string[];
@@ -140,7 +172,7 @@ export async function PATCH(request: NextRequest) {
 
     if (body.action === "markRead" && body.viewerKey && body.room) {
       if (isSupabaseConfigured()) {
-        await markChannelRead(body.viewerKey, body.room);
+        await markChannelRead(body.viewerKey, body.room, scope);
       } else {
         localMarkChannelRead(body.viewerKey, body.room);
       }
@@ -152,11 +184,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const channel = isSupabaseConfigured()
-      ? await updateChannelMembers(body.channelId, body.memberOperatorIds)
+      ? await updateChannelMembers(body.channelId, body.memberOperatorIds, scope)
       : localUpdateChannelMembers(body.channelId, body.memberOperatorIds);
     return NextResponse.json({ channel });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update channel";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: authErrorStatus(message) });
   }
 }

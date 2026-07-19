@@ -11,15 +11,19 @@ Production database: Supabase **Unit311 Central** (`kkxtvzxqmbacjatkiupq`)
 
 ## Production deploy
 
-From the repo root:
+**Canonical repository:** `Unit311central/unit311central` (`Desktop\unit311`).
+
+Production must ship from **committed Git revisions** via Vercel Git integration.  
+CLI `vercel --prod` is disabled in ops scripts.
 
 ```bash
-npm install
-npx vercel link --project unit311central --yes
-npx vercel --prod --yes
+node scripts/assert-canonical-unit311-repo.mjs
+# then merge to main on Unit311central/unit311central
 ```
 
-Git pushes to `main` may also deploy via Vercel Git integration if enabled for this project.
+Full process and rollback: [docs/PRODUCTION_DEPLOYMENT.md](./docs/PRODUCTION_DEPLOYMENT.md).
+
+Do **not** deploy Unit311 Central from `Desktop\onwardair`.
 
 ## Domains (Vercel)
 
@@ -52,7 +56,7 @@ Minimum required for a healthy production site:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SITE_URL=https://unit311central.com`
-- `AUTH_SECRET` (recommended)
+- `AUTH_SECRET` (required in production for session signing; never use the anon key)
 
 Commonly required for full product:
 
@@ -114,3 +118,4 @@ Protect with `CRON_SECRET` (or setup secret where implemented).
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [README.md](./README.md)
 - [docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md)
+- [docs/VERCEL_ARCHITECTURE.md](./docs/VERCEL_ARCHITECTURE.md) (host / middleware / domains; regenerate diagram with `npm run diagram:vercel-architecture`)

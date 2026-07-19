@@ -1,3 +1,5 @@
+import HomeSectionTitle from "./HomeSectionTitle";
+
 const INDUSTRIES = [
   { label: "Founders & Startups", icon: "building" },
   { label: "MedTech", icon: "medtech" },
@@ -14,7 +16,7 @@ const INDUSTRIES = [
 ] as const;
 
 function IndustryIcon({ type }: { type: (typeof INDUSTRIES)[number]["icon"] }) {
-  const cls = "h-[48px] w-[48px] stroke-white sm:h-[52px] sm:w-[52px]";
+  const cls = "h-10 w-10 stroke-white sm:h-12 sm:w-12 md:h-[48px] md:w-[48px] lg:h-[52px] lg:w-[52px]";
   switch (type) {
     case "building":
       return (
@@ -92,27 +94,21 @@ function IndustryIcon({ type }: { type: (typeof INDUSTRIES)[number]["icon"] }) {
 
 export default function WhoWeWorkWith() {
   return (
-    <section className="bg-[#030712] py-20 sm:py-24 lg:py-28">
-      <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-10">
-        <div className="flex items-center justify-center gap-5 sm:gap-6">
-          <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
-          <p className="whitespace-nowrap text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
-            Who we help accelerate and scale
-          </p>
-          <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
-        </div>
+    <section className="overflow-x-hidden bg-[#030712] py-14 sm:py-20 md:py-24 lg:py-28">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-8 lg:px-10">
+        <HomeSectionTitle>Who we help accelerate and scale</HomeSectionTitle>
 
-        <p className="mx-auto mt-6 max-w-3xl text-center text-[15px] leading-relaxed text-white/60 sm:text-[17px]">
+        <p className="mx-auto mt-4 max-w-3xl text-balance text-center text-sm leading-relaxed text-white/60 sm:mt-6 sm:text-[15px] md:text-[17px]">
           Unit311 Central supports any type of business — from first-time founders to established operators.
           These are just a few examples of the sectors we work with.
         </p>
 
-        <div className="mt-14 sm:mt-16">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-14">
+        <div className="mt-10 sm:mt-14 md:mt-16">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-14">
             {INDUSTRIES.map((item) => (
-              <div key={item.label} className="flex flex-col items-center text-center">
+              <div key={item.label} className="flex min-w-0 flex-col items-center px-1 text-center">
                 <IndustryIcon type={item.icon} />
-                <p className="mt-5 text-[14px] font-normal leading-[1.4] text-white/90 sm:text-[15px]">
+                <p className="mt-4 text-[13px] font-normal leading-snug text-white/90 sm:mt-5 sm:text-[14px] md:text-[15px]">
                   {item.label}
                 </p>
               </div>

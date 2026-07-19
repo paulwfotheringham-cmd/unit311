@@ -1,4 +1,4 @@
-export type EmailAccountId = "info" | "paul";
+export type EmailAccountId = "info" | "paul" | "admin";
 
 export type EmailAccount = {
   id: EmailAccountId;
@@ -37,6 +37,12 @@ export type EmailMessage = {
 
 export type EmailThreadStatus = "unread" | "open" | "replied" | "closed";
 
+export type EmailSendAttachment = {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+};
+
 export type EmailSendPayload = {
   account: EmailAccountId;
   to: string;
@@ -46,6 +52,9 @@ export type EmailSendPayload = {
   subject: string;
   html?: string;
   text?: string;
+  attachments?: EmailSendAttachment[];
+  inReplyTo?: string | null;
+  references?: string[];
 };
 
 export type EmailReplyContext = {

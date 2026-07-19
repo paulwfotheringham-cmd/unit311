@@ -72,4 +72,5 @@ Add focused tests when changing critical money, auth, or tenancy paths (expand c
 
 - Behavioural architecture → update `ARCHITECTURE.md` and/or `docs/WORKSPACE_ARCHITECTURE.md`
 - Deploy / domain process → `DEPLOYMENT.md`
+- Repository layout / module map → `docs/GITHUB_ARCHITECTURE.md` (then `npm run diagram:github-architecture`)
 - Long-lived debt → append a short note to `docs/TECHNICAL_DEBT.md`

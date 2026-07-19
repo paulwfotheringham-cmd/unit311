@@ -1,12 +1,19 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Check } from "lucide-react";
+import HomeSectionTitle from "./HomeSectionTitle";
+const MONTHLY_PRICE = 999;
+const QUARTERLY_PRICE = MONTHLY_PRICE * 3;
 
 const PLAN_FEATURES = [
-  "Complete Unit311 Central solution",
-  "Up to 25 users (additional costs applied for more users)",
-  "Email and chat support",
-  "Additional customization can be offered (charges will apply)",
+  "Many modules including Client Management, CRM, Projects, Finance, HR, Assets, Messaging, Training and Logistics",
+  "AI Executive Assistant and board pack / report automation",
+  "Initial customization for your business",
+  "Monthly allowance to ask for customization for any module",
+  "Easy integration with your preferred applications if required",
+  "Up to 15 users",
+  "Seamless onboarding process",
+  "High Touch High Care Support at all times",
 ] as const;
 
 const PROFESSIONAL_SERVICES = [
@@ -20,14 +27,28 @@ const PROFESSIONAL_SERVICES = [
   "Business consulting",
 ] as const;
 
-function SectionTitle({ children }: { children: ReactNode }) {
+function PricingCardShell({ children }: { children: ReactNode }) {  return (
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#3b82f6]/25 bg-gradient-to-b from-white/[0.07] to-white/[0.03] shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+      {children}
+    </article>
+  );
+}
+
+function PricingCardBody({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center justify-center gap-4 sm:gap-6">
-      <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
-      <p className="text-center text-[22px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">
+    <div className="flex h-full flex-1 flex-col px-5 py-7 sm:px-8 sm:py-10">{children}</div>
+  );
+}
+
+function PricingCardAction({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <div className="mt-auto pt-8">
+      <Link
+        href={href}
+        className="flex h-11 w-full items-center justify-center rounded-lg bg-white px-5 text-sm font-semibold text-[#0b2d63] transition-colors hover:bg-[#f8fafc]"
+      >
         {children}
-      </p>
-      <span className="h-px w-[80px] bg-[#3b82f6] sm:w-[140px]" aria-hidden />
+      </Link>
     </div>
   );
 }
@@ -36,9 +57,8 @@ export default function HomePricing() {
   return (
     <section
       id="pricing"
-      className="relative scroll-mt-28 overflow-hidden bg-[#050816] py-16 sm:py-20 lg:py-24"
-    >
-      <div
+      className="relative scroll-mt-20 overflow-x-hidden bg-[#050816] pt-7 pb-12 sm:scroll-mt-28 sm:pt-12 sm:pb-20 lg:pt-14 lg:pb-24"
+    >      <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
         style={{
@@ -47,67 +67,75 @@ export default function HomePricing() {
         }}
       />
 
-      <div className="relative mx-auto max-w-[1760px] px-5 sm:px-8 lg:px-10">
-        <SectionTitle>Simple, Transparent Pricing</SectionTitle>
+      <div className="relative mx-auto max-w-[1760px] px-4 sm:px-8 lg:px-10">
+        <HomeSectionTitle>Simple Transparent Pricing</HomeSectionTitle>
 
-        <div className="mx-auto mt-12 max-w-lg">
-          <article className="overflow-hidden rounded-2xl border border-[#3b82f6]/25 bg-gradient-to-b from-white/[0.07] to-white/[0.03] shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-            <div className="border-b border-white/10 px-6 py-8 text-center sm:px-8 sm:py-10">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#93c5fd]">
-                Unit311 Professional
-              </p>
-              <p className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                US$995
-                <span className="text-lg font-semibold text-white/50 sm:text-xl">/month</span>
-              </p>
-              <p className="mt-3 text-sm font-medium text-white/70">Billed quarterly</p>
-              <p className="mt-1 text-sm text-white/45">US$2,985 every 3 months</p>
-              <p className="mt-6 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-xs text-white/55">
-                Initial commitment: <span className="ml-1 font-semibold text-white/80">3 months</span>
-              </p>
-            </div>
+        <div className="mx-auto mt-8 grid max-w-6xl gap-4 sm:mt-12 lg:grid-cols-3 lg:gap-5">          <PricingCardShell>
+            <PricingCardBody>
+              <div className="text-left">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#93c5fd]">
+                  What does it cost
+                </h3>
+                <p className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-[2.75rem]">
+                  US${MONTHLY_PRICE}
+                  <span className="text-lg font-semibold text-white/50 sm:text-xl"> / month</span>
+                </p>
+                <p className="mt-3 text-sm font-medium text-white/70">Billed quarterly</p>
+                <p className="mt-1 text-sm text-white/45">
+                  US${QUARTERLY_PRICE.toLocaleString("en-US")} every 3 months
+                </p>
+                <p className="mt-6 flex flex-wrap gap-x-1 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-white/55 sm:mt-6 sm:inline-flex sm:px-4 sm:text-xs">
+                  Initial commitment: <span className="font-semibold text-white/80">3 months</span>
+                </p>
+              </div>
+              <PricingCardAction href="/signup">Get started</PricingCardAction>
+            </PricingCardBody>
+          </PricingCardShell>
 
-            <ul className="space-y-3 px-6 py-8 sm:px-8">
-              {PLAN_FEATURES.map((feature) => (
-                <li key={feature} className="flex items-start gap-3 text-sm text-white/75">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3b82f6]" strokeWidth={2.5} />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
+          <PricingCardShell>
+            <PricingCardBody>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#93c5fd]">
+                What is included
+              </h3>
+              <ul className="mt-6 space-y-3">
+                {PLAN_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3 text-sm text-white/75">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3b82f6]" strokeWidth={2.5} />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </PricingCardBody>
+          </PricingCardShell>
 
-            <div className="border-t border-white/10 px-6 py-8 sm:px-8">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/80">
+          <PricingCardShell>
+            <PricingCardBody>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#93c5fd]">
                 Professional Services
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-white/50">
                 Additional services are available where required and quoted separately.
               </p>
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+              <ul className="mt-5 space-y-3">
                 {PROFESSIONAL_SERVICES.map((service) => (
-                  <li key={service} className="flex items-center gap-2 text-sm text-white/65">
-                    <span className="text-[#3b82f6]" aria-hidden>
-                      •
-                    </span>
-                    {service}
+                  <li key={service} className="flex items-start gap-3 text-sm text-white/75">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#3b82f6]" strokeWidth={2.5} />
+                    <span>{service}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          </article>
+              <PricingCardAction href="/contact">Contact us</PricingCardAction>
+            </PricingCardBody>
+          </PricingCardShell>
+        </div>
 
-          <div className="mt-10 text-center">
-            <Link
-              href="/book"
-              className="inline-flex h-14 w-full max-w-lg items-center justify-center rounded-xl bg-white px-10 text-base font-semibold text-[#0b2d63] shadow-[0_10px_32px_rgba(255,255,255,0.18)] transition-colors hover:bg-white/95 sm:h-16 sm:text-lg sm:w-auto"
-            >
-              Book a Complimentary Founder Session
-            </Link>
-            <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-white/40">
-              No obligation. We&apos;ll help determine whether Unit311 is the right fit for your
-              business before you make any commitment.
-            </p>
-          </div>
+        <div className="mt-14 px-2 text-center sm:mt-20 sm:px-0">
+          <Link
+            href="/book"
+            className="inline-flex min-h-14 w-full max-w-lg items-center justify-center rounded-xl bg-[#15803d] px-6 text-base font-semibold text-white shadow-[0_2px_12px_rgba(21,128,61,0.35)] transition-colors hover:bg-[#166534] sm:h-16 sm:w-auto sm:px-10 sm:text-lg"
+          >
+            Book a free demo and intro session
+          </Link>
         </div>
       </div>
     </section>

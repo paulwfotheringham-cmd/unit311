@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { deleteFile, getFileDownloadUrl, updateFile } from "@/lib/internal-files-service";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +15,18 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
-    const download = await getFileDownloadUrl(id);
+    const download = await getFileDownloadUrl(id, { workspaceId: workspace.id });
     return NextResponse.json(download);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to get download URL";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -28,6 +36,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
     const body = (await request.json()) as {
       name?: string;
@@ -35,16 +45,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       categoryId?: string | null;
     };
 
-    const file = await updateFile(id, {
-      name: body.name,
-      folderId: body.folderId,
-      categoryId: body.categoryId,
-    });
+    const file = await updateFile(
+      id,
+      {
+        name: body.name,
+        folderId: body.folderId,
+        categoryId: body.categoryId,
+      },
+      { workspaceId: workspace.id },
+    );
 
     return NextResponse.json({ file });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update file";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -54,11 +72,17 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
-    await deleteFile(id);
+    await deleteFile(id, { workspaceId: workspace.id });
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete file";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

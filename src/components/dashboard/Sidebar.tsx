@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Logo from "@/components/layout/Logo";
@@ -53,7 +53,9 @@ export default function Sidebar({
 
   useEffect(() => {
     if (!viewerKey) return;
-    void loadUnread();
+    startTransition(() => {
+      void loadUnread();
+    });
     const timer = window.setInterval(() => void loadUnread(), 15000);
     return () => window.clearInterval(timer);
   }, [loadUnread, pathname, viewerKey]);

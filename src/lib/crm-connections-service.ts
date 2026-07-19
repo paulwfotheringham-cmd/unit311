@@ -12,10 +12,15 @@ import {
 } from "@/lib/connections-local-store";
 import { isMissingTableError } from "@/lib/internal-db-migrations";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import {
+  resolveCrmWorkspaceId,
+  type CrmWorkspaceScope,
+} from "@/lib/crm-leads-service";
 
 type DbConnection = Parameters<typeof mapCrmConnection>[0];
 
 export type ConnectionsSource = "supabase" | "local";
+export type ConnectionsWorkspaceScope = CrmWorkspaceScope;
 
 function requireConnectionsSupabase() {
   if (!isSupabaseConfigured()) {
@@ -24,11 +29,12 @@ function requireConnectionsSupabase() {
   return createSupabaseServerClient();
 }
 
-async function supabaseListConnections(): Promise<CrmConnection[]> {
+async function supabaseListConnections(workspaceId: string): Promise<CrmConnection[]> {
   const supabase = requireConnectionsSupabase();
   const { data, error } = await supabase
     .from("crm_connections")
     .select("*")
+    .eq("workspace_id", workspaceId)
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -36,6 +42,7 @@ async function supabaseListConnections(): Promise<CrmConnection[]> {
 }
 
 async function supabaseCreateConnection(
+  workspaceId: string,
   input: Partial<ReturnType<typeof createBlankConnectionInput>> & { name: string },
 ): Promise<CrmConnection> {
   const supabase = requireConnectionsSupabase();
@@ -46,6 +53,7 @@ async function supabaseCreateConnection(
   const { data, error } = await supabase
     .from("crm_connections")
     .insert({
+      workspace_id: workspaceId,
       name: input.name.trim(),
       role: input.role?.trim() || "Advisor",
       specialties: input.specialties?.trim() || null,
@@ -64,6 +72,7 @@ async function supabaseCreateConnection(
 }
 
 async function supabaseUpdateConnection(
+  workspaceId: string,
   id: string,
   patch: Partial<{
     name: string;
@@ -76,6 +85,16 @@ async function supabaseUpdateConnection(
   }>,
 ): Promise<CrmConnection> {
   const supabase = requireConnectionsSupabase();
+  const { data: existing, error: fetchError } = await supabase
+    .from("crm_connections")
+    .select("city, country")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) throw new Error("Connection not found.");
+
   const payload: Record<string, string | number | null> = {
     updated_at: new Date().toISOString(),
   };
@@ -89,14 +108,6 @@ async function supabaseUpdateConnection(
   }
 
   if (patch.city !== undefined || patch.country !== undefined) {
-    const { data: existing, error: fetchError } = await supabase
-      .from("crm_connections")
-      .select("city, country")
-      .eq("id", id)
-      .single();
-
-    if (fetchError) throw new Error(fetchError.message);
-
     const city = (patch.city ?? existing.city).trim();
     const country = (patch.country ?? existing.country).trim();
     const [latitude, longitude] = geocodeConnection(city, country);
@@ -110,6 +121,7 @@ async function supabaseUpdateConnection(
     .from("crm_connections")
     .update(payload)
     .eq("id", id)
+    .eq("workspace_id", workspaceId)
     .select("*")
     .single();
 
@@ -117,9 +129,22 @@ async function supabaseUpdateConnection(
   return mapCrmConnection(data as DbConnection);
 }
 
-async function supabaseDeleteConnection(id: string) {
+async function supabaseDeleteConnection(workspaceId: string, id: string) {
   const supabase = requireConnectionsSupabase();
-  const { error } = await supabase.from("crm_connections").delete().eq("id", id);
+  const { data: existing, error: fetchError } = await supabase
+    .from("crm_connections")
+    .select("id")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) throw new Error("Connection not found.");
+
+  const { error } = await supabase
+    .from("crm_connections")
+    .delete()
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
   if (error) throw new Error(error.message);
 }
 
@@ -146,32 +171,36 @@ async function withSupabaseOrLocal<T>(
   }
 }
 
-export async function listConnectionsWithSource(): Promise<{
+export async function listConnectionsWithSource(
+  scope?: ConnectionsWorkspaceScope,
+): Promise<{
   connections: CrmConnection[];
   source: ConnectionsSource;
 }> {
+  const workspaceId = await resolveCrmWorkspaceId(scope);
   const { result, source } = await withSupabaseOrLocal(
-    supabaseListConnections,
+    () => supabaseListConnections(workspaceId),
     localListConnections,
   );
 
-  if (source === "supabase" && result.length === 0) {
-    return { connections: localListConnections(), source: "local" };
-  }
-
+  // Do not fall back to seeded Unit311 local connections when the workspace is empty.
   return { connections: result, source };
 }
 
-export async function listConnections(): Promise<CrmConnection[]> {
-  const { connections } = await listConnectionsWithSource();
+export async function listConnections(
+  scope?: ConnectionsWorkspaceScope,
+): Promise<CrmConnection[]> {
+  const { connections } = await listConnectionsWithSource(scope);
   return connections;
 }
 
 export async function createConnectionWithSource(
   input: Partial<ReturnType<typeof createBlankConnectionInput>> & { name: string },
+  scope?: ConnectionsWorkspaceScope,
 ): Promise<{ connection: CrmConnection; source: ConnectionsSource }> {
+  const workspaceId = await resolveCrmWorkspaceId(scope);
   const { result, source } = await withSupabaseOrLocal(
-    () => supabaseCreateConnection(input),
+    () => supabaseCreateConnection(workspaceId, input),
     () => localCreateConnection(input),
   );
   return { connection: result, source };
@@ -179,8 +208,9 @@ export async function createConnectionWithSource(
 
 export async function createConnection(
   input: Partial<ReturnType<typeof createBlankConnectionInput>> & { name: string },
+  scope?: ConnectionsWorkspaceScope,
 ): Promise<CrmConnection> {
-  const { connection } = await createConnectionWithSource(input);
+  const { connection } = await createConnectionWithSource(input, scope);
   return connection;
 }
 
@@ -195,9 +225,11 @@ export async function updateConnectionWithSource(
     city: string;
     country: string;
   }>,
+  scope?: ConnectionsWorkspaceScope,
 ): Promise<{ connection: CrmConnection; source: ConnectionsSource }> {
+  const workspaceId = await resolveCrmWorkspaceId(scope);
   const { result, source } = await withSupabaseOrLocal(
-    () => supabaseUpdateConnection(id, patch),
+    () => supabaseUpdateConnection(workspaceId, id, patch),
     () => localUpdateConnection(id, patch),
   );
   return { connection: result, source };
@@ -214,17 +246,20 @@ export async function updateConnection(
     city: string;
     country: string;
   }>,
+  scope?: ConnectionsWorkspaceScope,
 ): Promise<CrmConnection> {
-  const { connection } = await updateConnectionWithSource(id, patch);
+  const { connection } = await updateConnectionWithSource(id, patch, scope);
   return connection;
 }
 
 export async function deleteConnectionWithSource(
   id: string,
+  scope?: ConnectionsWorkspaceScope,
 ): Promise<{ source: ConnectionsSource }> {
+  const workspaceId = await resolveCrmWorkspaceId(scope);
   const { source } = await withSupabaseOrLocal(
     async () => {
-      await supabaseDeleteConnection(id);
+      await supabaseDeleteConnection(workspaceId, id);
       return true;
     },
     () => {
@@ -235,6 +270,6 @@ export async function deleteConnectionWithSource(
   return { source };
 }
 
-export async function deleteConnection(id: string) {
-  await deleteConnectionWithSource(id);
+export async function deleteConnection(id: string, scope?: ConnectionsWorkspaceScope) {
+  await deleteConnectionWithSource(id, scope);
 }

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import type { LeadStatus } from "@/lib/crm-data";
 import { deleteLead, updateLead } from "@/lib/crm-leads-service";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
     const body = (await request.json()) as {
       companyName?: string;
@@ -26,13 +30,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       nextActionDate?: string | null;
       estimatedValue?: number | null;
       notes?: string;
+      discoveryNotes?: string;
     };
 
-    const lead = await updateLead(id, body);
+    const lead = await updateLead(id, body, { workspaceId: workspace.id });
     return NextResponse.json({ lead });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update lead";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") ||
+      message.includes("Workspace context") ||
+      message.includes("Lead not found")
+        ? message.includes("Lead not found")
+          ? 404
+          : 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -42,11 +55,21 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
-    await deleteLead(id);
+    await deleteLead(id, { workspaceId: workspace.id });
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete lead";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") ||
+      message.includes("Workspace context") ||
+      message.includes("Lead not found")
+        ? message.includes("Lead not found")
+          ? 404
+          : 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

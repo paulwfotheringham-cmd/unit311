@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 
-import { isCentralDomainHost } from "@/lib/app-domains";
+import { isCentralDomainHost, isInternalDomainHost } from "@/lib/app-domains";
 
 export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get("host");
-  const isCentral = isCentralDomainHost(host);
+  const isCentral = isCentralDomainHost(host) || isInternalDomainHost(host);
 
   return {
     title: isCentral

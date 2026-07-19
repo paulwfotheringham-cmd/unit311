@@ -21,7 +21,7 @@ export default function Hero({
   compact = false,
 }: HeroProps) {
   return (
-    <section className={`relative overflow-hidden ${compact ? "py-20 lg:py-24" : "py-24 lg:py-32"}`}>
+    <section className={`relative overflow-hidden ${compact ? "py-14 sm:py-20 lg:py-24" : "py-16 sm:py-24 lg:py-32"}`}>
       <div className="absolute inset-0 grid-pattern" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.18),transparent)]" />
 
@@ -39,24 +39,24 @@ export default function Hero({
         </div>
       )}
 
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <div className={`max-w-3xl ${compact ? "" : "lg:max-w-4xl"}`}>
           <h1
             className={`font-semibold tracking-tight text-foreground ${
               compact
-                ? "text-4xl sm:text-5xl"
-                : "text-4xl sm:text-5xl lg:text-6xl lg:leading-[1.1]"
+                ? "text-3xl sm:text-5xl"
+                : "text-3xl sm:text-5xl lg:text-6xl lg:leading-[1.1]"
             }`}
           >
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted sm:mt-6 sm:text-lg lg:text-xl">
               {subtitle}
             </p>
           )}
           {(primaryCta || secondaryCta) && (
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
               {primaryCta && (
                 <Link
                   href={primaryCta.href}

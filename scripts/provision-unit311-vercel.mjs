@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import { refuseCliProductionDeploy } from "./assert-canonical-unit311-repo.mjs";
+
+refuseCliProductionDeploy("provision-unit311-vercel.mjs");
 
 const ROOT = process.cwd();
 const SOURCE_ENV = path.join(ROOT, ".env.unit311-source");
@@ -95,13 +98,3 @@ try {
 } catch {
   console.warn("SSO protection disable skipped (may already be off).");
 }
-
-console.log("Deploying unit311 to production…");
-run("npx vercel --prod --yes");
-
-console.log("Restoring barcelonadronecenter project link…");
-run("npx vercel link --project barcelonadronecenter --yes");
-
-console.log("\nUnit311 production URL: https://unit311.vercel.app");
-console.log("Unit311 Central: https://unit311central.com/login");
-console.log("Internal dashboard: https://unit311central.com/internaldashboard");

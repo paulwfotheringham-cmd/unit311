@@ -1,5 +1,8 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
+import { refuseCliProductionDeploy } from "./assert-canonical-unit311-repo.mjs";
+
+refuseCliProductionDeploy("copy-bcn-env-to-unit311.mjs");
 
 const ROOT = process.cwd();
 const SOURCE = "barcelonadronecenter";
@@ -87,10 +90,3 @@ for (const [key, value] of Object.entries(OVERRIDE)) {
   });
   console.log(`  ✓ ${key} (override)`);
 }
-
-console.log("Redeploying unit311…");
-execSync("npx vercel --prod --yes", { cwd: ROOT, stdio: "inherit" });
-
-console.log("Restoring barcelonadronecenter link…");
-execSync("npx vercel link --project barcelonadronecenter --yes", { cwd: ROOT, stdio: "inherit" });
-console.log("Done.");

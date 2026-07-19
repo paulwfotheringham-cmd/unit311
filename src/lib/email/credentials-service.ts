@@ -1,5 +1,6 @@
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import type { EmailAccountId } from "@/lib/email/types";
+import { resolveEmailWorkspaceId, type EmailWorkspaceScope } from "@/lib/email-workspace";
 
 import { getAccountDefinition } from "@/lib/email/accounts";
 
@@ -13,8 +14,8 @@ type DbCredential = {
 type MemoryCredential = { email: string; password: string };
 
 declare global {
-  // eslint-disable-next-line no-var
-  var __unit311EmailCredentials: Map<EmailAccountId, MemoryCredential> | undefined;
+  // Ambient `var` is required for globalThis augmentation.
+  var __unit311EmailCredentials: Map<string, MemoryCredential> | undefined;
 }
 
 function memoryCredentialStore() {
@@ -24,10 +25,15 @@ function memoryCredentialStore() {
   return globalThis.__unit311EmailCredentials;
 }
 
-function readMemoryCredential(id: EmailAccountId): MemoryCredential | null {
-  return memoryCredentialStore().get(id) ?? null;
+function memoryKey(workspaceId: string, id: EmailAccountId) {
+  return `${workspaceId}:${id}`;
 }
 
+function readMemoryCredential(workspaceId: string, id: EmailAccountId): MemoryCredential | null {
+  return memoryCredentialStore().get(memoryKey(workspaceId, id)) ?? null;
+}
+
+/** Env credentials are shared platform secrets (not tenant DB rows). */
 function readEnvCredential(id: EmailAccountId): MemoryCredential | null {
   const account = getAccountDefinition(id);
   const password =
@@ -49,6 +55,7 @@ function readEnvCredential(id: EmailAccountId): MemoryCredential | null {
 
 async function readSupabaseCredential(
   id: EmailAccountId,
+  workspaceId: string,
 ): Promise<MemoryCredential | null> {
   if (!isSupabaseConfigured()) return null;
 
@@ -56,6 +63,7 @@ async function readSupabaseCredential(
   const { data, error } = await supabase
     .from("email_mailbox_credentials")
     .select("email, password")
+    .eq("workspace_id", workspaceId)
     .eq("account_id", id)
     .maybeSingle();
 
@@ -70,22 +78,28 @@ async function readSupabaseCredential(
 
 export async function resolveAccountCredentials(
   id: EmailAccountId,
+  scope?: EmailWorkspaceScope,
 ): Promise<MemoryCredential | null> {
+  const workspaceId = await resolveEmailWorkspaceId(scope);
   return (
     readEnvCredential(id) ??
-    readMemoryCredential(id) ??
-    (await readSupabaseCredential(id))
+    readMemoryCredential(workspaceId, id) ??
+    (await readSupabaseCredential(id, workspaceId))
   );
 }
 
-export async function isAccountConfiguredAsync(id: EmailAccountId): Promise<boolean> {
-  return Boolean(await resolveAccountCredentials(id));
+export async function isAccountConfiguredAsync(
+  id: EmailAccountId,
+  scope?: EmailWorkspaceScope,
+): Promise<boolean> {
+  return Boolean(await resolveAccountCredentials(id, scope));
 }
 
-export async function getMailboxCredentialStatus() {
+export async function getMailboxCredentialStatus(scope?: EmailWorkspaceScope) {
+  const workspaceId = await resolveEmailWorkspaceId(scope);
   const [infoConfigured, paulConfigured] = await Promise.all([
-    isAccountConfiguredAsync("info"),
-    isAccountConfiguredAsync("paul"),
+    isAccountConfiguredAsync("info", { workspaceId }),
+    isAccountConfiguredAsync("paul", { workspaceId }),
   ]);
 
   const storage = isSupabaseConfigured()
@@ -105,12 +119,14 @@ export async function saveMailboxCredentials(
   id: EmailAccountId,
   password: string,
   email?: string,
+  scope?: EmailWorkspaceScope,
 ) {
   const trimmedPassword = password.trim();
   if (!trimmedPassword) {
     throw new Error("Password is required.");
   }
 
+  const workspaceId = await resolveEmailWorkspaceId(scope);
   const accountEmail = email?.trim() || getAccountDefinition(id).email;
 
   if (isSupabaseConfigured()) {
@@ -119,22 +135,29 @@ export async function saveMailboxCredentials(
       .from("email_mailbox_credentials")
       .upsert(
         {
+          workspace_id: workspaceId,
           account_id: id,
           email: accountEmail,
           password: trimmedPassword,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "account_id" },
+        { onConflict: "workspace_id,account_id" },
       )
       .select("account_id, email, updated_at")
       .single();
 
     if (error) throw new Error(error.message);
-    memoryCredentialStore().set(id, { email: accountEmail, password: trimmedPassword });
+    memoryCredentialStore().set(memoryKey(workspaceId, id), {
+      email: accountEmail,
+      password: trimmedPassword,
+    });
     return data as Pick<DbCredential, "account_id" | "email" | "updated_at">;
   }
 
-  memoryCredentialStore().set(id, { email: accountEmail, password: trimmedPassword });
+  memoryCredentialStore().set(memoryKey(workspaceId, id), {
+    email: accountEmail,
+    password: trimmedPassword,
+  });
   return {
     account_id: id,
     email: accountEmail,

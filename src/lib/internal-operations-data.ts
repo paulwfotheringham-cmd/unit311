@@ -3,16 +3,38 @@ import type { SurveyOperationsBasePath } from "@/lib/survey-operations-mock-data
 export type InternalOperationsView =
   | "home"
   | "clients"
+  | "clients-dashboard"
   | "crm"
+  | "crm-meetings"
+  | "crm-questions-test"
   | "connections"
   | "representatives"
   | "office-locations"
+  | "corporate-dashboard"
+  | "corporate-company-details"
+  | "corporate-bank-accounts"
+  | "corporate-advisers"
+  | "corporate-insurance"
+  | "corporate-software"
+  | "corporate-contracts"
   | "financials"
+  | "general-ledger"
+  | "accounts-receivable"
+  | "accounts-payable"
+  | "financial-reports"
+  | "opex"
+  | "wise"
+  | "board-pack"
   | "debtors"
   | "creditors"
   | "expenses"
   | "hr"
+  | "hr-dashboard"
+  | "hr-recruitment"
+  | "hr-leave"
+  | "hr-performance"
   | "strategy"
+  | "potential-clients"
   | "whiteboard"
   | "competitors"
   | "assets"
@@ -32,33 +54,96 @@ export type InternalOperationsView =
   | "files-internal"
   | "files-external"
   | "files-client"
+  | "unit311-details"
   | "users"
   | "users-external"
+  | "external-client-access"
   | "support"
   | "telemetry"
   | "media-example"
   | "design-mockups"
   | "sector"
   | "training"
-  | "logistics";
+  | "training-dashboard"
+  | "logistics"
+  | "client-onboarding"
+  | "quality-management"
+  | "qms-training"
+  | "profile"
+  | "executive-assistant"
+  | "website-management"
+  | "engineering";
 
-export const INTERNAL_OPERATIONS_BASE_PATH: SurveyOperationsBasePath = "/internaldashboard";
+/** App Router folder path (middleware may rewrite `/` → this on the internal host). */
+export const INTERNAL_OPERATIONS_APP_PATH = "/internaldashboard";
+
+/**
+ * Browser URL base for the internal app.
+ * On internal.unit311central.com this is `/`; locally it stays `/internaldashboard`.
+ */
+export const INTERNAL_OPERATIONS_BASE_PATH: SurveyOperationsBasePath =
+  "/internaldashboard";
+
 export const INTERNAL_GRANTS_OPERATIONS_BASE_PATH: SurveyOperationsBasePath =
   "/internaldashboard_grants";
+
+export function resolveInternalOperationsBasePath(
+  hostname?: string | null,
+): SurveyOperationsBasePath {
+  const host = (hostname ?? "").split(":")[0].trim().toLowerCase();
+  if (host === "internal.unit311central.com" || host === "internal.localhost") {
+    return "/";
+  }
+  // Customer workspace hosts use /dashboard as the public app URL.
+  if (
+    host.endsWith(".unit311central.com") &&
+    host !== "unit311central.com" &&
+    host !== "www.unit311central.com" &&
+    host !== "internal.unit311central.com"
+  ) {
+    return "/dashboard";
+  }
+  if (host.endsWith(".localhost") && host !== "localhost" && host !== "internal.localhost") {
+    return "/dashboard";
+  }
+  return INTERNAL_OPERATIONS_BASE_PATH;
+}
 
 export const internalOperationsViews: InternalOperationsView[] = [
   "home",
   "clients",
+  "clients-dashboard",
   "crm",
+  "crm-meetings",
+  "crm-questions-test",
   "connections",
   "representatives",
   "office-locations",
+  "corporate-dashboard",
+  "corporate-company-details",
+  "corporate-bank-accounts",
+  "corporate-advisers",
+  "corporate-insurance",
+  "corporate-software",
+  "corporate-contracts",
   "financials",
+  "general-ledger",
+  "accounts-receivable",
+  "accounts-payable",
+  "financial-reports",
+  "opex",
+  "wise",
+  "board-pack",
   "debtors",
   "creditors",
   "expenses",
   "hr",
+  "hr-dashboard",
+  "hr-recruitment",
+  "hr-leave",
+  "hr-performance",
   "strategy",
+  "potential-clients",
   "whiteboard",
   "competitors",
   "assets",
@@ -78,15 +163,25 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "files-internal",
   "files-external",
   "files-client",
+  "unit311-details",
   "users",
   "users-external",
+  "external-client-access",
   "support",
   "telemetry",
   "media-example",
   "design-mockups",
   "sector",
   "training",
+  "training-dashboard",
   "logistics",
+  "client-onboarding",
+  "quality-management",
+  "qms-training",
+  "profile",
+  "executive-assistant",
+  "website-management",
+  "engineering",
 ];
 
 export function isInternalOperationsView(value: string | null): value is InternalOperationsView {
@@ -97,6 +192,9 @@ export function normalizeInternalOperationsView(value: string | null): InternalO
   if (value === "live-projects") return "projects";
   if (value === "sector-mining") return "sector";
   if (value === "files") return "files-internal";
+  if (value === "debtors") return "accounts-receivable";
+  if (value === "creditors") return "accounts-payable";
+  if (value === "opex") return "financials";
   return isInternalOperationsView(value) ? value : "home";
 }
 
@@ -104,6 +202,7 @@ export type InternalNavChildItem = {
   readonly label: string;
   readonly view?: InternalOperationsView;
   readonly href?: string;
+  readonly query?: Record<string, string>;
 };
 
 export type InternalNavItem = {
@@ -123,15 +222,37 @@ export type InternalNavSection = {
 export const internalSurveyNavSections: readonly InternalNavSection[] = [
   {
     label: null,
-    items: [{ label: "Home", icon: "LayoutDashboard", view: "home" as const }],
+    items: [
+      { label: "Home", icon: "LayoutDashboard", view: "home" as const },
+      {
+        label: "Executive Assistant",
+        icon: "Bot",
+        view: "executive-assistant" as const,
+      },
+    ],
   },
   {
     label: "Business Central",
     items: [
-      { label: "Clients", icon: "Building2", view: "clients" as const },
-      { label: "CRM", icon: "ContactRound", view: "crm" as const },
-      { label: "Representatives", icon: "Handshake", view: "representatives" as const },
-      { label: "Office Locations", icon: "MapPin", view: "office-locations" as const },
+      {
+        label: "Clients",
+        icon: "Building2",
+        children: [
+          { label: "Dashboard", view: "clients-dashboard" as const },
+          { label: "Client Directory", view: "clients" as const },
+          { label: "Client Onboarding", view: "client-onboarding" as const },
+        ],
+      },
+      {
+        label: "CRM",
+        icon: "ContactRound",
+        children: [
+          { label: "Pipeline", view: "crm" as const },
+          { label: "Executive Strategy Session Meetings", view: "crm-meetings" as const },
+          { label: "Potential Clients", view: "potential-clients" as const },
+        ],
+      },
+      { label: "Partners", icon: "Handshake", view: "representatives" as const },
       { label: "Projects", icon: "FolderKanban", view: "projects" as const },
       { label: "Grants", icon: "Landmark", view: "grants" as const },
       {
@@ -139,12 +260,39 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         icon: "Wallet",
         children: [
           { label: "Overview", view: "financials" as const },
-          { label: "Debtors", view: "debtors" as const },
-          { label: "Creditors", view: "creditors" as const },
+          { label: "General Ledger", view: "general-ledger" as const },
+          { label: "Accounts Receivable", view: "accounts-receivable" as const },
+          { label: "Accounts Payable", view: "accounts-payable" as const },
           { label: "Expenses", view: "expenses" as const },
+          { label: "Wise", view: "wise" as const },
+          { label: "Reports", view: "financial-reports" as const },
         ],
       },
-      { label: "HR", icon: "Briefcase", view: "hr" as const },
+      {
+        label: "HR",
+        icon: "Briefcase",
+        children: [
+          { label: "Dashboard", view: "hr-dashboard" as const },
+          { label: "Employees", view: "hr" as const },
+          { label: "Recruitment", view: "hr-recruitment" as const },
+          { label: "Leave", view: "hr-leave" as const },
+          { label: "Performance", view: "hr-performance" as const },
+        ],
+      },
+      {
+        label: "Corporate Information",
+        icon: "MapPin",
+        children: [
+          { label: "Dashboard", view: "corporate-dashboard" as const },
+          { label: "Company Details", view: "corporate-company-details" as const },
+          { label: "Office Locations", view: "office-locations" as const },
+          { label: "Bank Accounts", view: "corporate-bank-accounts" as const },
+          { label: "Professional Advisers", view: "corporate-advisers" as const },
+          { label: "Insurance", view: "corporate-insurance" as const },
+          { label: "Software & Licences", view: "corporate-software" as const },
+          { label: "Contracts", view: "corporate-contracts" as const },
+        ],
+      },
     ],
   },
   {
@@ -159,6 +307,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         icon: "FolderOpen",
         children: [
           { label: "Internal files", view: "files-internal" as const },
+          { label: "Unit311 Details", view: "unit311-details" as const },
           { label: "External files", view: "files-external" as const },
           { label: "Client explorer", view: "files-client" as const },
         ],
@@ -179,27 +328,56 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
     ],
   },
   {
-    label: "Strategy",
+    label: "Training",
     items: [
-      { label: "Strategy", icon: "Compass", view: "strategy" as const },
-      { label: "Competitors", icon: "Binoculars", view: "competitors" as const },
-      { label: "Whiteboard", icon: "PenLine", view: "whiteboard" as const },
-      { label: "Sector", icon: "Pickaxe", view: "sector" as const },
+      {
+        label: "Training",
+        icon: "GraduationCap",
+        children: [
+          { label: "Dashboard", view: "training-dashboard" as const },
+          { label: "Staff Training", view: "training" as const },
+          { label: "QMS Training", view: "qms-training" as const },
+        ],
+      },
     ],
   },
   {
-    label: "Training",
-    items: [{ label: "Training", icon: "GraduationCap", view: "training" as const }],
+    label: "QMS",
+    items: [
+      { label: "Quality Management", icon: "ShieldCheck", view: "quality-management" as const },
+    ],
+  },
+  {
+    label: "Strategy",
+    items: [
+      { label: "Board deck", icon: "ScrollText", view: "board-pack" as const },
+      { label: "Strategy", icon: "Compass", view: "strategy" as const },
+      { label: "Competitors", icon: "Binoculars", view: "competitors" as const },
+      { label: "Whiteboard", icon: "PenLine", view: "whiteboard" as const },
+    ],
+  },
+  {
+    label: "Engineering",
+    items: [{ label: "Engineering", icon: "Wrench", view: "engineering" as const }],
   },
   {
     label: "Tools",
     items: [
+      { label: "Website Management", icon: "Globe", view: "website-management" as const },
+      { label: "Testing", icon: "FlaskConical", view: "testing" as const },
+      { label: "Telemetry", icon: "Radio", view: "telemetry" as const },
+      { label: "Users", icon: "Users", view: "users" as const },
+    ],
+  },
+  {
+    label: "External Client Access",
+    items: [
       {
-        label: "Users",
-        icon: "Users",
+        label: "External Client Access",
+        icon: "KeyRound",
         children: [
-          { label: "Internal users", view: "users" as const },
-          { label: "External users", view: "users-external" as const },
+          { label: "Dashboard", view: "external-client-access" as const },
+          { label: "External Users", view: "users-external" as const },
         ],
       },
     ],
@@ -211,6 +389,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         label: "Settings",
         icon: "Settings",
         children: [
+          { label: "Profile", view: "profile" as const },
           { label: "General", view: "settings" as const },
           { label: "Billing", view: "billing" as const },
         ],
@@ -228,17 +407,45 @@ export const internalViewTitles: Record<
   { title: string; subtitle: string }
 > = {
   home: { title: "Internal Operations", subtitle: "Unit311" },
-  clients: { title: "Client Directory", subtitle: "Internal Operations" },
-  crm: { title: "CRM", subtitle: "Internal Operations" },
+  clients: { title: "Client Directory", subtitle: "Clients" },
+  "clients-dashboard": { title: "Clients Dashboard", subtitle: "Clients" },
+  crm: { title: "CRM Pipeline", subtitle: "CRM" },
+  "crm-meetings": {
+    title: "Executive Strategy Session Meetings",
+    subtitle: "CRM",
+  },
+  "crm-questions-test": {
+    title: "CRM Discovery Questions (Test)",
+    subtitle: "Internal test workspace",
+  },
   connections: { title: "Connections", subtitle: "Internal Operations" },
-  representatives: { title: "Representatives", subtitle: "Internal Operations" },
-  "office-locations": { title: "Office Locations", subtitle: "Business Central" },
-  financials: { title: "Financials", subtitle: "Internal Operations" },
-  debtors: { title: "Debtors", subtitle: "Accounts Receivable" },
-  creditors: { title: "Creditors", subtitle: "Accounts Payable" },
-  expenses: { title: "Expenses", subtitle: "Internal Operations" },
-  hr: { title: "Human Resources", subtitle: "Unit311" },
+  representatives: { title: "Partners", subtitle: "Business Central" },
+  "office-locations": { title: "Office Locations", subtitle: "Corporate Information" },
+  "corporate-dashboard": { title: "Corporate Information", subtitle: "Dashboard" },
+  "corporate-company-details": { title: "Company Details", subtitle: "Corporate Information" },
+  "corporate-bank-accounts": { title: "Bank Accounts", subtitle: "Corporate Information" },
+  "corporate-advisers": { title: "Professional Advisers", subtitle: "Corporate Information" },
+  "corporate-insurance": { title: "Insurance", subtitle: "Corporate Information" },
+  "corporate-software": { title: "Software & Licences", subtitle: "Corporate Information" },
+  "corporate-contracts": { title: "Contracts", subtitle: "Corporate Information" },
+  financials: { title: "Financial Overview", subtitle: "Financials" },
+  "general-ledger": { title: "General Ledger", subtitle: "Financials" },
+  "accounts-receivable": { title: "Accounts Receivable", subtitle: "Financials" },
+  "accounts-payable": { title: "Accounts Payable", subtitle: "Financials" },
+  "financial-reports": { title: "Reports", subtitle: "Financials" },
+  opex: { title: "Opex", subtitle: "Financials" },
+  wise: { title: "Wise", subtitle: "Financials Integration" },
+  "board-pack": { title: "Board deck", subtitle: "Strategy" },
+  debtors: { title: "Accounts Receivable", subtitle: "Financials" },
+  creditors: { title: "Accounts Payable", subtitle: "Financials" },
+  expenses: { title: "Expenses", subtitle: "Financials" },
+  hr: { title: "Employees", subtitle: "HR" },
+  "hr-dashboard": { title: "HR Dashboard", subtitle: "HR" },
+  "hr-recruitment": { title: "Recruitment", subtitle: "HR" },
+  "hr-leave": { title: "Leave", subtitle: "HR" },
+  "hr-performance": { title: "Performance", subtitle: "HR" },
   strategy: { title: "Strategy", subtitle: "Internal Operations" },
+  "potential-clients": { title: "Potential Clients", subtitle: "CRM" },
   whiteboard: { title: "Whiteboard", subtitle: "Internal Operations" },
   competitors: { title: "Competitors", subtitle: "Internal Operations" },
   assets: { title: "Asset Registry", subtitle: "Internal Operations" },
@@ -251,22 +458,35 @@ export const internalViewTitles: Record<
   messaging: { title: "Messaging", subtitle: "Internal Operations" },
   social: { title: "Social", subtitle: "Unit311" },
   settings: { title: "Settings", subtitle: "Unit311" },
-  billing: { title: "Billing", subtitle: "Unit311 Professional" },
+  billing: { title: "Platform Billing", subtitle: "Customer subscriptions" },
   calendar: { title: "Calendar", subtitle: "Internal Operations" },
   "info-email": { title: "Email", subtitle: "Internal Operations" },
   files: { title: "File Explorer", subtitle: "Internal Operations" },
   "files-internal": { title: "Internal Files", subtitle: "Internal Operations" },
+  "unit311-details": { title: "Unit311 Details", subtitle: "Business Productivity" },
   "files-external": { title: "External Files", subtitle: "Internal Operations" },
   "files-client": { title: "Client File Explorer", subtitle: "Internal Operations" },
-  users: { title: "Internal Users", subtitle: "Internal Operations" },
-  "users-external": { title: "External Users", subtitle: "Client Portals" },
+  users: { title: "Internal Users", subtitle: "Tools" },
+  "users-external": { title: "External Users", subtitle: "External Client Access" },
+  "external-client-access": {
+    title: "External Client Access",
+    subtitle: "Client Portals",
+  },
   support: { title: "Support", subtitle: "Internal Operations" },
   telemetry: { title: "Live Telemetry", subtitle: "Internal Operations" },
   "media-example": { title: "Media Example", subtitle: "Internal Operations" },
   "design-mockups": { title: "Design Concepts", subtitle: "Internal Operations" },
   sector: { title: "Sector Intelligence", subtitle: "Unit311" },
-  training: { title: "Training Programmes", subtitle: "Unit311" },
+  training: { title: "Staff Training", subtitle: "Training" },
+  "training-dashboard": { title: "Training Dashboard", subtitle: "Training" },
   logistics: { title: "Logistics", subtitle: "Package tracking" },
+  "client-onboarding": { title: "Client Onboarding", subtitle: "Clients" },
+  "quality-management": { title: "Quality Management", subtitle: "QMS" },
+  "qms-training": { title: "QMS Training", subtitle: "Training" },
+  profile: { title: "Profile", subtitle: "Settings" },
+  "executive-assistant": { title: "Executive Assistant", subtitle: "Unit311 Central" },
+  "website-management": { title: "Website Management", subtitle: "unit311central.com" },
+  engineering: { title: "Engineering", subtitle: "Internal Operations" },
 };
 
 export const internalHomeTileRows = [
@@ -378,15 +598,49 @@ export const internalHomeTileRows = [
 
 export type InternalHomeTile = (typeof internalHomeTileRows)[number][number];
 
+function joinBasePath(basePath: SurveyOperationsBasePath, suffix: string) {
+  if (basePath === "/") {
+    return suffix.startsWith("/") ? suffix : `/${suffix}`;
+  }
+  return `${basePath}${suffix.startsWith("/") ? suffix : `/${suffix}`}`;
+}
+
 export function getInternalNavHref(
   view: InternalOperationsView | null,
   basePath: SurveyOperationsBasePath = INTERNAL_OPERATIONS_BASE_PATH,
+  query?: Record<string, string>,
 ) {
-  if (!view || view === "home") {
-    return basePath;
+  if (view === "client-onboarding") {
+    return joinBasePath(basePath, "/client-onboarding");
   }
 
-  return `${basePath}?view=${view}`;
+  if (view === "executive-assistant") {
+    return joinBasePath(basePath, "/executive-assistant");
+  }
+
+  if (!view || view === "home") {
+    if (!query || Object.keys(query).length === 0) {
+      return basePath;
+    }
+    const params = new URLSearchParams(query);
+    return `${basePath === "/" ? "/" : basePath}?${params.toString()}`;
+  }
+
+  const params = new URLSearchParams({ view });
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      params.set(key, value);
+    }
+  }
+  return `${basePath === "/" ? "/" : basePath}?${params.toString()}`;
+}
+
+function internalNavQueryMatches(
+  expectedQuery: Record<string, string>,
+  searchParams: URLSearchParams | null | undefined,
+) {
+  if (!searchParams) return false;
+  return Object.entries(expectedQuery).every(([key, value]) => searchParams.get(key) === value);
 }
 
 export function isInternalNavChildActive(
@@ -394,9 +648,38 @@ export function isInternalNavChildActive(
   activeView: InternalOperationsView = "home",
   pathname = "",
   basePath: SurveyOperationsBasePath = INTERNAL_OPERATIONS_BASE_PATH,
+  searchParams?: URLSearchParams | null,
 ) {
   if (item.href) {
+    if (item.href.includes("?")) {
+      const [hrefPath, hrefQuery] = item.href.split("?", 2);
+      if (pathname !== hrefPath && !pathname.startsWith(`${hrefPath}/`)) {
+        return false;
+      }
+      const expected = Object.fromEntries(new URLSearchParams(hrefQuery).entries());
+      return internalNavQueryMatches(expected, searchParams);
+    }
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  }
+
+  if (item.view && item.query) {
+    return item.view === activeView && internalNavQueryMatches(item.query, searchParams);
+  }
+  if (item.view === "client-onboarding") {
+    const onboardingPath = joinBasePath(basePath, "/client-onboarding");
+    return (
+      activeView === "client-onboarding" ||
+      pathname === onboardingPath ||
+      pathname.startsWith(`${onboardingPath}/`)
+    );
+  }
+  if (item.view === "executive-assistant") {
+    const assistantPath = joinBasePath(basePath, "/executive-assistant");
+    return (
+      activeView === "executive-assistant" ||
+      pathname === assistantPath ||
+      pathname.startsWith(`${assistantPath}/`)
+    );
   }
   return item.view === activeView;
 }
@@ -406,14 +689,34 @@ export function isInternalNavItemActive(
   item: InternalNavItem,
   activeView: InternalOperationsView = "home",
   basePath: SurveyOperationsBasePath = INTERNAL_OPERATIONS_BASE_PATH,
+  searchParams?: URLSearchParams | null,
 ) {
   if (item.href) {
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
   }
 
   const childHrefActive =
-    item.children?.some((child) => isInternalNavChildActive(child, activeView, pathname, basePath)) ??
-    false;
+    item.children?.some((child) =>
+      isInternalNavChildActive(child, activeView, pathname, basePath, searchParams),
+    ) ?? false;
+
+  if (item.view === "client-onboarding") {
+    return (
+      activeView === "client-onboarding" ||
+      pathname === `${basePath}/client-onboarding` ||
+      pathname.startsWith(`${basePath}/client-onboarding/`) ||
+      childHrefActive
+    );
+  }
+
+  if (item.view === "executive-assistant") {
+    return (
+      activeView === "executive-assistant" ||
+      pathname === `${basePath}/executive-assistant` ||
+      pathname.startsWith(`${basePath}/executive-assistant/`) ||
+      childHrefActive
+    );
+  }
 
   if (pathname !== basePath) {
     return childHrefActive;

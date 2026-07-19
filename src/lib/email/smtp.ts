@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
 import {
   getAccountCredentials,
@@ -24,7 +25,10 @@ function createTransport(accountId: EmailAccountId) {
         user: credentials.email,
         pass: credentials.password,
       },
-    }),
+      connectionTimeout: 20_000,
+      greetingTimeout: 20_000,
+      socketTimeout: 30_000,
+    } satisfies SMTPTransport.Options),
   }));
 }
 
@@ -69,6 +73,14 @@ export async function sendMailboxEmail(payload: EmailSendPayload) {
       subject: payload.subject,
       text: payload.text,
       html: payload.html ?? payload.text,
+      inReplyTo: payload.inReplyTo ?? undefined,
+      references:
+        payload.references && payload.references.length > 0 ? payload.references : undefined,
+      attachments: payload.attachments?.map((attachment) => ({
+        filename: attachment.filename,
+        content: attachment.content,
+        contentType: attachment.contentType,
+      })),
     });
 
     return {

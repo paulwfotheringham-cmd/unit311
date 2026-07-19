@@ -139,8 +139,7 @@ export default function ResetPasswordPage({
             <Logo
               height={240}
               href={undefined}
-              wordmark
-              onDark
+              variant="hero"
               className="drop-shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
             />
           </div>

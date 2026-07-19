@@ -66,6 +66,7 @@ Localhost keeps path-based Internal routing (`/internaldashboard`). Host-based r
 | --- | --- |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Host model, tenancy, app layout |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Vercel, domains, DNS, migrations |
+| [docs/PRODUCTION_DEPLOYMENT.md](./docs/PRODUCTION_DEPLOYMENT.md) | Canonical repo, Git-only prod, rollback |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to work in this repo |
 | [docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md) | Workspace / `workspace_id` technical specification |
 | [docs/TECHNICAL_DEBT.md](./docs/TECHNICAL_DEBT.md) | Known debt and improvement backlog |
@@ -76,12 +77,16 @@ See [`.env.example`](./.env.example) for the full matrix. Never commit `.env.loc
 
 ## Deploy
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md). Short path:
+**Canonical GitHub:** https://github.com/Unit311central/unit311central
+
+Production ships from committed Git revisions on that repository (Vercel Git integration).  
+See [docs/PRODUCTION_DEPLOYMENT.md](./docs/PRODUCTION_DEPLOYMENT.md).
 
 ```bash
-npx vercel link --project unit311central --yes
-npx vercel --prod --yes
+node scripts/assert-canonical-unit311-repo.mjs
 ```
+
+Do **not** run `npx vercel --prod` from other folders (especially `Desktop\onwardair`).
 
 ## License / ownership
 

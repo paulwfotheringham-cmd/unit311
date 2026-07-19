@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import {
   createBlankTicketInput,
@@ -194,9 +194,10 @@ export default function SupportWorkspace() {
     [inQueueCount, outstandingCount, periodTickets, resolvedCount],
   );
 
+  const [historicChartNowMs] = useState(() => Date.now());
   const historicChartData = useMemo(() => {
     const buckets: Array<{ week: string; opened: number; resolved: number }> = [];
-    const now = Date.now();
+    const now = historicChartNowMs;
     const weekMs = 7 * 24 * 60 * 60 * 1000;
 
     for (let index = 5; index >= 0; index -= 1) {
@@ -219,7 +220,7 @@ export default function SupportWorkspace() {
     }
 
     return buckets;
-  }, [tickets]);
+  }, [historicChartNowMs, tickets]);
 
   const openTicketsNow = useMemo(
     () => tickets.filter((ticket) => !ticket.archived && !ticket.closed).length,
@@ -279,21 +280,25 @@ export default function SupportWorkspace() {
   }, []);
 
   useEffect(() => {
-    void loadTickets();
+    startTransition(() => {
+      void loadTickets();
+    });
   }, [loadTickets]);
 
   useEffect(() => {
-    if (!selectedTicketId) {
-      snapshottedIdRef.current = null;
-      setSavedSnapshot(null);
-      return;
-    }
-    if (snapshottedIdRef.current === selectedTicketId) return;
-    const ticket = tickets.find((item) => item.id === selectedTicketId);
-    if (ticket) {
-      snapshottedIdRef.current = selectedTicketId;
-      setSavedSnapshot({ ...ticket });
-    }
+    startTransition(() => {
+      if (!selectedTicketId) {
+        snapshottedIdRef.current = null;
+        setSavedSnapshot(null);
+        return;
+      }
+      if (snapshottedIdRef.current === selectedTicketId) return;
+      const ticket = tickets.find((item) => item.id === selectedTicketId);
+      if (ticket) {
+        snapshottedIdRef.current = selectedTicketId;
+        setSavedSnapshot({ ...ticket });
+      }
+    });
   }, [selectedTicketId, tickets]);
 
   async function saveTicket(ticket: SupportTicket) {

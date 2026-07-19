@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import {
   REPRESENTATIVE_STATUS_OPTIONS,
@@ -17,7 +17,12 @@ import {
 } from "@/lib/representatives-extended-data";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
-import { FileText, Plus, Trash2, X } from "lucide-react";
+import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import {
+  DEFAULT_REPRESENTATIVES_TILE_LAYOUT,
+  REPRESENTATIVES_DASHBOARD_TILES,
+} from "@/lib/view-dashboard-tile-catalogs";
+import { FileText, Plus, Trash2, Upload, X } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -90,7 +95,9 @@ export default function RepresentativesWorkspace({
     : [];
 
   useEffect(() => {
-    setCustomTerritoryInput("");
+    startTransition(() => {
+      setCustomTerritoryInput("");
+    });
   }, [selectedRepresentativeId]);
 
   function updateRepresentative(updated: Representative) {
@@ -155,34 +162,81 @@ export default function RepresentativesWorkspace({
     }));
   }
 
+  function handleImportCsv(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) return;
+
+      const imported = lines.slice(1).map((line, index) => {
+        const [fullName = "", companyName = "", email = "", territory = "Iberia"] = line
+          .split(",")
+          .map((part) => part.trim());
+        const rep = createBlankRepresentative();
+        return {
+          ...rep,
+          id: `rep-import-${Date.now()}-${index}`,
+          fullName: fullName || companyName || `Imported rep ${index + 1}`,
+          companyName: companyName || fullName,
+          email,
+          territory: (REPRESENTATIVE_TERRITORY_OPTIONS.includes(territory as Representative["territory"])
+            ? territory
+            : "Iberia") as Representative["territory"],
+        };
+      });
+
+      onRepresentativesChange([...representatives, ...imported]);
+      event.target.value = "";
+    };
+    reader.readAsText(file);
+  }
+
   return (
     <div className="space-y-6">
+      <DashboardTopTilesBar
+        storageKey="unit311-representatives-dashboard-tiles"
+        catalog={REPRESENTATIVES_DASHBOARD_TILES}
+        defaultLayout={DEFAULT_REPRESENTATIVES_TILE_LAYOUT}
+        title="Representative key details"
+        showCustomizeHint={false}
+      />
       <ResponsiveMasterDetail
         showDetail={showDetail && !!selectedRepresentative}
         onBack={closeDetail}
-        backLabel="Back to representatives"
+          backLabel="Back to partners"
         master={
           <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-white">Representatives</h2>
+                <h2 className="text-lg font-semibold text-white">Partners</h2>
                 <p className="mt-1 text-xs text-white/45">
-                  {representatives.length} external distributors &amp; agents
+                  {representatives.length} representatives, distributors &amp; referral partners
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleAddRepresentative}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add rep
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-200 transition-colors hover:border-emerald-400/60 hover:bg-emerald-500/25">
+                  <Upload className="h-3.5 w-3.5" />
+                  Import CSV
+                  <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportCsv} />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddRepresentative}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add rep
+                </button>
+              </div>
             </div>
 
             {representatives.length === 0 ? (
               <p className="mt-6 text-sm text-white/45">
-                No representatives yet. Add your first external distributor or agent.
+                No partners yet. Add your first representative, distributor, or referral partner.
               </p>
             ) : (
               <ul className="mt-4 space-y-2">

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { processSupportTicketFromWhatsApp } from "@/lib/support-intake";
 import { logWhatsAppInbound } from "@/lib/whatsapp/inbound-log";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { resolveWorkspaceBinding } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -97,26 +98,42 @@ async function handleInboundText(
   fromName?: string | null,
   suppressWhatsApp = false,
 ) {
+  const workspace = await resolveWorkspaceBinding({ fallbackInternal: true });
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace context is required." }, { status: 401 });
+  }
+  const scope = { workspaceId: workspace.id };
+
   if (shouldSkipMessage(text)) {
-    await logWhatsAppInbound({
-      fromPhone: phone,
-      fromName,
-      message: text,
-      result: "skipped_noise",
-    });
+    await logWhatsAppInbound(
+      {
+        fromPhone: phone,
+        fromName,
+        message: text,
+        result: "skipped_noise",
+      },
+      scope,
+    );
     return NextResponse.json({ ok: true, skipped: true, reason: "noise_message" });
   }
 
   try {
-    const result = await processSupportTicketFromWhatsApp(text, { phone, suppressWhatsApp });
+    const result = await processSupportTicketFromWhatsApp(text, {
+      phone,
+      suppressWhatsApp,
+      workspaceId: workspace.id,
+    });
     const mode = "mode" in result ? result.mode : "unknown";
 
-    await logWhatsAppInbound({
-      fromPhone: phone,
-      fromName,
-      message: text,
-      result: mode,
-    });
+    await logWhatsAppInbound(
+      {
+        fromPhone: phone,
+        fromName,
+        message: text,
+        result: mode,
+      },
+      scope,
+    );
 
     if (result.mode === "ignored") {
       return NextResponse.json({
@@ -130,12 +147,15 @@ async function handleInboundText(
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process WhatsApp ticket";
-    await logWhatsAppInbound({
-      fromPhone: phone,
-      fromName,
-      message: text,
-      error: message,
-    });
+    await logWhatsAppInbound(
+      {
+        fromPhone: phone,
+        fromName,
+        message: text,
+        error: message,
+      },
+      scope,
+    );
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
@@ -186,12 +206,16 @@ export async function POST(request: NextRequest) {
   });
 
   if (!text) {
-    await logWhatsAppInbound({
-      fromPhone: phone,
-      fromName,
-      message: "",
-      error: "missing_message_text",
-    });
+    const workspace = await resolveWorkspaceBinding({ fallbackInternal: true });
+    await logWhatsAppInbound(
+      {
+        fromPhone: phone,
+        fromName,
+        message: "",
+        error: "missing_message_text",
+      },
+      workspace ? { workspaceId: workspace.id } : undefined,
+    );
     return NextResponse.json({ error: "Missing message text." }, { status: 400 });
   }
 

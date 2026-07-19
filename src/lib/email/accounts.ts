@@ -1,4 +1,5 @@
 import type { EmailAccount, EmailAccountId } from "@/lib/email/types";
+import type { EmailWorkspaceScope } from "@/lib/email-workspace";
 
 import { resolveAccountCredentials } from "@/lib/email/credentials-service";
 
@@ -56,8 +57,9 @@ function resolveAccountEmailFromEnv(id: EmailAccountId): string | null {
 
 export async function getAccountCredentials(
   id: EmailAccountId,
+  scope?: EmailWorkspaceScope,
 ): Promise<{ email: string; password: string }> {
-  const credentials = await resolveAccountCredentials(id);
+  const credentials = await resolveAccountCredentials(id, scope);
   if (!credentials) {
     throw new Error(
       id === "info"
@@ -69,19 +71,22 @@ export async function getAccountCredentials(
   return credentials;
 }
 
-export async function isAccountConfigured(id: EmailAccountId): Promise<boolean> {
+export async function isAccountConfigured(
+  id: EmailAccountId,
+  scope?: EmailWorkspaceScope,
+): Promise<boolean> {
   try {
-    await getAccountCredentials(id);
+    await getAccountCredentials(id, scope);
     return true;
   } catch {
     return false;
   }
 }
 
-export async function isAnyMailboxConfigured(): Promise<boolean> {
+export async function isAnyMailboxConfigured(scope?: EmailWorkspaceScope): Promise<boolean> {
   const [info, paul] = await Promise.all([
-    isAccountConfigured("info"),
-    isAccountConfigured("paul"),
+    isAccountConfigured("info", scope),
+    isAccountConfigured("paul", scope),
   ]);
   return info || paul;
 }

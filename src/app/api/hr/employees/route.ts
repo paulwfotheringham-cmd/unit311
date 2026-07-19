@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHrEmployee, listHrEmployees } from "@/lib/hr-employees-service";
 import type { HrDocuments } from "@/lib/hr-data";
 import { ensureHrEmployeesTable } from "@/lib/internal-db-migrations";
+import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +35,18 @@ export async function GET() {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     await ensureHrEmployeesTable();
-    const employees = await listHrEmployees();
+    const employees = await listHrEmployees({ workspaceId: workspace.id });
     return NextResponse.json({ employees });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load employees";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -48,6 +56,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await requirePlatformSession();
+    const workspace = await requireCurrentWorkspace();
     const body = (await request.json()) as EmployeeBody;
 
     if (!body.fullName?.trim()) {
@@ -55,13 +65,20 @@ export async function POST(request: NextRequest) {
     }
 
     await ensureHrEmployeesTable();
-    const employee = await createHrEmployee({
-      ...body,
-      fullName: body.fullName.trim(),
-    });
+    const employee = await createHrEmployee(
+      {
+        ...body,
+        fullName: body.fullName.trim(),
+      },
+      { workspaceId: workspace.id },
+    );
     return NextResponse.json({ employee });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create employee";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("Authentication required") || message.includes("Workspace context")
+        ? 401
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
