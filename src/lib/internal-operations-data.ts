@@ -1,4 +1,5 @@
 import type { SurveyOperationsBasePath } from "@/lib/survey-operations-mock-data";
+import { EXECUTIVE_ASSISTANT_VISIBLE } from "@/lib/product-surface-flags";
 
 export type InternalOperationsView =
   | "home"
@@ -11,6 +12,7 @@ export type InternalOperationsView =
   | "representatives"
   | "office-locations"
   | "corporate-dashboard"
+  | "corporate-information"
   | "corporate-company-details"
   | "corporate-bank-accounts"
   | "corporate-advisers"
@@ -127,6 +129,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "representatives",
   "office-locations",
   "corporate-dashboard",
+  "corporate-information",
   "corporate-company-details",
   "corporate-bank-accounts",
   "corporate-advisers",
@@ -233,6 +236,44 @@ export function isInternalOperationsView(value: string | null): value is Interna
   return internalOperationsViews.includes(value as InternalOperationsView);
 }
 
+/** Corporate Information workspace tabs (UI shell only — APIs remain per capability). */
+export const CORPORATE_INFORMATION_TABS = [
+  { key: "company-details", label: "Company Details" },
+  { key: "office-locations", label: "Office Locations" },
+  { key: "bank-accounts", label: "Bank Accounts" },
+  { key: "professional-advisors", label: "Professional Advisors" },
+  { key: "software-licences", label: "Software & Licences" },
+  { key: "contracts", label: "Contracts" },
+] as const;
+
+export type CorporateInformationTab = (typeof CORPORATE_INFORMATION_TABS)[number]["key"];
+
+export function isCorporateInformationTab(value: string | null): value is CorporateInformationTab {
+  return CORPORATE_INFORMATION_TABS.some((tab) => tab.key === value);
+}
+
+/** Legacy leaf views that now open the tabbed Corporate Information workspace. */
+export function legacyCorporateViewToTab(
+  view: string | null,
+): CorporateInformationTab | null {
+  switch (view) {
+    case "corporate-company-details":
+      return "company-details";
+    case "office-locations":
+      return "office-locations";
+    case "corporate-bank-accounts":
+      return "bank-accounts";
+    case "corporate-advisers":
+      return "professional-advisors";
+    case "corporate-software":
+      return "software-licences";
+    case "corporate-contracts":
+      return "contracts";
+    default:
+      return null;
+  }
+}
+
 export function normalizeInternalOperationsView(value: string | null): InternalOperationsView {
   if (value === "live-projects") return "projects";
   if (value === "sector-mining") return "sector";
@@ -240,6 +281,7 @@ export function normalizeInternalOperationsView(value: string | null): InternalO
   if (value === "debtors") return "accounts-receivable";
   if (value === "creditors") return "accounts-payable";
   if (value === "opex") return "financials";
+  if (legacyCorporateViewToTab(value)) return "corporate-information";
   return isInternalOperationsView(value) ? value : "home";
 }
 
@@ -285,19 +327,23 @@ export type InternalNavSection = {
 
 export const internalSurveyNavSections: readonly InternalNavSection[] = [
   {
-    label: "HOME",
-    items: [{ label: "Home Dashboard", icon: "LayoutDashboard", view: "home" as const }],
+    label: "Home",
+    items: [{ label: "Dashboard", icon: "LayoutDashboard", view: "home" as const }],
   },
-  {
-    label: "EXECUTIVE",
-    items: [
-      {
-        label: "Executive Assistant",
-        icon: "Bot",
-        view: "executive-assistant" as const,
-      },
-    ],
-  },
+  ...(EXECUTIVE_ASSISTANT_VISIBLE
+    ? [
+        {
+          label: null,
+          items: [
+            {
+              label: "Executive Assistant",
+              icon: "Bot",
+              view: "executive-assistant" as const,
+            },
+          ],
+        } satisfies InternalNavSection,
+      ]
+    : []),
   {
     label: "Business Central",
     items: [
@@ -315,8 +361,8 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         children: [
           { label: "Pipeline", view: "crm" as const },
           { label: "Discovery & Demo Sessions", view: "crm-meetings" as const },
-          { label: "Potential Clients", view: "potential-clients" as const },
           { label: "Client Onboarding", view: "client-onboarding" as const },
+          { label: "Potential Clients", view: "potential-clients" as const },
         ],
       },
       { label: "Partners", icon: "Handshake", view: "representatives" as const },
@@ -330,6 +376,11 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         ],
       },
       { label: "Grants", icon: "Landmark", view: "grants" as const },
+    ],
+  },
+  {
+    label: "Financials",
+    items: [
       {
         label: "Financials",
         icon: "Wallet",
@@ -339,10 +390,15 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
           { label: "Accounts Receivable", view: "accounts-receivable" as const },
           { label: "Accounts Payable", view: "accounts-payable" as const },
           { label: "Expenses", view: "expenses" as const },
-          { label: "Wise", view: "wise" as const },
+          { label: "Bank", view: "wise" as const },
           { label: "Reports", view: "financial-reports" as const },
         ],
       },
+    ],
+  },
+  {
+    label: "Human Resources",
+    items: [
       {
         label: "Human Resources",
         icon: "Briefcase",
@@ -354,17 +410,17 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
           { label: "Recruitment", view: "hr-recruitment" as const },
         ],
       },
+    ],
+  },
+  {
+    label: "Corporate Information",
+    items: [
       {
         label: "Corporate Information",
         icon: "MapPin",
         children: [
           { label: "Dashboard", view: "corporate-dashboard" as const },
-          { label: "Company Details", view: "corporate-company-details" as const },
-          { label: "Office Locations", view: "office-locations" as const },
-          { label: "Bank Accounts", view: "corporate-bank-accounts" as const },
-          { label: "Professional Advisors", view: "corporate-advisers" as const },
-          { label: "Software & Licences", view: "corporate-software" as const },
-          { label: "Contracts", view: "corporate-contracts" as const },
+          { label: "Corporate Information", view: "corporate-information" as const },
           {
             label: "Unit311 Details",
             children: [
@@ -492,7 +548,7 @@ export const internalViewTitles: Record<
   InternalOperationsView,
   { title: string; subtitle: string }
 > = {
-  home: { title: "Home Dashboard", subtitle: "HOME" },
+  home: { title: "Dashboard", subtitle: "Home" },
   clients: { title: "Client Directory", subtitle: "Clients" },
   "clients-dashboard": { title: "Clients Dashboard", subtitle: "Clients" },
   crm: { title: "CRM Pipeline", subtitle: "CRM" },
@@ -507,7 +563,8 @@ export const internalViewTitles: Record<
   connections: { title: "Connections", subtitle: "Internal Operations" },
   representatives: { title: "Partners", subtitle: "Business Central" },
   "office-locations": { title: "Office Locations", subtitle: "Corporate Information" },
-  "corporate-dashboard": { title: "Corporate Information", subtitle: "Dashboard" },
+  "corporate-dashboard": { title: "Dashboard", subtitle: "Corporate Information" },
+  "corporate-information": { title: "Corporate Information", subtitle: "Corporate Information" },
   "corporate-company-details": { title: "Company Details", subtitle: "Corporate Information" },
   "corporate-bank-accounts": { title: "Bank Accounts", subtitle: "Corporate Information" },
   "corporate-advisers": { title: "Professional Advisors", subtitle: "Corporate Information" },
@@ -520,13 +577,13 @@ export const internalViewTitles: Record<
   "accounts-payable": { title: "Accounts Payable", subtitle: "Financials" },
   "financial-reports": { title: "Reports", subtitle: "Financials" },
   opex: { title: "Opex", subtitle: "Financials" },
-  wise: { title: "Wise", subtitle: "Financials" },
+  wise: { title: "Bank", subtitle: "Financials" },
   "board-pack": { title: "Board deck", subtitle: "Strategy" },
   debtors: { title: "Accounts Receivable", subtitle: "Financials" },
   creditors: { title: "Accounts Payable", subtitle: "Financials" },
   expenses: { title: "Expenses", subtitle: "Financials" },
   hr: { title: "Employees", subtitle: "Human Resources" },
-  "hr-dashboard": { title: "HR Dashboard", subtitle: "Human Resources" },
+  "hr-dashboard": { title: "Dashboard", subtitle: "Human Resources" },
   "hr-recruitment": { title: "Recruitment", subtitle: "Human Resources" },
   "hr-leave": { title: "Leave", subtitle: "Human Resources" },
   "hr-performance": { title: "Performance", subtitle: "Human Resources" },
@@ -556,7 +613,7 @@ export const internalViewTitles: Record<
   "unit311-details": { title: "Unit311 Details", subtitle: "Corporate Information" },
   "module-go-live": {
     title: "Module Go-Live",
-    subtitle: "Corporate Information · Unit311 Details",
+    subtitle: "Unit311 Details",
   },
   "files-external": { title: "External Files", subtitle: "File Explorer" },
   "files-client": { title: "Client Explorer", subtitle: "File Explorer" },
@@ -578,7 +635,7 @@ export const internalViewTitles: Record<
   "quality-management": { title: "Quality Management System", subtitle: "QMS" },
   "qms-training": { title: "QMS Training", subtitle: "Training" },
   profile: { title: "Profile", subtitle: "Settings" },
-  "executive-assistant": { title: "Executive Assistant", subtitle: "EXECUTIVE" },
+  "executive-assistant": { title: "Executive Assistant", subtitle: "Executive" },
   "website-management": { title: "Website Management", subtitle: "Tools" },
   engineering: { title: "Engineering", subtitle: "Engineering" },
   "engineering-dashboard": { title: "Engineering Dashboard", subtitle: "Engineering" },
@@ -587,6 +644,51 @@ export const internalViewTitles: Record<
     subtitle: "Engineering",
   },
 };
+
+/** Breadcrumb labels for the active internal leaf (section → … → page). */
+export function getInternalNavBreadcrumb(
+  activeView: InternalOperationsView,
+): readonly string[] {
+  const titles = internalViewTitles[activeView];
+  const pageTitle = titles?.title ?? activeView;
+
+  for (const section of internalSurveyNavSections) {
+    for (const item of section.items) {
+      const trail = findNavTrailLabels(item, activeView, []);
+      if (trail) {
+        const crumbs =
+          section.label != null ? [section.label, ...trail] : [...trail];
+        if (crumbs[crumbs.length - 1] !== pageTitle) {
+          crumbs.push(pageTitle);
+        }
+        return crumbs;
+      }
+    }
+  }
+
+  return titles?.subtitle ? [titles.subtitle, pageTitle] : [pageTitle];
+}
+
+function findNavTrailLabels(
+  item: InternalNavItem | InternalNavChildItem,
+  activeView: InternalOperationsView,
+  ancestors: string[],
+): string[] | null {
+  const nextAncestors = [...ancestors, item.label];
+
+  if (item.view === activeView) {
+    return nextAncestors;
+  }
+
+  if (item.children?.length) {
+    for (const child of item.children) {
+      const found = findNavTrailLabels(child, activeView, nextAncestors);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
 
 export const internalHomeTileRows = [
   [
@@ -717,6 +819,20 @@ export function getInternalNavHref(
     return joinBasePath(basePath, "/executive-assistant");
   }
 
+  if (view === "corporate-information") {
+    const params = new URLSearchParams({
+      view: "corporate-information",
+      tab: query?.tab && isCorporateInformationTab(query.tab) ? query.tab : "company-details",
+    });
+    if (query) {
+      for (const [key, value] of Object.entries(query)) {
+        if (key === "view" || key === "tab") continue;
+        params.set(key, value);
+      }
+    }
+    return `${basePath === "/" ? "/" : basePath}?${params.toString()}`;
+  }
+
   if (!view || view === "home") {
     if (!query || Object.keys(query).length === 0) {
       return basePath;
@@ -786,15 +902,8 @@ export function isInternalNavChildActive(
       pathname.startsWith(`${assistantPath}/`)
     );
   }
-  if (item.view && isProjectsNavView(item.view) && isProjectsNavView(activeView)) {
-    return true;
-  }
-  if (item.view && isEngineeringNavView(item.view) && isEngineeringNavView(activeView)) {
-    return true;
-  }
-  if (item.view && isAssetsNavView(item.view) && isAssetsNavView(activeView)) {
-    return true;
-  }
+  // Shared implementations (Projects / Engineering / Assets) must highlight only the
+  // selected leaf. Parent expansion still works via children.some(...) above.
   return item.view === activeView;
 }
 

@@ -8,11 +8,13 @@ import ExecutiveAssistantPanel, {
   ExecutiveAssistantTriggerButton,
 } from "@/components/executive-assistant/ExecutiveAssistantPanel";
 import {
+  getInternalNavBreadcrumb,
   internalViewTitles,
   isInternalOperationsView,
   type InternalOperationsView,
 } from "@/lib/internal-operations-data";
-import { isInternalDomainHost } from "@/lib/app-domains";
+import { isDemoDomainHost, isInternalDomainHost } from "@/lib/app-domains";
+import { EXECUTIVE_ASSISTANT_VISIBLE } from "@/lib/product-surface-flags";
 import {
   surveyViewTitles,
   type SurveyOperationsBasePath,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/survey-operations-mock-data";
 
 import SurveyOperationsSidebar from "./SurveyOperationsSidebar";
+import { WorkspaceBreadcrumb } from "./workspace-chrome";
 
 type SurveyOperationsShellProps = {
   children: React.ReactNode;
@@ -45,12 +48,16 @@ export default function SurveyOperationsShell({
   const pathname = usePathname() ?? "";
   const [isInternalHost] = useState(() => {
     if (typeof window === "undefined") return true;
-    if (isInternalDomainHost(window.location.hostname)) return true;
     const host = window.location.hostname;
+    if (isInternalDomainHost(host) || isDemoDomainHost(host)) return true;
     if (host === "localhost" || host === "127.0.0.1") {
       return !host.includes(".") || host === "localhost";
     }
     return false;
+  });
+  const [isDemoHost] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return isDemoDomainHost(window.location.hostname);
   });
 
   useEffect(() => {
@@ -95,12 +102,17 @@ export default function SurveyOperationsShell({
         : surveyViewTitles[activeView as SurveyOperationsView].subtitle
       : subtitle;
 
-  // Home already embeds the Assistant panel for internal hosts — keep header clean there.
-  const showAssistantTrigger = !(
+  // Executive Assistant is hidden until production-ready (demo journey).
+  const showAssistantTrigger =
+    EXECUTIVE_ASSISTANT_VISIBLE &&
+    !(mode === "internal" && isInternalHost && activeView === "home");
+
+  const breadcrumbCrumbs =
     mode === "internal" &&
-    isInternalHost &&
-    activeView === "home"
-  );
+    activeView != null &&
+    isInternalOperationsView(activeView)
+      ? getInternalNavBreadcrumb(activeView)
+      : null;
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0">
@@ -145,12 +157,26 @@ export default function SurveyOperationsShell({
               <Menu className="h-4 w-4" />
             </button>
             <div className="min-w-0">
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-                {resolvedSubtitle}
-              </p>
-              <h1 className="truncate text-sm font-semibold text-white sm:text-base md:text-lg">
-                {resolvedTitle}
-              </h1>
+              {breadcrumbCrumbs && breadcrumbCrumbs.length > 1 ? (
+                <WorkspaceBreadcrumb crumbs={breadcrumbCrumbs} />
+              ) : (
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
+                  {resolvedSubtitle}
+                </p>
+              )}
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="truncate text-sm font-semibold text-white sm:text-base md:text-lg">
+                  {resolvedTitle}
+                </h1>
+                {isDemoHost ? (
+                  <span
+                    className="shrink-0 rounded border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-200"
+                    title="Demo surface — same build as Internal; curated workspace content"
+                  >
+                    Demo
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
 

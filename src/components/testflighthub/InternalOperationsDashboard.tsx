@@ -16,11 +16,14 @@ import {
   type Representative,
 } from "@/lib/representatives-data";
 import { isInternalDomainHost } from "@/lib/app-domains";
+import { EXECUTIVE_ASSISTANT_VISIBLE } from "@/lib/product-surface-flags";
 import {
   INTERNAL_OPERATIONS_BASE_PATH,
   getNavImplementationNotice,
   internalViewTitles,
+  isCorporateInformationTab,
   isInternalOperationsView,
+  legacyCorporateViewToTab,
   normalizeInternalOperationsView,
   resolveInternalOperationsBasePath,
   type InternalOperationsView,
@@ -43,6 +46,7 @@ import MeetingsWorkspace from "./MeetingsWorkspace";
 import ConnectionsWorkspace from "./ConnectionsWorkspace";
 import FileRepositoryWorkspace from "./FileRepositoryWorkspace";
 import Unit311DetailsWorkspace from "./Unit311DetailsWorkspace";
+import CorporateInformationWorkspace from "./CorporateInformationWorkspace";
 import ModuleGoLiveWorkspace from "./ModuleGoLiveWorkspace";
 import ClientFilesExplorerWorkspace from "./ClientFilesExplorerWorkspace";
 import AccountsPayableWorkspace from "./AccountsPayableWorkspace";
@@ -66,7 +70,6 @@ import SectorWorkspace from "./SectorWorkspace";
 import TrainingWorkspace from "./TrainingWorkspace";
 import ProjectsWorkspace from "./ProjectsWorkspace";
 import LogisticsWorkspace from "./LogisticsWorkspace";
-import OfficeLocationsWorkspace from "./OfficeLocationsWorkspace";
 import MediaExampleWorkspace from "./MediaExampleWorkspace";
 import MessagingWorkspace from "./MessagingWorkspace";
 import SocialWorkspace from "./SocialWorkspace";
@@ -87,7 +90,6 @@ import UserManagementWorkspace from "./UserManagementWorkspace";
 import EngineeringWorkspace from "./EngineeringWorkspace";
 import WebsiteManagementWorkspace from "./WebsiteManagementWorkspace";
 import WebODMWorkspace from "./WebODMWorkspace";
-import SoftwareAssetRegisterWorkspace from "./SoftwareAssetRegisterWorkspace";
 import ModulePlaceholderWorkspace from "./ModulePlaceholderWorkspace";
 import TelemetryDashboard from "@/components/telemetry/TelemetryDashboard";
 import { type ManagedUser } from "@/lib/user-management-data";
@@ -115,24 +117,6 @@ function PlaceholderForView({ view }: { view: InternalOperationsView }) {
     "corporate-dashboard": {
       description:
         "Coming Soon — Summary of company corporate records — locations, advisers, licences, and contracts.",
-    },
-    "corporate-company-details": {
-      description: "Coming Soon — Legal entity details, registration numbers, and corporate profile.",
-    },
-    "corporate-bank-accounts": {
-      description: "Coming Soon — Company bank accounts and payment details used for operations.",
-    },
-    "corporate-advisers": {
-      description: "Coming Soon — Lawyers, accountants, and other professional advisers on retainer.",
-    },
-    "corporate-insurance": {
-      description: "Coming Soon — Insurance policies, renewals, and coverage notes.",
-    },
-    "corporate-software": {
-      description: "Coming Soon — Software subscriptions, licences, and vendor accounts.",
-    },
-    "corporate-contracts": {
-      description: "Coming Soon — Corporate contracts, MSAs, and key commercial agreements.",
     },
     "external-client-access": {
       description:
@@ -203,10 +187,14 @@ function readInitialView(
   }
 
   if (isExecutiveAssistantPath(pathname)) {
-    return "executive-assistant";
+    return EXECUTIVE_ASSISTANT_VISIBLE ? "executive-assistant" : "home";
   }
 
-  return normalizeInternalOperationsView(searchParams.get("view"));
+  const fromQuery = normalizeInternalOperationsView(searchParams.get("view"));
+  if (fromQuery === "executive-assistant" && !EXECUTIVE_ASSISTANT_VISIBLE) {
+    return "home";
+  }
+  return fromQuery;
 }
 
 export default function InternalOperationsDashboard({
@@ -284,6 +272,16 @@ export default function InternalOperationsDashboard({
 
   useEffect(() => {
     const viewParam = searchParams.get("view");
+    const legacyTab = legacyCorporateViewToTab(viewParam);
+    if (legacyTab) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("view", "corporate-information");
+      url.searchParams.set("tab", legacyTab);
+      window.history.replaceState({}, "", url.toString());
+      startTransition(() => setActiveView("corporate-information"));
+      return;
+    }
+
     const nextView = readInitialView(searchParams, pathname, initialView);
     startTransition(() => {
       if (viewParam && normalizeInternalOperationsView(viewParam) !== viewParam) {
@@ -349,8 +347,16 @@ export default function InternalOperationsDashboard({
     if (activeView === "home") {
       url.searchParams.delete("view");
       url.searchParams.delete("country");
+      url.searchParams.delete("tab");
+    } else if (activeView === "corporate-information") {
+      url.searchParams.set("view", "corporate-information");
+      if (!isCorporateInformationTab(url.searchParams.get("tab"))) {
+        url.searchParams.set("tab", "company-details");
+      }
+      url.searchParams.delete("country");
     } else {
       url.searchParams.set("view", activeView);
+      url.searchParams.delete("tab");
       if (activeView !== "potential-clients") {
         url.searchParams.delete("country");
       } else if (!isPotentialClientsCountryId(url.searchParams.get("country"))) {
@@ -415,17 +421,23 @@ export default function InternalOperationsDashboard({
           {activeView !== "home" && <NavImplementationNotice view={activeView} />}
           {activeView === "home" &&
             (isInternalHost ? (
-              <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)] xl:items-start xl:gap-5">
-                <div className="min-w-0">
-                  <InternalDashboardHome showCustomize />
+              EXECUTIVE_ASSISTANT_VISIBLE ? (
+                <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)] xl:items-start xl:gap-5">
+                  <div className="min-w-0">
+                    <InternalDashboardHome showCustomize />
+                  </div>
+                  <HomeExecutiveAssistantPanel />
                 </div>
-                <HomeExecutiveAssistantPanel />
-              </div>
+              ) : (
+                <InternalDashboardHome showCustomize />
+              )
             ) : (
               <InternalDashboardHome showCustomize />
             ))}
 
-          {activeView === "executive-assistant" && <ExecutiveAssistantWorkspace />}
+          {EXECUTIVE_ASSISTANT_VISIBLE && activeView === "executive-assistant" && (
+            <ExecutiveAssistantWorkspace />
+          )}
           {activeView === "quality-management" && <QualityManagementWorkspace />}
           {activeView === "qms-training" && <QmsTrainingWorkspace />}
           {activeView === "profile" && <ProfileWorkspace />}
@@ -509,8 +521,6 @@ export default function InternalOperationsDashboard({
             />
           )}
 
-          {activeView === "office-locations" && <OfficeLocationsWorkspace />}
-
           {activeView === "financials" && <FinancialsWorkspace />}
 
           {activeView === "general-ledger" && <GeneralLedgerWorkspace />}
@@ -553,21 +563,7 @@ export default function InternalOperationsDashboard({
 
           {activeView === "corporate-dashboard" && <PlaceholderForView view="corporate-dashboard" />}
 
-          {activeView === "corporate-company-details" && (
-            <PlaceholderForView view="corporate-company-details" />
-          )}
-
-          {activeView === "corporate-bank-accounts" && (
-            <PlaceholderForView view="corporate-bank-accounts" />
-          )}
-
-          {activeView === "corporate-advisers" && <PlaceholderForView view="corporate-advisers" />}
-
-          {activeView === "corporate-insurance" && <PlaceholderForView view="corporate-insurance" />}
-
-          {activeView === "corporate-software" && <SoftwareAssetRegisterWorkspace />}
-
-          {activeView === "corporate-contracts" && <PlaceholderForView view="corporate-contracts" />}
+          {activeView === "corporate-information" && <CorporateInformationWorkspace />}
 
           {activeView === "external-client-access" && (
             <PlaceholderForView view="external-client-access" />
