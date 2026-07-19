@@ -4,7 +4,7 @@ import {
   PLATFORM_SESSION_COOKIE,
   readPlatformSessionToken,
   type PlatformSession,
-} from "@/lib/platform-auth";
+} from "@/lib/platform-session-token";
 
 export type { PlatformSession };
 

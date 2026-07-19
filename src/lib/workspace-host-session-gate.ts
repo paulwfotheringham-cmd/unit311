@@ -9,7 +9,7 @@ import {
   PLATFORM_SESSION_COOKIE,
   readPlatformSessionToken,
   type PlatformSession,
-} from "@/lib/platform-auth";
+} from "@/lib/platform-session-token";
 import { authorizeUserForWorkspace } from "@/lib/workspace-authorization";
 import { findWorkspaceBySlug } from "@/lib/workspace-host";
 import {
@@ -42,7 +42,7 @@ export async function evaluateCustomerHostSessionGate(
     return { status: "anonymous" };
   }
 
-  const session = readPlatformSessionToken(token);
+  const session = await readPlatformSessionToken(token);
   if (!session) {
     return { status: "invalid" };
   }

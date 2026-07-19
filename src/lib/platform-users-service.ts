@@ -274,14 +274,14 @@ export async function authenticatePlatformUser(username: string, password: strin
   return user;
 }
 
-export function createSessionForUser(
+export async function createSessionForUser(
   user: PlatformUserRecord,
   workspace?: { id: string; slug: string; name: string } | null,
 ) {
   const session = buildPlatformSession(user, workspace);
   return {
     session,
-    token: createPlatformSessionToken(session),
+    token: await createPlatformSessionToken(session),
     redirectPath: user.redirect_path,
   };
 }
@@ -344,7 +344,7 @@ export async function loginPlatformUser(
     }
   }
 
-  const session = createSessionForUser(user, workspace);
+  const session = await createSessionForUser(user, workspace);
   const subscriptionRedirect = await resolveSubscriptionRedirectForUser(user, {
     workspaceSlug: options?.workspaceSlug,
   });

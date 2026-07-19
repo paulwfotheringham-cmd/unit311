@@ -1,10 +1,10 @@
 import type { NextRequest, NextResponse } from "next/server";
 
+import { platformSessionCookieDomain, resolveUnit311CookieHost } from "@/lib/app-domains";
 import {
   PLATFORM_SESSION_COOKIE,
   PLATFORM_SESSION_MAX_AGE_SECONDS,
-} from "@/lib/platform-auth";
-import { platformSessionCookieDomain, resolveUnit311CookieHost } from "@/lib/app-domains";
+} from "@/lib/platform-session-token";
 
 export { PLATFORM_SESSION_COOKIE, PLATFORM_SESSION_MAX_AGE_SECONDS };
 

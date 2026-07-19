@@ -1,25 +1,23 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-export const PLATFORM_SESSION_COOKIE = "dc_platform_session";
-export const PLATFORM_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+import {
+  PLATFORM_SESSION_COOKIE,
+  PLATFORM_SESSION_MAX_AGE_SECONDS,
+  createPlatformSessionToken,
+  getAuthSecret,
+  readPlatformSessionToken,
+  type PlatformSession,
+  type PlatformUserType,
+} from "@/lib/platform-session-token";
 
-export type PlatformUserType = "internal" | "external";
-
-export type PlatformSession = {
-  sub: string;
-  username: string;
-  displayName: string;
-  userType: PlatformUserType;
-  redirectPath: string;
-  exp: number;
-  /**
-   * Active workspace claim cache (RC1-C07).
-   * Identity is sub/username/userType; membership is authorizeUserForWorkspace;
-   * active workspace on customer hosts is derived from the request host after authz.
-   */
-  workspaceId?: string;
-  workspaceSlug?: string;
-  workspaceName?: string;
+export {
+  PLATFORM_SESSION_COOKIE,
+  PLATFORM_SESSION_MAX_AGE_SECONDS,
+  createPlatformSessionToken,
+  getAuthSecret,
+  readPlatformSessionToken,
+  type PlatformSession,
+  type PlatformUserType,
 };
 
 export type PlatformUserRecord = {
@@ -66,70 +64,6 @@ export function verifyPlatformPassword(password: string, storedHash: string) {
     return timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(candidate, "hex"));
   } catch {
     return false;
-  }
-}
-
-function isProductionRuntime() {
-  return (
-    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production"
-  );
-}
-
-/**
- * Dedicated secret for HMAC session signing (and related AUTH_SECRET consumers).
- * Never falls back to SUPABASE_ANON_KEY (public client key).
- * Production fails fast when unset; local/dev uses a non-public placeholder.
- */
-export function getAuthSecret(): string {
-  const secret = process.env.AUTH_SECRET?.trim();
-  if (secret) {
-    return secret;
-  }
-
-  if (isProductionRuntime()) {
-    throw new Error(
-      "AUTH_SECRET is required in production for session signing. A public key such as SUPABASE_ANON_KEY must not be used.",
-    );
-  }
-
-  return "unit311-local-dev-auth-secret";
-}
-
-export function createPlatformSessionToken(session: PlatformSession) {
-  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
-  const signature = createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
-  return `${payload}.${signature}`;
-}
-
-export function readPlatformSessionToken(token: string | undefined | null): PlatformSession | null {
-  if (!token) {
-    return null;
-  }
-
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) {
-    return null;
-  }
-
-  const expected = createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
-
-  try {
-    if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-      return null;
-    }
-  } catch {
-    return null;
-  }
-
-  try {
-    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as PlatformSession;
-    if (!session.exp || session.exp < Date.now()) {
-      return null;
-    }
-
-    return session;
-  } catch {
-    return null;
   }
 }
 

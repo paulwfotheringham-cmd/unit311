@@ -119,7 +119,7 @@ async function createDemoLoginResponse(request: NextRequest, returnTo: string | 
       : null,
   });
 
-  applyPlatformSessionCookie(response, createPlatformSessionToken(session), request);
+  applyPlatformSessionCookie(response, await createPlatformSessionToken(session), request);
 
   return response;
 }

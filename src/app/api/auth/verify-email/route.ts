@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       userWorkspaceId: user.workspace_id ?? null,
       fallbackInternal: user.user_type === "internal",
     });
-    const sessionBundle = createSessionForUser(user, workspace);
+    const sessionBundle = await createSessionForUser(user, workspace);
     const response = NextResponse.redirect(new URL("/payment", request.url));
 
     applyPlatformSessionCookie(response, sessionBundle.token, request);

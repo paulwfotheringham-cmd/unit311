@@ -3,7 +3,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import {
   createPlatformSessionToken,
   type PlatformSession,
-} from "@/lib/platform-auth";
+} from "@/lib/platform-session-token";
 import { applyPlatformSessionCookie } from "@/lib/platform-session-cookie";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -99,7 +99,11 @@ export async function rebindSessionToWorkspace(options: {
 
   const needsRebind = sessionNeedsWorkspaceRebind(session, workspace);
   const nextSession = withSessionWorkspace(session, workspace);
-  applyPlatformSessionCookie(response, createPlatformSessionToken(nextSession), request);
+  applyPlatformSessionCookie(
+    response,
+    await createPlatformSessionToken(nextSession),
+    request,
+  );
 
   if (needsRebind) {
     void recordHostRebindAudit({
