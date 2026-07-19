@@ -5,7 +5,7 @@
 | **Status** | **ACTIVE** — master implementation tracker |
 | **Host** | `internal.unit311central.com` |
 | **Navigation** | **FROZEN** — [Internal Navigation Blueprint](./INTERNAL_NAVIGATION_BLUEPRINT.md) (IMPLEMENTED) |
-| **Baseline architecture** | PRM-001 · PRM-002 · Navigation Blueprint · Navigation Implementation |
+| **Baseline architecture** | PRM-001 · PRM-002 · PRM-003 (APPROVED) · Navigation Blueprint · Navigation Implementation · [Integration Dependency Matrix](./INTEGRATION_DEPENDENCY_MATRIX.md) (**APPROVED**) · [Module Go-Live Structure Review](./MODULE_GO_LIVE_STRUCTURE_REVIEW.md) (**APPROVED** — 68 modules; catalog not yet updated) |
 | **Last updated** | 2026-07-19 |
 
 ---
@@ -26,8 +26,10 @@
 | --- | --- |
 | [PRM-001 – Client](./PRM-001-CLIENT.md) | **LOCKED** |
 | [PRM-002 – Workspace](./PRM-002-WORKSPACE.md) | **LOCKED** |
+| [PRM-003 – Platform Integrations](./PRM-003-PLATFORM-INTEGRATIONS.md) | **APPROVED** |
 | [Internal Navigation Blueprint](./INTERNAL_NAVIGATION_BLUEPRINT.md) | **APPROVED / IMPLEMENTED** |
 | Navigation implementation | **COMPLETE** |
+| [Integration Dependency Matrix](./INTEGRATION_DEPENDENCY_MATRIX.md) | **ACTIVE** |
 
 ---
 
@@ -97,7 +99,7 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
 | --- | --- | --- | --- | --- | --- |
 | HR Dashboard | Business Central → Human Resources → Dashboard | Not Started | — | Employees | |
-| Employees | Business Central → Human Resources → Employees | Not Started | — | Internal Users (optional) | |
+| Employees | Business Central → Human Resources → Employees | **Implementing** | PRM-002 · **PRM-003** (optional IdP) | Internal Users (optional link) | [FDR-MOD-071](./FDR-MOD-071-EMPLOYEES.md) **APPROVED**. Phase 1 plans **APPROVED**. Go-Live **Needs Work**. |
 | Leave | Business Central → Human Resources → Leave | Not Started | — | Employees | Coming Soon UI |
 | Performance | Business Central → Human Resources → Performance | Not Started | — | Employees | Coming Soon UI |
 | Recruitment | Business Central → Human Resources → Recruitment | Not Started | — | — | Coming Soon UI |
@@ -122,7 +124,7 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 | --- | --- | --- | --- | --- | --- |
 | Assets | Assets → Assets | Not Started | PRM-001 (optional tag) | — | Asset registry |
 | Inventory Management | Assets → Inventory Management | Not Started | — | Assets | **Shares** Assets implementation today |
-| Logistics | Assets → Logistics | Not Started | — | — | Package / shipment tracking |
+| Logistics | Assets → Logistics | **Approved** | PRM-001 · PRM-002 · **PRM-003** | Shipping Providers | [FDR-MOD-092](./FDR-MOD-092-LOGISTICS.md) **APPROVED** · Architecture **COMPLETE / FROZEN**. Go-Live **READY**. [Readiness](./MOD-092-IMPLEMENTATION-READINESS.md) **APPROVED**. No implementation yet. |
 
 ### Business Productivity
 

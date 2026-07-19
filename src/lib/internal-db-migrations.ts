@@ -14,6 +14,8 @@ export const HR_EMPLOYEES_MIGRATION_PATH =
   "supabase/migrations/024_create_hr_employees.sql";
 export const HR_EMPLOYEES_EXTENDED_MIGRATION_PATH =
   "supabase/migrations/034_hr_employees_extended_fields.sql";
+export const HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH =
+  "supabase/migrations/091_hr_employee_foundation.sql";
 export const INTERNAL_OPERATORS_MIGRATION_PATH =
   "supabase/migrations/019_create_internal_operators.sql";
 export const FINANCIAL_EXPENSES_MIGRATION_PATH =
@@ -876,13 +878,15 @@ async function applyHrEmployeesMigrations(client: ClientBase) {
     await applyMigration(client, HR_EMPLOYEES_MIGRATION_PATH);
   }
   await applyMigration(client, HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
+  await applyMigration(client, HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
 }
 
 export async function ensureHrEmployeesTable(): Promise<boolean> {
   const exists = await tableExistsViaManagementApi("hr_employees");
   if (exists === true) {
     const extended = await applyMigrationViaManagementApi(HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
-    if (extended) await reloadPostgrestSchema();
+    const foundation = await applyMigrationViaManagementApi(HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
+    if (extended || foundation) await reloadPostgrestSchema();
     return true;
   }
 
@@ -894,6 +898,7 @@ export async function ensureHrEmployeesTable(): Promise<boolean> {
       await client.connect();
       if (await tableExists(client, "hr_employees")) {
         await applyMigration(client, HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
+        await applyMigration(client, HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
         await reloadPostgrestSchema();
         return true;
       }
@@ -908,8 +913,9 @@ export async function ensureHrEmployeesTable(): Promise<boolean> {
   if (exists === false) {
     const baseApplied = await applyMigrationViaManagementApi(HR_EMPLOYEES_MIGRATION_PATH);
     const extendedApplied = await applyMigrationViaManagementApi(HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
-    if (baseApplied || extendedApplied) await reloadPostgrestSchema();
-    return baseApplied || extendedApplied;
+    const foundationApplied = await applyMigrationViaManagementApi(HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
+    if (baseApplied || extendedApplied || foundationApplied) await reloadPostgrestSchema();
+    return baseApplied || extendedApplied || foundationApplied;
   }
 
   return false;

@@ -376,6 +376,18 @@ export default function InternalOperationsDashboard({
     setExcludedProfileIds([]);
   }, [activeView, setExcludedProfileIds]);
 
+  const [logisticsEntryId, setLogisticsEntryId] = useState(0);
+  const previousViewRef = useRef<InternalOperationsView | null>(null);
+
+  useEffect(() => {
+    const previous = previousViewRef.current;
+    previousViewRef.current = activeView;
+    // Remount only when entering Logistics from another view (or first navigation to it).
+    if (activeView === "logistics" && previous !== "logistics") {
+      setLogisticsEntryId((current) => current + 1);
+    }
+  }, [activeView]);
+
   const handleViewChange = useCallback((view: InternalOperationsView) => {
     setActiveView(view);
   }, []);
@@ -574,7 +586,9 @@ export default function InternalOperationsDashboard({
             <CalendarWorkspace users={users} clients={clients} />
           )}
 
-          {activeView === "logistics" && <LogisticsWorkspace />}
+          {activeView === "logistics" && (
+            <LogisticsWorkspace key={`logistics-entry-${logisticsEntryId}`} />
+          )}
 
           {activeView === "info-email" && <InfoEmailWorkspace />}
 

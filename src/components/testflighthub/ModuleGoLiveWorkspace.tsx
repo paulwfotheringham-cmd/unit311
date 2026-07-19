@@ -172,13 +172,14 @@ export default function ModuleGoLiveWorkspace() {
                           }
                           className={cn(
                             "rounded-lg border px-2.5 py-1.5 text-xs outline-none transition-colors",
-                            "bg-[#0b1524] focus:border-sky-400/50 disabled:opacity-60",
+                            "focus:border-sky-400/50 disabled:opacity-60",
+                            "[&>option]:bg-white [&>option]:text-black",
                             moduleGoLiveStatusClass(row.status),
                           )}
                           aria-label={`Status for ${row.id}`}
                         >
                           {MODULE_GO_LIVE_STATUSES.map((status) => (
-                            <option key={status} value={status}>
+                            <option key={status} value={status} className="bg-white text-black">
                               {status}
                             </option>
                           ))}

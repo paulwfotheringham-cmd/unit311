@@ -66,10 +66,14 @@ function buildDeckContext(input: BoardReviewPdfInput) {
   const employees = input.employees ?? [];
   const ytdRevenue = sumRevenueYtd();
   const jun = latestPl();
-  const annualPayroll = employees.reduce(
-    (sum, employee) => sum + employee.salaryCurrent + employee.bonus,
-    0,
-  );
+  const annualPayroll = employees
+    .filter((employee) => {
+      const status = String(
+        (employee as { employmentStatus?: string }).employmentStatus ?? "active",
+      );
+      return status !== "former_employee" && status !== "archived";
+    })
+    .reduce((sum, employee) => sum + employee.salaryCurrent + employee.bonus, 0);
   const cashEurApprox =
     BANK_BALANCES.reduce((sum, account) => {
       if (account.currency === "GBP") return sum + account.balance * 1.17;

@@ -587,16 +587,20 @@ export async function unlinkSoftwareAssetFile(input: {
   });
 }
 
-async function countActiveEmployees(): Promise<number | null> {
+async function countActiveEmployees(workspaceId?: string): Promise<number | null> {
   try {
     const supabase = requireSupabase();
-    const { data, error } = await supabase.from("hr_employees").select("id, status");
+    let query = supabase.from("hr_employees").select("id, employment_status");
+    if (workspaceId) query = query.eq("workspace_id", workspaceId);
+    const { data, error } = await query;
     if (error) return null;
-    const active = (data ?? []).filter((row) => {
-      const status = String((row as { status?: string }).status ?? "Active").toLowerCase();
-      return status === "active" || status === "";
-    });
-    return active.length;
+    const activeStatuses = new Set(["active", "probation", "notice_given", "leave_of_absence"]);
+    return (data ?? []).filter((row) => {
+      const status = String(
+        (row as { employment_status?: string }).employment_status ?? "active",
+      ).toLowerCase();
+      return activeStatuses.has(status);
+    }).length;
   } catch {
     return null;
   }

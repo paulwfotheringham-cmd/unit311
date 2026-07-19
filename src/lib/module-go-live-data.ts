@@ -86,7 +86,7 @@ export function buildDefaultModuleGoLiveRegister(): ModuleGoLiveEntry[] {
   return MODULE_GO_LIVE_CATALOG.map((entry) => ({
     id: entry.id,
     module: entry.module,
-    status: "Not Started" as const,
+    status: entry.id === "MOD-071" ? ("Needs Work" as const) : ("Not Started" as const),
   }));
 }
 
@@ -114,11 +114,18 @@ export function mergeModuleGoLiveRegister(
     }
   }
 
-  return MODULE_GO_LIVE_CATALOG.map((entry) => ({
-    id: entry.id,
-    module: entry.module,
-    status: byId.get(entry.id) ?? "Not Started",
-  }));
+  return MODULE_GO_LIVE_CATALOG.map((entry) => {
+    const storedStatus = byId.get(entry.id);
+    // MOD-071: architecture + Phase 1 plans approved; work remains — Needs Work (not Not Started).
+    if (entry.id === "MOD-071" && (!storedStatus || storedStatus === "Not Started")) {
+      return { id: entry.id, module: entry.module, status: "Needs Work" as const };
+    }
+    return {
+      id: entry.id,
+      module: entry.module,
+      status: storedStatus ?? "Not Started",
+    };
+  });
 }
 
 export function serializeModuleGoLiveRegister(entries: ModuleGoLiveEntry[]): string {

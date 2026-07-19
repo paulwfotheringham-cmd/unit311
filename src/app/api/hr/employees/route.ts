@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { createHrEmployee, listHrEmployees } from "@/lib/hr-employees-service";
-import type { HrDocuments } from "@/lib/hr-data";
+import {
+  createHrEmployee,
+  listHrEmployees,
+} from "@/lib/hr-employees-service";
+import type { HrEmployee } from "@/lib/hr-data";
 import { ensureHrEmployeesTable } from "@/lib/internal-db-migrations";
 import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
@@ -9,27 +12,7 @@ import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
-type EmployeeBody = {
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  dateJoined?: string;
-  location?: string;
-  role?: string;
-  department?: string;
-  manager?: string;
-  salaryCurrent?: number;
-  salaryPrevious?: number;
-  salaryIncreaseDate?: string | null;
-  salaryIncreaseAmount?: number;
-  bonus?: number;
-  holidayCalendar?: string;
-  vacationDaysPerYear?: number;
-  vacationDaysTaken?: number;
-  documents?: HrDocuments;
-};
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
@@ -38,7 +21,11 @@ export async function GET() {
     await requirePlatformSession();
     const workspace = await requireCurrentWorkspace();
     await ensureHrEmployeesTable();
-    const employees = await listHrEmployees({ workspaceId: workspace.id });
+    const includeArchived = request.nextUrl.searchParams.get("includeArchived") === "true";
+    const employees = await listHrEmployees({
+      workspaceId: workspace.id,
+      includeArchived,
+    });
     return NextResponse.json({ employees });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load employees";
@@ -58,7 +45,7 @@ export async function POST(request: NextRequest) {
   try {
     await requirePlatformSession();
     const workspace = await requireCurrentWorkspace();
-    const body = (await request.json()) as EmployeeBody;
+    const body = (await request.json()) as Partial<HrEmployee> & { fullName?: string };
 
     if (!body.fullName?.trim()) {
       return NextResponse.json({ error: "Full name is required" }, { status: 400 });
