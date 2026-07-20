@@ -7,8 +7,8 @@
 | **Domain** | DOM-11 Assets |
 | **Status** | **READY** |
 | **Completion date** | 2026-07-21 |
-| **Production deployment SHA** | _(filled after push)_ |
-| **Production deployment** | _(filled after Vercel Ready)_ |
+| **Production deployment SHA** | `2003e8e` on `main` |
+| **Production deployment** | `dpl_5iaHA5eVqavPScZN2Zu78QYWWpqp` |
 | **Benchmark** | Commercial enterprise asset management (ops control centre) |
 | **Purpose** | Day-to-day operational management of company assets — distinct from the Asset Register |
 
