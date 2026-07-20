@@ -5,7 +5,7 @@
 | **Status** | **ACTIVE** — master implementation tracker |
 | **Host** | `internal.unit311central.com` |
 | **Navigation** | **FROZEN** — [Internal Navigation Blueprint](./INTERNAL_NAVIGATION_BLUEPRINT.md) (IMPLEMENTED) |
-| **Baseline architecture** | PRM-001 · PRM-002 · PRM-003 (APPROVED) · Navigation Blueprint · Navigation Implementation · [Integration Dependency Matrix](./INTEGRATION_DEPENDENCY_MATRIX.md) (**APPROVED**) · [Module Go-Live Structure Review](./MODULE_GO_LIVE_STRUCTURE_REVIEW.md) (**APPROVED** — 68 modules; catalog not yet updated) |
+| **Baseline architecture** | PRM-001 · PRM-002 · PRM-003 (APPROVED) · Navigation Blueprint · Navigation Implementation · [Integration Dependency Matrix](./INTEGRATION_DEPENDENCY_MATRIX.md) (**APPROVED**) · [Module Go-Live Structure Review](./MODULE_GO_LIVE_STRUCTURE_REVIEW.md) (**APPROVED** — HR IDs remapped 2026-07-21: MOD-074 Reports · MOD-201 Recruitment ATS) |
 | **Last updated** | 2026-07-21 |
 
 ---
@@ -96,14 +96,29 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 
 ### Business Central — Human Resources
 
-| Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
-| --- | --- | --- | --- | --- | --- |
-| HR Dashboard | Human Resources → Dashboard | **Implemented** | — | Employees | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY** (demo). Go-Live **Ready** (MOD-070). |
-| Employees | Human Resources → Employees | **Implemented** | PRM-002 · **PRM-003** (optional IdP) | Internal Users (optional link) | [FDR-MOD-071](./FDR-MOD-071-EMPLOYEES.md) **APPROVED**. [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. Go-Live **Ready** (MOD-071). Follow-up: [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md). |
-| Leave | Human Resources → Leave | **Implemented** | — | Employees | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. Go-Live **Ready** (MOD-072). |
-| Performance | Human Resources → Performance | **Implemented** | — | Employees | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. Go-Live **Ready** (MOD-073). |
-| Reports | Human Resources → Reports | **Implemented** | — | Employees | Delivered under [MOD-200](./MOD-200-HR-DOMAIN.md) (nav `hr-reports`). |
-| Recruitment | Human Resources → Recruitment | **Implemented** | — | — | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. [MOD-201](./MOD-201-RECRUITMENT-ATS.md) ATS redesign **READY**. Go-Live **Ready** (MOD-074). |
+| Field | Value |
+| --- | --- |
+| **Domain** | Human Resources (DOM-09) |
+| **Status** | **READY** |
+| **Demo status** | **READY** |
+| **Production status** | **READY** |
+| **Completion date** | 2026-07-21 |
+| **Production deployment SHA** | `7d881991d6f96c70dcfe7d36889610b00d6ed229` (`7d88199`) |
+| **Production deployment** | `dpl_J93KntbeAXjrLamyyYQi2kJDkRei` |
+| **Waves** | [MOD-200](./MOD-200-HR-DOMAIN.md) **CLOSED · READY** · [MOD-201](./MOD-201-RECRUITMENT-ATS.md) **CLOSED · READY** |
+| **Open backlog (only)** | [HR-201 – Employee 360 Data Integration](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) |
+| **Architecture** | [FDR-MOD-071](./FDR-MOD-071-EMPLOYEES.md) · [FDR-DOMAIN-GO-LIVE](./FDR-DOMAIN-GO-LIVE.md) · [Internal Navigation Blueprint](./INTERNAL_NAVIGATION_BLUEPRINT.md) · [mod-071-phase1/](./mod-071-phase1/README.md) |
+
+**No further work should be scheduled against the HR domain except HR-201.**
+
+| Module ID | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| MOD-070 | HR Dashboard | Human Resources → Dashboard | **READY** | — | Employees | Closed under [MOD-200](./MOD-200-HR-DOMAIN.md) |
+| MOD-071 | Employees | Human Resources → Employees | **READY** | PRM-002 · **PRM-003** (optional IdP) | Internal Users (optional link) | [FDR-MOD-071](./FDR-MOD-071-EMPLOYEES.md). Live 360 tabs → [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) |
+| MOD-072 | Leave | Human Resources → Leave | **READY** | — | Employees | Closed under [MOD-200](./MOD-200-HR-DOMAIN.md) |
+| MOD-073 | Performance | Human Resources → Performance | **READY** | — | Employees | Closed under [MOD-200](./MOD-200-HR-DOMAIN.md) |
+| MOD-074 | Reports | Human Resources → Reports | **READY** | — | Employees | Closed under [MOD-200](./MOD-200-HR-DOMAIN.md) (nav `hr-reports`) |
+| MOD-201 | Recruitment ATS | Human Resources → Recruitment | **READY** | — | — | Closed under [MOD-201](./MOD-201-RECRUITMENT-ATS.md) |
 
 ### Business Central — Corporate Information
 
@@ -228,3 +243,4 @@ Reachable via deep link but **not** in frozen sidebar. Do not expand without arc
 | --- | --- | --- |
 | Register created | 2026-07-19 | Post navigation freeze |
 | Module statuses | — | All Not Started pending FDR cycle |
+| HR domain closeout | 2026-07-21 | MOD-200 · MOD-201 **CLOSED · READY**. Production SHA `7d88199`. Sole HR backlog: [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) |

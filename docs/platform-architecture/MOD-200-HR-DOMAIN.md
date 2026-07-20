@@ -4,33 +4,44 @@
 | --- | --- |
 | **Wave ID** | MOD-200 |
 | **Domain** | DOM-09 Human Resources |
-| **Child modules** | MOD-070 · MOD-071 · MOD-072 · MOD-073 · MOD-074 (+ HR Reports nav surface) |
-| **Status** | **READY** |
-| **Approved** | 2026-07-21 |
-| **Purpose** | Production-ready for **customer demonstrations** (demo-grade HR domain) |
+| **Status** | **CLOSED · READY** |
+| **Completion date** | 2026-07-21 |
+| **Production deployment SHA** | `7d881991d6f96c70dcfe7d36889610b00d6ed229` (`7d88199`) |
+| **Production deployment** | `dpl_J93KntbeAXjrLamyyYQi2kJDkRei` |
+| **Demo status** | **READY** |
+| **Production status** | **READY** |
 
 ---
 
-## Approval
+## Closure
 
-MOD-200 is **classified READY**.
+MOD-200 is **closed**. The Human Resources domain is **READY** for demo and production demonstration use.
 
-The Human Resources domain is considered **production-ready for demonstration purposes**. No further work is required before customer demonstrations.
+No further work should be scheduled against the HR domain **except** [HR-201 – Employee 360 Data Integration](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md).
 
-### Delivered surfaces
+### Modules delivered under / with this wave
 
-| Nav | Go-Live ID | Classification at approval |
+| ID | Module | Status |
 | --- | --- | --- |
-| Dashboard | MOD-070 | Ready |
-| Employees / Employee 360 | MOD-071 | Ready (demo) — see [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) |
-| Leave | MOD-072 | Ready |
-| Performance | MOD-073 | Ready |
-| Recruitment | MOD-074 | Ready |
-| Reports | (nav `hr-reports`) | Ready — delivered under MOD-200 |
+| MOD-070 | HR Dashboard | **READY** |
+| MOD-071 | Employees | **READY** |
+| MOD-072 | Leave | **READY** |
+| MOD-073 | Performance | **READY** |
+| MOD-074 | Reports | **READY** |
+| MOD-201 | Recruitment ATS | **READY** (closed under [MOD-201](./MOD-201-RECRUITMENT-ATS.md)) |
+
+### Architecture links
+
+- [Platform Module Register](./PLATFORM_MODULE_REGISTER.md) — HR domain closeout
+- [FDR-MOD-071 Employees](./FDR-MOD-071-EMPLOYEES.md)
+- [MOD-201 Recruitment ATS](./MOD-201-RECRUITMENT-ATS.md)
+- [HR-201 Employee 360 Data Integration](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) (sole open HR backlog)
+- [FDR-DOMAIN-GO-LIVE](./FDR-DOMAIN-GO-LIVE.md) — DOM-09
+- [Internal Navigation Blueprint](./INTERNAL_NAVIGATION_BLUEPRINT.md)
 
 ### Explicit non-blocker
 
-[HR-201 – Employee 360 Data Integration](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) is a **future enhancement wave**. It does **not** block demos or MOD-200 Ready status.
+[HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) remains the only scheduled HR enhancement. It does **not** reopen MOD-200.
 
 ---
 
@@ -38,6 +49,8 @@ The Human Resources domain is considered **production-ready for demonstration pu
 
 | Decision | Outcome |
 | --- | --- |
-| MOD-200 commercial review | Complete — Ready / Minor Polish only; no Needs Work |
-| Demo readiness | **Approved** 2026-07-21 |
-| Live API completion for Employee 360 tabs | Deferred to **HR-201** (enhancement) |
+| Commercial review | Complete — Ready |
+| Demo readiness | **READY** 2026-07-21 |
+| Production readiness | **READY** 2026-07-21 · SHA `7d88199` |
+| Wave closure | **CLOSED** 2026-07-21 |
+| Live Employee 360 APIs | Deferred to **HR-201** only |

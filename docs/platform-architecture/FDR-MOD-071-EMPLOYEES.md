@@ -9,7 +9,7 @@
 | **Go-Live status (current)** | **Needs Work** |
 | **FDR status** | **APPROVED** — canonical architectural specification for MOD-071 |
 | **Approved** | 2026-07-19 |
-| **Related modules** | MOD-070 HR Dashboard · MOD-072 Leave · MOD-073 Performance · MOD-074 Recruitment |
+| **Related modules** | MOD-070 HR Dashboard · MOD-072 Leave · MOD-073 Performance · MOD-074 Reports · MOD-201 Recruitment ATS |
 | **Related PRMs** | PRM-002 (workspace tenancy); Internal Users (access identity — not employee master); [PRM-003 – Platform Integrations](./PRM-003-PLATFORM-INTEGRATIONS.md) (**APPROVED** — optional Identity Providers) |
 | **Canonical object** | **Employee** |
 | **Canonical store (current)** | `public.hr_employees` |
@@ -545,7 +545,7 @@ Implementation is authorised **only** to proceed in approved phases conforming t
 4. **Compensation is history-first (§C)** — current = latest active row.  
 5. **Offboarding is §D** — employment record + financial references.  
 6. **Integration is §E** — `employee_id` everywhere; no duplicate masters.  
-7. **Module Go-Live (MOD-071)** is **Ready** for demonstration under [MOD-200](./MOD-200-HR-DOMAIN.md) (2026-07-21). Live Employee 360 tab integration is tracked as enhancement [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) (not a demo blocker).
+7. **Module Go-Live (MOD-071)** is **Ready** under [MOD-200](./MOD-200-HR-DOMAIN.md) (**CLOSED** 2026-07-21, production SHA `7d88199`). The only scheduled HR follow-up is [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) (Employee 360 live data; not a demo blocker).
 
 ---
 

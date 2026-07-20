@@ -4,11 +4,15 @@
 | --- | --- |
 | **ID** | HR-201 |
 | **Type** | Future implementation wave (enhancement) |
-| **Parent** | [MOD-200](./MOD-200-HR-DOMAIN.md) (**READY**) |
-| **Priority** | Not a demo blocker |
-| **Status** | **Backlog** — recorded 2026-07-21 |
+| **Parent** | [MOD-200](./MOD-200-HR-DOMAIN.md) (**CLOSED · READY**) |
+| **Priority** | Not a demo / production blocker |
+| **Status** | **Backlog** — sole open HR domain item (recorded 2026-07-21) |
 
 ---
+
+## Scheduling rule
+
+After MOD-200 / MOD-201 closeout: **no further work should be scheduled against the HR domain except this item (HR-201).**
 
 ## Intent
 
@@ -29,7 +33,9 @@ Make Employee 360 the **single authoritative employee record**, with every tab d
 
 Employee 360 becomes the single authoritative employee record with all tabs driven by live HR data.
 
-## Notes
+## Architecture links
 
-- This is an **enhancement**, not a blocker for MOD-200 Ready or customer demonstrations.
-- Leave, Performance, Recruitment, and Reports domain workspaces may remain mock-backed until their dedicated live APIs ship; HR-201 focuses on closing the Employee 360 integration gap against those sources once available.
+- [Platform Module Register](./PLATFORM_MODULE_REGISTER.md) — HR domain **READY**
+- [MOD-200 HR Domain](./MOD-200-HR-DOMAIN.md)
+- [MOD-201 Recruitment ATS](./MOD-201-RECRUITMENT-ATS.md)
+- [FDR-MOD-071 Employees](./FDR-MOD-071-EMPLOYEES.md)

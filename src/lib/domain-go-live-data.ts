@@ -62,7 +62,7 @@ export const DOMAIN_GO_LIVE_CATALOG: readonly DomainGoLiveCatalogEntry[] = [
   {
     id: "DOM-09",
     name: "Human Resources",
-    moduleIds: ["MOD-070", "MOD-071", "MOD-072", "MOD-073", "MOD-074"],
+    moduleIds: ["MOD-070", "MOD-071", "MOD-072", "MOD-073", "MOD-074", "MOD-201"],
   },
   {
     id: "DOM-10",

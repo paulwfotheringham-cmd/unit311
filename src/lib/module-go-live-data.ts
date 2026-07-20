@@ -34,7 +34,8 @@ export const MODULE_GO_LIVE_CATALOG: readonly Omit<ModuleGoLiveEntry, "status">[
   { id: "MOD-071", module: "Employees" },
   { id: "MOD-072", module: "Leave" },
   { id: "MOD-073", module: "Performance" },
-  { id: "MOD-074", module: "Recruitment" },
+  { id: "MOD-074", module: "Reports" },
+  { id: "MOD-201", module: "Recruitment ATS" },
   { id: "MOD-080", module: "Corporate Information Dashboard" },
   { id: "MOD-081", module: "Company Details" },
   { id: "MOD-082", module: "Office Locations" },
@@ -84,12 +85,13 @@ export function isModuleGoLiveStatus(value: unknown): value is ModuleGoLiveStatu
 
 /** Wave 0 verified defaults when no stored status exists. */
 const MODULE_GO_LIVE_DEFAULT_STATUS: Readonly<Partial<Record<string, ModuleGoLiveStatus>>> = {
-  /** MOD-200 — HR domain demo-ready (2026-07-21). Follow-up: HR-201 Employee 360 live data. */
+  /** MOD-200 / MOD-201 — HR domain closed Ready (2026-07-21). Only backlog: HR-201. */
   "MOD-070": "Ready",
   "MOD-071": "Ready",
   "MOD-072": "Ready",
   "MOD-073": "Ready",
   "MOD-074": "Ready",
+  "MOD-201": "Ready",
   /** Profile bound to session / whoami (Wave 0). */
   "MOD-170": "Ready",
   /** Wave 1 — Client Directory lifecycle rewrite (FDR-MOD-011-LIFECYCLE). */

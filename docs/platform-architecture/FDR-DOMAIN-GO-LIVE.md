@@ -79,7 +79,7 @@ Clearing Blocked returns the domain to its **derived** status.
 | DOM-06 | Projects | MOD-040, MOD-041, MOD-042 |
 | DOM-07 | Grants | MOD-050 |
 | DOM-08 | Financials | MOD-060, MOD-061, MOD-062, MOD-063, MOD-064, MOD-065, MOD-066 |
-| DOM-09 | Human Resources | MOD-070, MOD-071, MOD-072, MOD-073, MOD-074 |
+| DOM-09 | Human Resources | MOD-070, MOD-071, MOD-072, MOD-073, MOD-074, MOD-201 |
 | DOM-10 | Corporate Information | MOD-080, MOD-081, MOD-082, MOD-083, MOD-084, MOD-085, MOD-086, MOD-087 |
 | DOM-11 | Assets | MOD-090, MOD-091, MOD-092 |
 | DOM-12 | Business Productivity | MOD-100, MOD-101, MOD-102, MOD-103, MOD-110, MOD-111, MOD-112, MOD-113, MOD-114 |

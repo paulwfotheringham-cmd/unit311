@@ -66,7 +66,8 @@ No other FDRs exist at this date. Future FDRs must consult this matrix and cite 
 | MOD-071 | Employees | Optional | Identity Providers | Optional | Microsoft Entra ID, Google Workspace, Okta |
 | MOD-072 | Leave | Optional | Calendar Providers | Optional | Google Calendar, Microsoft 365 |
 | MOD-073 | Performance | None | — | — | — |
-| MOD-074 | Recruitment | Optional | Communication Providers; Email Providers; Identity Providers | Optional | LinkedIn-class ATS later, SendGrid, Entra ID |
+| MOD-074 | Reports | Optional | — | Optional | HR workforce reports (closed under MOD-200) |
+| MOD-201 | Recruitment ATS | Optional | Communication Providers; Email Providers; Identity Providers | Optional | LinkedIn-class ATS later, SendGrid, Entra ID |
 | MOD-080 | Corporate Information Dashboard | None | — | — | — |
 | MOD-081 | Company Details | None | — | — | — |
 | MOD-082 | Office Locations | None | — | — | — |
