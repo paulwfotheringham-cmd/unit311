@@ -545,7 +545,7 @@ Implementation is authorised **only** to proceed in approved phases conforming t
 4. **Compensation is history-first (§C)** — current = latest active row.  
 5. **Offboarding is §D** — employment record + financial references.  
 6. **Integration is §E** — `employee_id` everywhere; no duplicate masters.  
-7. **Module Go-Live (MOD-071)** remains **Needs Work** until implemented phases meet acceptance criteria.
+7. **Module Go-Live (MOD-071)** is **Ready** for demonstration under [MOD-200](./MOD-200-HR-DOMAIN.md) (2026-07-21). Live Employee 360 tab integration is tracked as enhancement [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) (not a demo blocker).
 
 ---
 
@@ -576,6 +576,7 @@ Implementation is authorised **only** to proceed in approved phases conforming t
 | Document storage | Pending implementation choice (Internal Files vs HR bucket) — must not change ownership rules |
 | Employee ID format | Pending implementation choice — must remain permanent |
 | Contractors | Include via Employment Type unless a future FDR splits them |
+| Module Go-Live (demo) | **Ready** 2026-07-21 via [MOD-200](./MOD-200-HR-DOMAIN.md); [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) backlog for live 360 data |
 
 ---
 

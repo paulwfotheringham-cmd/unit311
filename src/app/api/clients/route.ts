@@ -6,6 +6,7 @@ import type {
   ClientIndustry,
   ClientRegion,
 } from "@/lib/client-management-data";
+import { apiErrorStatus } from "@/lib/api-error-status";
 import { createInternalClient, listInternalClients } from "@/lib/internal-clients-service";
 import { ensureInternalClientsTable } from "@/lib/internal-db-migrations";
 import { requirePlatformSession } from "@/lib/platform-session";
@@ -30,11 +31,7 @@ export async function GET() {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load clients";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: apiErrorStatus(error) });
   }
 }
 
@@ -67,10 +64,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ client });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create client";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: apiErrorStatus(error) });
   }
 }

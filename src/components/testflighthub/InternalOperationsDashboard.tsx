@@ -59,6 +59,10 @@ import FinancialsWorkspace from "./FinancialsWorkspace";
 import GeneralLedgerWorkspace from "./GeneralLedgerWorkspace";
 import GrantsWorkspace from "./GrantsWorkspace";
 import HrWorkspace from "./HrWorkspace";
+import LeaveManagementWorkspace from "./LeaveManagementWorkspace";
+import PerformanceHubWorkspace from "./PerformanceHubWorkspace";
+import RecruitmentWorkspace from "./RecruitmentWorkspace";
+import HrReportsWorkspace from "./HrReportsWorkspace";
 import FleetWorkspace from "./FleetWorkspace";
 import InfoEmailWorkspace from "./InfoEmailWorkspace";
 import InternalDashboardHome from "./InternalDashboardHome";
@@ -101,18 +105,6 @@ import { useSurveyOperationsSimulator } from "./SurveyOperationsSimulatorProvide
 function PlaceholderForView({ view }: { view: InternalOperationsView }) {
   const meta = internalViewTitles[view];
   const descriptions: Partial<Record<InternalOperationsView, { description: string; bullets?: string[] }>> = {
-    "hr-recruitment": {
-      description:
-        "Coming Soon — Recruitment pipeline for open roles, applicants, and hiring stages.",
-    },
-    "hr-leave": {
-      description:
-        "Coming Soon — Leave requests, balances, and approvals.",
-    },
-    "hr-performance": {
-      description:
-        "Coming Soon — Performance reviews, goals, and manager feedback.",
-    },
     "training-dashboard": {
       description: "Coming Soon — Overview of staff and QMS training progress across the organisation.",
     },
@@ -285,7 +277,12 @@ export default function InternalOperationsDashboard({
           setClients([]);
           return;
         }
-        const data = (await response.json()) as { clients?: ManagedClient[] };
+        const text = await response.text();
+        if (!text || /^\s*</.test(text)) {
+          setClients([]);
+          return;
+        }
+        const data = JSON.parse(text) as { clients?: ManagedClient[] };
         // Always replace — empty workspace must not keep mock/Unit311 seed clients.
         setClients(data.clients ?? []);
       })
@@ -594,11 +591,15 @@ export default function InternalOperationsDashboard({
 
           {activeView === "hr-dashboard" && <HrWorkspace mode="dashboard" />}
 
-          {activeView === "hr-recruitment" && <PlaceholderForView view="hr-recruitment" />}
+          {activeView === "hr-recruitment" && <RecruitmentWorkspace />}
 
-          {activeView === "hr-leave" && <PlaceholderForView view="hr-leave" />}
+          {activeView === "hr-leave" && <LeaveManagementWorkspace />}
 
-          {activeView === "hr-performance" && <PlaceholderForView view="hr-performance" />}
+          {activeView === "hr-performance" && <PerformanceHubWorkspace />}
+
+          {activeView === "hr-reports" && (
+            <HrReportsWorkspace initialEmployeeId={searchParams.get("employeeId") ?? ""} />
+          )}
 
           {activeView === "strategy" && <StrategyWorkspace />}
 

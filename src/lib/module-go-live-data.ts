@@ -84,7 +84,12 @@ export function isModuleGoLiveStatus(value: unknown): value is ModuleGoLiveStatu
 
 /** Wave 0 verified defaults when no stored status exists. */
 const MODULE_GO_LIVE_DEFAULT_STATUS: Readonly<Partial<Record<string, ModuleGoLiveStatus>>> = {
-  "MOD-071": "Needs Work",
+  /** MOD-200 — HR domain demo-ready (2026-07-21). Follow-up: HR-201 Employee 360 live data. */
+  "MOD-070": "Ready",
+  "MOD-071": "Ready",
+  "MOD-072": "Ready",
+  "MOD-073": "Ready",
+  "MOD-074": "Ready",
   /** Profile bound to session / whoami (Wave 0). */
   "MOD-170": "Ready",
   /** Wave 1 — Client Directory lifecycle rewrite (FDR-MOD-011-LIFECYCLE). */

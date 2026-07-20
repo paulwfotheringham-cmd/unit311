@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Loader2, Plus, Save, Search } from "lucide-react";
 
@@ -17,18 +19,26 @@ import {
   HR_EMPLOYMENT_STATUSES,
   HR_EMPLOYMENT_TYPE_LABELS,
   HR_EMPLOYMENT_TYPES,
-  HR_HOLIDAY_CALENDARS,
   HR_LOCATIONS,
   statusBadgeClass,
-  vacationDaysRemaining,
   type HrCompensationCategory,
   type HrDocumentType,
   type HrEmployee,
   type HrEmployeeDetail,
   type HrEmploymentStatus,
 } from "@/lib/hr-data";
+import { HR_LEAVE_TYPE_LABELS, leaveStatusClass } from "@/lib/hr-leave-data";
+import { getInternalNavHref } from "@/lib/internal-operations-data";
+import {
+  getLeaveRequestsForEmployee,
+  resolveLeaveBalanceForLiveEmployee,
+} from "@/lib/hr-mock-store";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
+import EmployeePerformancePanel from "./EmployeePerformancePanel";
+import { useInternalOperationsBasePath } from "./InternalOperationsBasePathContext";
+import { useHrMockStore } from "./useHrMockStore";
+import { HrStatusPill } from "./hr-ui";
 
 const TABS = [
   "Overview",
@@ -67,16 +77,28 @@ function inputClass() {
   return "mt-1.5 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none focus:border-violet-400/50";
 }
 
-function PlaceholderCard({ title, body }: { title: string; body: string }) {
+function EmptyStatePanel({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-4 py-6">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-6">
       <p className="text-sm font-medium text-white/80">{title}</p>
       <p className="mt-2 text-sm text-white/45">{body}</p>
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }
 
 export default function EmployeeRecordWorkspace() {
+  const searchParams = useSearchParams();
+  const basePath = useInternalOperationsBasePath();
+  useHrMockStore();
   const [employees, setEmployees] = useState<HrEmployee[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<HrEmployeeDetail | null>(null);
@@ -93,6 +115,18 @@ export default function EmployeeRecordWorkspace() {
   const [addOpen, setAddOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState(createBlankEmployeeInput());
   const { showDetail, openDetail, closeDetail } = useMobileDetailPanel();
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("employeeId");
+    if (fromUrl) {
+      setSelectedId(fromUrl);
+      openDetail();
+    }
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl && (TABS as readonly string[]).includes(tabFromUrl)) {
+      setTab(tabFromUrl as TabId);
+    }
+  }, [searchParams, openDetail]);
 
   const [compForm, setCompForm] = useState({
     category: "salary" as HrCompensationCategory,
@@ -779,7 +813,10 @@ export default function EmployeeRecordWorkspace() {
                   </div>
                 ))}
                 {(detail?.employmentHistory.length ?? 0) === 0 ? (
-                  <p className="text-sm text-white/40">No employment history rows yet.</p>
+                  <EmptyStatePanel
+                    title="Employment history"
+                    body="No role or department changes recorded yet. Updates made here will appear in this timeline."
+                  />
                 ) : null}
               </div>
             </div>
@@ -808,9 +845,9 @@ export default function EmployeeRecordWorkspace() {
               </div>
             </div>
 
-            <PlaceholderCard
+            <EmptyStatePanel
               title="Payroll history"
-              body="Payroll transactions are owned by Financials / Payroll. Employees displays outcomes here in a later phase."
+              body="No payroll history on this record yet. Payslips and payroll runs are managed in Financials."
             />
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -921,65 +958,106 @@ export default function EmployeeRecordWorkspace() {
                   ))}
                 </tbody>
               </table>
+              {(detail?.compensationHistory.length ?? 0) === 0 ? (
+                <div className="border-t border-white/10 px-4 py-6 text-sm text-white/45">
+                  No compensation changes recorded yet.
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
 
         {tab === "Leave" ? (
           <div className="space-y-4">
-            <PlaceholderCard
-              title="Leave module owns requests and balances"
-              body="Leave (MOD-072) will own Allocated / Taken / Remaining. This tab will display those balances when Leave ships."
-            />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <FieldLabel>Holiday calendar (legacy)</FieldLabel>
-                <select
-                  className={inputClass()}
-                  value={draft.holidayCalendar}
-                  onChange={(event) =>
-                    setDraft({ ...draft, holidayCalendar: event.target.value })
-                  }
-                >
-                  {HR_HOLIDAY_CALENDARS.map((calendar) => (
-                    <option key={calendar} value={calendar}>
-                      {calendar}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <FieldLabel>Vacation days / year (legacy)</FieldLabel>
-                <input
-                  type="number"
-                  className={inputClass()}
-                  value={draft.vacationDaysPerYear}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      vacationDaysPerYear: Number(event.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <FieldLabel>Days taken (legacy)</FieldLabel>
-                <input
-                  type="number"
-                  className={inputClass()}
-                  value={draft.vacationDaysTaken}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      vacationDaysTaken: Number(event.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <p className="text-xs text-white/40">
-              Remaining (legacy): {vacationDaysRemaining(draft)} — not the long-term source of truth.
-            </p>
+            {(() => {
+              const balance = resolveLeaveBalanceForLiveEmployee(draft);
+              const requests = getLeaveRequestsForEmployee(draft.id);
+              return (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-4">
+                    <div className="rounded-xl border border-white/10 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                        Annual allocated
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {balance?.annualAllocated ?? draft.vacationDaysPerYear}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                        Annual taken
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {balance?.annualTaken ?? draft.vacationDaysTaken}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                        Remaining
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {(balance?.annualAllocated ?? draft.vacationDaysPerYear) -
+                          (balance?.annualTaken ?? draft.vacationDaysTaken)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                        Sick taken
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {balance?.sickTaken ?? 0}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                      Leave requests
+                    </p>
+                    {requests.length > 0 ? (
+                      requests.map((request) => (
+                        <div
+                          key={request.id}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2"
+                        >
+                          <div>
+                            <p className="text-sm text-white">
+                              {HR_LEAVE_TYPE_LABELS[request.type]}
+                            </p>
+                            <p className="text-xs text-white/45">
+                              {request.startDate} → {request.endDate} · {request.days} days
+                            </p>
+                          </div>
+                          <HrStatusPill className={leaveStatusClass(request.status)}>
+                            {request.status}
+                          </HrStatusPill>
+                        </div>
+                      ))
+                    ) : (
+                      <EmptyStatePanel
+                        title="No leave requests"
+                        body="No leave requests for this employee yet."
+                        action={
+                          <Link
+                            href={getInternalNavHref("hr-leave", basePath)}
+                            className="inline-flex h-9 items-center rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-200"
+                          >
+                            Open Leave Management
+                          </Link>
+                        }
+                      />
+                    )}
+                  </div>
+                  {requests.length > 0 ? (
+                    <Link
+                      href={getInternalNavHref("hr-leave", basePath)}
+                      className="inline-flex h-9 items-center rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-200"
+                    >
+                      Open Leave Management
+                    </Link>
+                  ) : null}
+                </>
+              );
+            })()}
           </div>
         ) : null}
 
@@ -1071,18 +1149,16 @@ export default function EmployeeRecordWorkspace() {
                 </div>
               ))}
               {(detail?.documents.length ?? 0) === 0 ? (
-                <p className="text-sm text-white/40">No documents yet.</p>
+                <EmptyStatePanel
+                  title="No documents"
+                  body="Upload contracts, IDs, certifications, and other employee files using the form above."
+                />
               ) : null}
             </div>
           </div>
         ) : null}
 
-        {tab === "Performance" ? (
-          <PlaceholderCard
-            title="Performance reviews"
-            body="Owned by the Performance module (MOD-073). Summaries will appear here when that module is implemented."
-          />
-        ) : null}
+        {tab === "Performance" && draft ? <EmployeePerformancePanel employee={draft} /> : null}
 
         {tab === "Notes" ? (
           <div className="space-y-4">
@@ -1111,6 +1187,12 @@ export default function EmployeeRecordWorkspace() {
                   </p>
                 </div>
               ))}
+              {(detail?.notes.length ?? 0) === 0 ? (
+                <EmptyStatePanel
+                  title="No notes"
+                  body="Add employment notes to capture context that does not belong in formal records."
+                />
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -1150,27 +1232,44 @@ export default function EmployeeRecordWorkspace() {
                 >
                   <p className="text-white/90">{event.title}</p>
                   <p className="text-xs text-white/45">
-                    {formatHrDate(event.occurredAt.slice(0, 10))} · {event.eventType}
+                    {formatHrDate(event.occurredAt.slice(0, 10))}
                     {event.detail ? ` · ${event.detail}` : ""}
                   </p>
                 </div>
               ))}
+              {(detail?.timeline.length ?? 0) === 0 ? (
+                <EmptyStatePanel
+                  title="No timeline events"
+                  body="Record milestones such as promotions, transfers, or policy acknowledgements."
+                />
+              ) : null}
             </div>
           </div>
         ) : null}
 
-        {tab === "Reports" ? (
-          <PlaceholderCard
-            title="Employee Report"
-            body="Report generation will be implemented in a later phase. This tab is reserved for the complete Employee Report (Personal, Employment, Compensation, Leave, Performance, Documents, Notes, Timeline)."
-          />
+        {tab === "Reports" && draft ? (
+          <div className="space-y-4 rounded-xl border border-white/10 p-4">
+            <div>
+              <p className="text-sm font-medium text-white">Employee report pack</p>
+              <p className="mt-1 text-sm text-white/55">
+                Generate a complete pack covering personal details, employment, compensation summary,
+                leave, performance, documents, notes, and timeline from the HR Reports centre.
+              </p>
+            </div>
+            <Link
+              href={getInternalNavHref("hr-reports", basePath, { employeeId: draft.id })}
+              className="inline-flex h-9 items-center rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-200"
+            >
+              Generate employee pack
+            </Link>
+          </div>
         ) : null}
 
         {tab === "Offboarding" ? (
           <div className="space-y-4">
             <p className="text-sm text-white/50">
-              Financial calculations belong to Financials / Payroll. Store employment outcomes and
-              references here.
+              Capture notice period, final working day, exit interview notes, and settlement
+              references when an employee leaves the organisation.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               {(

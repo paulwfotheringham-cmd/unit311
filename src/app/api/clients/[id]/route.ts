@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { apiErrorStatus } from "@/lib/api-error-status";
 import type { ManagedClient } from "@/lib/client-management-data";
 import {
   deleteInternalClient,
@@ -30,11 +31,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ client });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load client";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: apiErrorStatus(error) });
   }
 }
 
@@ -53,11 +50,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update client";
     const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : message.includes("Client not found")
-          ? 404
-          : 500;
+      message.includes("Cannot delete this client") || message.includes("paid invoice")
+        ? 409
+        : apiErrorStatus(error);
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -76,13 +71,9 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete client";
     const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : message.includes("Client not found")
-          ? 404
-          : message.includes("Cannot delete this client") || message.includes("paid invoice")
-            ? 409
-            : 500;
+      message.includes("Cannot delete this client") || message.includes("paid invoice")
+        ? 409
+        : apiErrorStatus(error);
     return NextResponse.json({ error: message }, { status });
   }
 }

@@ -36,6 +36,7 @@ export type InternalOperationsView =
   | "hr-recruitment"
   | "hr-leave"
   | "hr-performance"
+  | "hr-reports"
   | "strategy"
   | "potential-clients"
   | "whiteboard"
@@ -165,6 +166,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "hr-recruitment",
   "hr-leave",
   "hr-performance",
+  "hr-reports",
   "strategy",
   "potential-clients",
   "whiteboard",
@@ -421,6 +423,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
           { label: "Employees", view: "hr" as const },
           { label: "Leave", view: "hr-leave" as const },
           { label: "Performance", view: "hr-performance" as const },
+          { label: "Reports", view: "hr-reports" as const },
           { label: "Recruitment", view: "hr-recruitment" as const },
         ],
       },
@@ -608,6 +611,7 @@ export const internalViewTitles: Record<
   "hr-recruitment": { title: "Recruitment", subtitle: "Human Resources" },
   "hr-leave": { title: "Leave", subtitle: "Human Resources" },
   "hr-performance": { title: "Performance", subtitle: "Human Resources" },
+  "hr-reports": { title: "Reports", subtitle: "Human Resources" },
   strategy: { title: "Strategy", subtitle: "Strategy" },
   "potential-clients": { title: "Potential Clients", subtitle: "CRM" },
   whiteboard: { title: "Whiteboard", subtitle: "Strategy" },

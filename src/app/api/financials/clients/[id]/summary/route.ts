@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getClientFinanceSummary } from "@/lib/accounting/client-finance";
+import { apiErrorStatus } from "@/lib/api-error-status";
 import { requirePlatformSession } from "@/lib/platform-session";
 import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
@@ -22,10 +23,6 @@ export async function GET(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to load client finance summary.";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: apiErrorStatus(error) });
   }
 }

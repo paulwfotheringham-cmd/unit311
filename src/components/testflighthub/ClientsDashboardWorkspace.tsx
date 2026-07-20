@@ -47,6 +47,12 @@ async function readApiJson<T>(response: Response): Promise<T> {
   try {
     return JSON.parse(text) as T;
   } catch {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html") || /^\s*</.test(text)) {
+      throw new Error(
+        `API returned HTML instead of JSON (${response.status}${response.url ? ` ${response.url}` : ""}).`,
+      );
+    }
     throw new Error(response.ok ? "Invalid server response." : text.slice(0, 180));
   }
 }
