@@ -14,10 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const isCentral = isCentralDomainHost(host);
 
   return {
-    title: isCentral ? "Internal Operations | Sign In" : "Sign In | Unit311",
+    title: isCentral ? "Workspace Login | Unit311 Central" : "Workspace Login | Unit311",
     description: isCentral
-      ? "Secure access to the Unit311 Central Operations Platform."
-      : "Sign in to your Unit311 workspace.",
+      ? "Secure Access to your Workspace."
+      : "Secure Access to your Workspace.",
     robots: { index: false, follow: false },
   };
 }
