@@ -57,6 +57,7 @@ Minimum required for a healthy production site:
 - `SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SITE_URL=https://unit311central.com`
 - `AUTH_SECRET` (required in production for session signing; never use the anon key)
+- `INTEGRATION_CREDENTIALS_SECRET` (required in production when storing Integration Framework credentials; never reuse `AUTH_SECRET`. Optional `INTEGRATION_CREDENTIALS_KEY_ID` defaults to `v1` for rotation)
 
 Commonly required for full product:
 
@@ -97,7 +98,30 @@ Production database **Unit311 Central** (`kkxtvzxqmbacjatkiupq`) includes recove
 
 Migration **090** replaces global `UNIQUE(accounts.code)` with `UNIQUE(workspace_id, code)` so each workspace can seed the standard Chart of Accounts.
 
-Allowlist: `/api/internal/apply-unit311central-pending-migrations` includes these paths through **090**.
+Allowlist: `/api/internal/apply-unit311central-pending-migrations` includes these paths through **097**.
+
+### Required pre-deploy migrations (Company Details + Integration Framework)
+
+| Version | File | Purpose |
+| --- | --- | --- |
+| 091 | `091_hr_employee_foundation.sql` | HR employee foundation (allowlist predecessor) |
+| **092** | **`092_company_details.sql`** | **Required** — creates `company_details` (one row per workspace) |
+| **093** | **`093_integration_framework_phase0.sql`** | **Required** — Integration Framework Phase 0 tables + seed providers |
+| **094** | **`094_client_lifecycle_status.sql`** | Client Directory lifecycle status remap (FDR-MOD-011) |
+| **095** | **`095_platform_users_client_id.sql`** | External Users `client_id` FK → Client Directory (FDR-MOD-161) |
+| **096** | **`096_client_files_root_integrity.sql`** | Client Files root FK + backfill (MOD-103) |
+| **097** | **`097_demo_workspace.sql`** | Demo workspace (same build; curated content tenancy) |
+
+**Release checklist — database**
+
+1. Apply pending migrations via `/api/internal/apply-unit311central-pending-migrations` (or Supabase SQL / Management API) through **093**.
+2. Confirm verification payload includes `company_details: true`.
+3. Hit health probe: `GET /api/internal/company-details-health` → `{ ok: true, ready: true }`.
+4. Hit health probe: `GET /api/internal/wave0-foundation-health` → `{ ok: true, ready: true }` (includes integration tables after 093).
+5. Confirm Vercel Production has `INTEGRATION_CREDENTIALS_SECRET` (never `AUTH_SECRET`) before storing integration credentials.
+6. Only then merge/promote the app revision that depends on these schemas.
+
+The app **must not** create these tables at runtime. If 092/093 are missing, related APIs/health return **503** with a clear migration error.
 
 Full process notes: [docs/PRODUCTION_DEPLOYMENT.md](./docs/PRODUCTION_DEPLOYMENT.md).  
 Release summary: [docs/RELEASE_NOTES_RECOVERY_2026-07.md](./docs/RELEASE_NOTES_RECOVERY_2026-07.md).
@@ -108,6 +132,8 @@ After migrations that affect workspace foundations, confirm:
 - `provision_workspace()` is present (migration `079_…`)
 - Phase 1 `workspace_id` columns remain intact
 - `accounts` has `UNIQUE(workspace_id, code)` (migration `090_…`)
+- `company_details` table exists (migration `092_…`)
+- `integration_providers` + `workspace_integration_connections` exist (migration `093_…`)
 
 See [docs/WORKSPACE_ARCHITECTURE.md](./docs/WORKSPACE_ARCHITECTURE.md).
 
@@ -131,6 +157,7 @@ Protect with `CRON_SECRET` (or setup secret where implemented).
 4. https://unit311central.com/internaldashboard — redirects to Internal host
 5. https://acme.unit311central.com — Workspace unavailable (after wildcard DNS)
 6. Create a `workspaces` row with `slug=acme` — onboarding placeholder appears
+7. `GET https://unit311central.com/api/internal/company-details-health` — must return `{ ok: true, ready: true }` (fails **503** if migration **092** is not applied)
 
 ## Rollback
 

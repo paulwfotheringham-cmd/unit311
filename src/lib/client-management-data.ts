@@ -8,8 +8,17 @@ export type ClientIndustry =
   | "Infrastructure"
   | "Other";
 
+/** PRM-001 / FDR-MOD-011-LIFECYCLE — Directory-owned statuses only. */
 export type ClientAccountStatus =
+  | "Client Created"
+  | "Workspace Provisioned"
+  | "Onboarding"
   | "Active"
+  | "Dormant"
+  | "Archived";
+
+/** Legacy values still may exist until migration 094; never writable. */
+export type LegacyClientAccountStatus =
   | "Prospect"
   | "Pending"
   | "Pending Payment"
@@ -81,6 +90,9 @@ export type ManagedClient = {
   paymentMatchedAt?: string | null;
   lastPaidInvoiceNumber?: string | null;
   lastWiseTransactionId?: string | null;
+  /** ISO timestamps from internal_clients (live). */
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export const CLIENT_INDUSTRY_OPTIONS: ClientIndustry[] = [
@@ -95,13 +107,80 @@ export const CLIENT_INDUSTRY_OPTIONS: ClientIndustry[] = [
 ];
 
 export const CLIENT_STATUS_OPTIONS: ClientAccountStatus[] = [
+  "Client Created",
+  "Workspace Provisioned",
+  "Onboarding",
   "Active",
-  "Prospect",
-  "Pending",
-  "Pending Payment",
-  "On Hold",
-  "Inactive",
+  "Dormant",
+  "Archived",
 ];
+
+const CLIENT_STATUS_SET = new Set<string>(CLIENT_STATUS_OPTIONS);
+
+/** Allowed Directory transitions (FDR-MOD-011-LIFECYCLE). Archived is terminal. */
+const CLIENT_STATUS_TRANSITIONS: Readonly<
+  Record<ClientAccountStatus, readonly ClientAccountStatus[]>
+> = {
+  "Client Created": ["Workspace Provisioned", "Onboarding", "Active", "Dormant", "Archived"],
+  "Workspace Provisioned": ["Onboarding", "Active", "Archived"],
+  Onboarding: ["Active", "Dormant", "Archived"],
+  Active: ["Dormant", "Archived"],
+  Dormant: ["Active", "Archived"],
+  Archived: [],
+};
+
+export function isClientAccountStatus(value: unknown): value is ClientAccountStatus {
+  return typeof value === "string" && CLIENT_STATUS_SET.has(value);
+}
+
+/** Read-path normalization — maps legacy → canonical. */
+export function normalizeClientAccountStatus(value: unknown): ClientAccountStatus {
+  if (isClientAccountStatus(value)) return value;
+  switch (String(value ?? "").trim()) {
+    case "Prospect":
+      return "Client Created";
+    case "Pending":
+      return "Onboarding";
+    case "Pending Payment":
+      return "Workspace Provisioned";
+    case "On Hold":
+      return "Dormant";
+    case "Inactive":
+      return "Archived";
+    case "Active":
+      return "Active";
+    default:
+      return "Client Created";
+  }
+}
+
+export function canTransitionClientAccountStatus(
+  from: ClientAccountStatus,
+  to: ClientAccountStatus,
+): boolean {
+  if (from === to) return true;
+  return CLIENT_STATUS_TRANSITIONS[from].includes(to);
+}
+
+export function assertClientAccountStatusTransition(
+  from: ClientAccountStatus,
+  to: ClientAccountStatus,
+): void {
+  if (!canTransitionClientAccountStatus(from, to)) {
+    throw new Error(
+      `Invalid client lifecycle transition: ${from} → ${to}. Archived is terminal.`,
+    );
+  }
+}
+
+/** Dashboard “pre-active” bucket. */
+export function isClientPreActiveStatus(status: ClientAccountStatus): boolean {
+  return (
+    status === "Client Created" ||
+    status === "Workspace Provisioned" ||
+    status === "Onboarding"
+  );
+}
 
 export const CLIENT_CONTRACT_OPTIONS: ClientContractType[] = [
   "Framework Agreement",
@@ -199,7 +278,7 @@ export function createInitialClients(): ManagedClient[] {
       email: "sofia.alvarez@iberiainfra.com",
       phone: "+34 91 555 0142",
       region: "Iberia",
-      accountStatus: "Prospect",
+      accountStatus: "Client Created",
       contractType: "Trial",
       taxId: "ES-A80192736",
       billingAddress: "Paseo de la Castellana 95, 28046 Madrid, Spain",
@@ -235,7 +314,7 @@ export function createBlankClient(): ManagedClient {
     email: "",
     phone: "",
     region: "United Kingdom",
-    accountStatus: "Prospect",
+    accountStatus: "Client Created",
     contractType: "Project-based",
     taxId: "",
     billingAddress: "",
@@ -269,14 +348,14 @@ export function clientStatusClass(status: ClientAccountStatus) {
   switch (status) {
     case "Active":
       return "border-emerald-400/40 bg-emerald-500/15 text-emerald-300";
-    case "Prospect":
+    case "Client Created":
       return "border-sky-400/40 bg-sky-500/15 text-sky-300";
-    case "Pending":
-    case "Pending Payment":
+    case "Workspace Provisioned":
+    case "Onboarding":
       return "border-amber-400/40 bg-amber-500/15 text-amber-200";
-    case "On Hold":
-      return "border-amber-400/40 bg-amber-500/15 text-amber-200";
-    case "Inactive":
+    case "Dormant":
+      return "border-violet-400/40 bg-violet-500/15 text-violet-200";
+    case "Archived":
       return "border-white/20 bg-white/10 text-white/60";
     default:
       return "border-white/20 bg-white/10 text-white/60";
@@ -334,7 +413,7 @@ export function mapInternalClient(row: DbInternalClient): ManagedClient {
     email: row.email,
     phone: row.phone,
     region: row.region as ClientRegion,
-    accountStatus: row.account_status as ClientAccountStatus,
+    accountStatus: normalizeClientAccountStatus(row.account_status),
     contractType: row.contract_type as ClientContractType,
     taxId: row.tax_id,
     billingAddress: row.billing_address,
@@ -350,7 +429,7 @@ export function mapInternalClient(row: DbInternalClient): ManagedClient {
     primaryContactSurname: row.primary_contact_surname ?? undefined,
     activeProjects: row.active_projects,
     notes: row.notes,
-    filesFolderId: row.files_folder_id ?? undefined,
+    filesFolderId: row.files_folder_id != null ? String(row.files_folder_id) : undefined,
     filesFolderName: row.files_folder_name ?? undefined,
     platformUrl: row.platform_url ?? undefined,
     platformOrganisationId: row.platform_organisation_id ?? undefined,
@@ -366,6 +445,8 @@ export function mapInternalClient(row: DbInternalClient): ManagedClient {
     paymentMatchedAt: row.payment_matched_at ?? null,
     lastPaidInvoiceNumber: row.last_paid_invoice_number ?? null,
     lastWiseTransactionId: row.last_wise_transaction_id ?? null,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
   };
 }
 

@@ -33,12 +33,23 @@
  */
 
 import { useMemo, useState } from "react";
-import { Check, Package, Truck } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Globe2,
+  Package,
+  Truck,
+} from "lucide-react";
 
 import {
   SHIPPING_REGIONS,
+  WIZARD_SHIPPING_REGIONS,
+  getProviderBrandName,
   getShippingProviderByCode,
   listRecommendedProvidersForRegion,
+  type ShippingProviderRegistryEntry,
   type ShippingRegionCode,
 } from "@/lib/shipping-provider-registry";
 import { cn } from "@/lib/utils";
@@ -53,7 +64,6 @@ type WizardStep =
   | "region"
   | "provider"
   | "business_account"
-  | "api_credentials"
   | "finish";
 
 type LogisticsSetupWizardProps = {
@@ -154,12 +164,278 @@ function StepActions({
   );
 }
 
+function TriStateQuestion({
+  name,
+  question,
+  value,
+  onChange,
+}: {
+  name: string;
+  question: string;
+  value: TriState;
+  onChange: (next: TriState) => void;
+}) {
+  const options: { value: Exclude<TriState, null>; label: string }[] = [
+    { value: "yes", label: "Yes" },
+    { value: "no", label: "No" },
+    { value: "unsure", label: "I'm Not Sure" },
+  ];
+
+  return (
+    <fieldset className="rounded-xl border border-white/12 bg-[#0b1524]/70 px-4 py-3.5">
+      <legend className="px-1 text-sm font-semibold text-white">{question}</legend>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <label
+              key={option.value}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+                selected
+                  ? "border-sky-400/45 bg-sky-500/15 text-white"
+                  : "border-white/10 bg-white/[0.03] text-white/80 hover:border-white/20",
+              )}
+            >
+              <input
+                type="radio"
+                className="sr-only"
+                name={name}
+                checked={selected}
+                onChange={() => onChange(option.value)}
+              />
+              <span
+                className={cn(
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                  selected ? "border-sky-300 bg-sky-400" : "border-white/35",
+                )}
+                aria-hidden
+              >
+                {selected ? <span className="h-1.5 w-1.5 rounded-full bg-[#0b1524]" /> : null}
+              </span>
+              {option.label}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function businessAccountGuidance({
+  brand,
+  businessAccount,
+  onlineAccess,
+  apiCredentials,
+}: {
+  brand: string;
+  businessAccount: TriState;
+  onlineAccess: TriState;
+  apiCredentials: TriState;
+}): { tone: "amber" | "sky" | "emerald" | "neutral"; message: string; showVisit: boolean } | null {
+  if (!businessAccount && !onlineAccess && !apiCredentials) return null;
+
+  if (businessAccount === "no") {
+    return {
+      tone: "amber",
+      message: `You'll first need to create a business account with ${brand} before your workspace can connect.`,
+      showVisit: true,
+    };
+  }
+
+  if (businessAccount === "unsure") {
+    return {
+      tone: "amber",
+      message: `A ${brand} business account is normally required before Unit311 can connect. If you are unsure whether you have one, check with your shipping team or visit ${brand} to confirm.`,
+      showVisit: true,
+    };
+  }
+
+  if (businessAccount === "yes" && onlineAccess === "no") {
+    return {
+      tone: "sky",
+      message: `You will need online access to your ${brand} account so you can reach the developer portal and prepare a connection later.`,
+      showVisit: true,
+    };
+  }
+
+  if (businessAccount === "yes" && onlineAccess === "unsure") {
+    return {
+      tone: "sky",
+      message: `Online account access is needed to reach the ${brand} Developer Portal. If you are unsure, try signing in to your ${brand} business account first.`,
+      showVisit: true,
+    };
+  }
+
+  if (
+    businessAccount === "yes" &&
+    (onlineAccess === "yes" || onlineAccess === null) &&
+    apiCredentials === "no"
+  ) {
+    return {
+      tone: "sky",
+      message: "Great. The next step will help you create API credentials.",
+      showVisit: false,
+    };
+  }
+
+  if (
+    businessAccount === "yes" &&
+    (onlineAccess === "yes" || onlineAccess === null) &&
+    apiCredentials === "unsure"
+  ) {
+    return {
+      tone: "sky",
+      message: `API credentials are issued from the ${brand} Developer Portal. You do not need to enter them on this screen — Unit311 will guide you when you are ready to connect.`,
+      showVisit: false,
+    };
+  }
+
+  if (businessAccount === "yes" && onlineAccess === "yes" && apiCredentials === "yes") {
+    return {
+      tone: "emerald",
+      message: `You're ready to connect your ${brand} account.`,
+      showVisit: false,
+    };
+  }
+
+  if (businessAccount === "yes") {
+    return {
+      tone: "neutral",
+      message: `Answer the questions above so we can guide you. You can skip setup at any time and keep using Unit311 Logistics.`,
+      showVisit: false,
+    };
+  }
+
+  return null;
+}
+
+function ProviderLogoPlaceholder({ name }: { name: string }) {
+  const initials = name
+    .split(/[\s/]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return (
+    <span
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-sky-500/20 via-white/[0.06] to-indigo-500/10 text-sm font-bold tracking-wide text-sky-100"
+      aria-hidden
+    >
+      {initials || <Package className="h-5 w-5 text-sky-200" />}
+    </span>
+  );
+}
+
+function ProviderSelectionCard({
+  provider,
+  selected,
+  learnMoreOpen,
+  onToggleLearnMore,
+  onSelect,
+}: {
+  provider: ShippingProviderRegistryEntry;
+  selected: boolean;
+  learnMoreOpen: boolean;
+  onToggleLearnMore: () => void;
+  onSelect: () => void;
+}) {
+  return (
+    <article
+      className={cn(
+        "flex h-full flex-col rounded-2xl border p-4 transition-colors sm:p-5",
+        selected
+          ? "border-sky-400/55 bg-sky-500/12 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.22)]"
+          : "border-white/12 bg-[#0b1524]/85 hover:border-white/22",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <ProviderLogoPlaceholder name={provider.name} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-white">{provider.name}</h3>
+            {selected ? (
+              <span className="inline-flex items-center gap-1 rounded-md border border-sky-400/35 bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-sky-200">
+                <Check className="h-3 w-3" aria-hidden />
+                Selected
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1.5 text-sm leading-relaxed text-white/75">{provider.shortDescription}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+            Best suited for
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {provider.bestSuitedFor.map((item) => (
+              <li key={item} className="flex items-start gap-1.5 text-sm text-white/80">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-sky-300/80" aria-hidden />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+            Typical use cases
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {provider.typicalUseCases.map((item) => (
+              <li key={item} className="flex items-start gap-1.5 text-sm text-white/80">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/35" aria-hidden />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {learnMoreOpen ? (
+        <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm leading-relaxed text-white/70">
+          {provider.learnMore ?? provider.shortDescription}
+        </p>
+      ) : null}
+
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+        <button
+          type="button"
+          className={secondaryBtnClassName}
+          onClick={onToggleLearnMore}
+          aria-expanded={learnMoreOpen}
+        >
+          {learnMoreOpen ? (
+            <>
+              <ChevronUp className="mr-1.5 h-4 w-4" aria-hidden />
+              Hide details
+            </>
+          ) : (
+            <>
+              <ChevronDown className="mr-1.5 h-4 w-4" aria-hidden />
+              Learn More
+            </>
+          )}
+        </button>
+        <button type="button" className={primaryBtnClassName} onClick={onSelect}>
+          Select Provider
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetupWizardProps) {
   const [step, setStep] = useState<WizardStep>("welcome");
   const [path, setPath] = useState<SetupPath>(null);
   const [region, setRegion] = useState<ShippingRegionCode | null>(null);
   const [providerCode, setProviderCode] = useState<string | null>(null);
+  const [learnMoreCode, setLearnMoreCode] = useState<string | null>(null);
   const [businessAccount, setBusinessAccount] = useState<TriState>(null);
+  const [onlineAccess, setOnlineAccess] = useState<TriState>(null);
   const [apiCredentials, setApiCredentials] = useState<TriState>(null);
   /** Providers marked deferred (configure later / not now mid-flow). No live connect in this phase. */
   const [deferredProviderCodes, setDeferredProviderCodes] = useState<string[]>([]);
@@ -170,7 +446,16 @@ export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetup
     [region],
   );
   const selectedProvider = providerCode ? getShippingProviderByCode(providerCode) : undefined;
+  const providerBrand = selectedProvider ? getProviderBrandName(selectedProvider) : "this provider";
   const regionLabel = SHIPPING_REGIONS.find((entry) => entry.code === region)?.label;
+  const wideLayout = step === "region" || step === "provider";
+  const accountGuidance = businessAccountGuidance({
+    brand: providerBrand,
+    businessAccount,
+    onlineAccess,
+    apiCredentials,
+  });
+  const businessAccountReady = Boolean(businessAccount && onlineAccess && apiCredentials);
 
   const deferredProviders = useMemo(
     () =>
@@ -200,7 +485,24 @@ export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetup
     setStep("finish");
   }
 
-  function handleConfigureLater() {
+  function selectRegion(code: ShippingRegionCode) {
+    setRegion(code);
+    setProviderCode(null);
+    setLearnMoreCode(null);
+    setStep("provider");
+  }
+
+  function selectProvider(code: string) {
+    setProviderCode(code);
+    setLearnMoreCode(null);
+    setBusinessAccount(null);
+    setOnlineAccess(null);
+    setApiCredentials(null);
+    setStep("business_account");
+  }
+
+  function finishBusinessAccountStep() {
+    // No live connect yet — defer selected provider; Connection Wizard handles credentials later.
     deferCurrentProviderIfAny();
     setStep("finish");
   }
@@ -214,7 +516,7 @@ export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetup
   ];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className={cn("mx-auto space-y-4", wideLayout ? "max-w-5xl" : "max-w-2xl")}>
       <section className={panelClassName}>
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
           Workspace Logistics Setup
@@ -257,7 +559,7 @@ export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetup
               <OptionCard
                 selected={path === "connect"}
                 title="Connect a Shipping Provider"
-                description="Connect your existing courier account for enhanced tracking and automation."
+                description="Choose a courier that fits your business and prepare your shipping account."
                 onSelect={() => setPath("connect")}
               />
             </div>
@@ -302,47 +604,49 @@ export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetup
         {step === "region" ? (
           <div className="mt-4 space-y-5">
             <div>
-              <h2 className="text-lg font-semibold text-white">Step 2 – Select your shipping region</h2>
+              <h2 className="text-lg font-semibold text-white">Select Shipping Region</h2>
               <p className="mt-1 text-sm text-white/70">
-                Recommended providers are based on your region (from the Provider Registry).
+                Choose where you ship from. We will show providers that fit that market.
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {SHIPPING_REGIONS.map((entry) => (
-                <button
-                  key={entry.code}
-                  type="button"
-                  onClick={() => {
-                    setRegion(entry.code);
-                    setProviderCode(null);
-                  }}
-                  className={cn(
-                    "rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-colors",
-                    region === entry.code
-                      ? "border-sky-400/50 bg-sky-500/15 text-white"
-                      : "border-white/12 bg-[#0b1524]/80 text-white/85 hover:border-white/25",
-                  )}
-                >
-                  {entry.label}
-                </button>
-              ))}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {WIZARD_SHIPPING_REGIONS.map((entry) => {
+                const selected = region === entry.code;
+                return (
+                  <button
+                    key={entry.code}
+                    type="button"
+                    onClick={() => selectRegion(entry.code)}
+                    className={cn(
+                      "min-h-[7.5rem] rounded-2xl border px-5 py-5 text-left transition-colors",
+                      selected
+                        ? "border-sky-400/55 bg-sky-500/15 text-white shadow-[inset_0_0_0_1px_rgba(56,189,248,0.22)]"
+                        : "border-white/12 bg-[#0b1524]/85 text-white/90 hover:border-white/25",
+                    )}
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.04]">
+                      <Globe2 className="h-5 w-5 text-sky-200" aria-hidden />
+                    </span>
+                    <span className="mt-4 block text-lg font-semibold tracking-tight">{entry.label}</span>
+                    <span className="mt-1.5 block text-sm leading-relaxed text-white/65">
+                      {entry.description}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <StepActions
-              onNotNow={handleNotNow}
-              onBack={() => setStep("choose_path")}
-              continueDisabled={!region}
-              onContinue={() => setStep("provider")}
-            />
+            <StepActions onNotNow={handleNotNow} onBack={() => setStep("choose_path")} />
           </div>
         ) : null}
 
         {step === "provider" ? (
           <div className="mt-4 space-y-5">
             <div>
-              <h2 className="text-lg font-semibold text-white">Step 3 – Select a Provider</h2>
+              <h2 className="text-lg font-semibold text-white">Choose a Shipping Provider</h2>
               <p className="mt-1 text-sm text-white/70">
                 {regionLabel ? `${regionLabel} — ` : null}
-                providers from the Provider Registry.
+                compare providers and pick the one that best fits how you ship. You can change this
+                later.
               </p>
             </div>
             {providers.length === 0 ? (
@@ -350,178 +654,151 @@ export default function LogisticsSetupWizard({ onOpenLogistics }: LogisticsSetup
                 No recommended providers for this region yet. You can continue with Unit311 Logistics.
               </p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {providers.map((provider) => {
-                  const selected = providerCode === provider.code;
-                  return (
-                    <button
-                      key={provider.code}
-                      type="button"
-                      onClick={() => setProviderCode(provider.code)}
-                      className={cn(
-                        "flex flex-col rounded-xl border p-4 text-left transition-colors",
-                        selected
-                          ? "border-sky-400/50 bg-sky-500/15 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.2)]"
-                          : "border-white/12 bg-[#0b1524]/80 hover:border-white/25",
-                      )}
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">
-                        <Package className="h-4 w-4 text-sky-200" aria-hidden />
-                      </span>
-                      <span className="mt-3 text-sm font-semibold text-white">{provider.name}</span>
-                      <span className="mt-1 text-xs leading-relaxed text-white/65">
-                        Shipping provider · Registry
-                      </span>
-                      {selected ? (
-                        <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-200">
-                          <Check className="h-3 w-3" aria-hidden />
-                          Selected
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
+              <div className="grid gap-4 lg:grid-cols-2">
+                {providers.map((provider) => (
+                  <ProviderSelectionCard
+                    key={provider.code}
+                    provider={provider}
+                    selected={providerCode === provider.code}
+                    learnMoreOpen={learnMoreCode === provider.code}
+                    onToggleLearnMore={() =>
+                      setLearnMoreCode((current) =>
+                        current === provider.code ? null : provider.code,
+                      )
+                    }
+                    onSelect={() => selectProvider(provider.code)}
+                  />
+                ))}
               </div>
             )}
-            <StepActions
-              onNotNow={handleNotNow}
-              onBack={() => setStep("region")}
-              continueDisabled={!providerCode}
-              onContinue={() => setStep("business_account")}
-            />
+            <StepActions onNotNow={handleNotNow} onBack={() => setStep("region")} />
           </div>
         ) : null}
 
         {step === "business_account" ? (
           <div className="mt-4 space-y-5">
             <div>
-              <h2 className="text-lg font-semibold text-white">Step 4 – Business Account</h2>
+              <h2 className="text-lg font-semibold text-white">Business Account</h2>
               <p className="mt-1 text-sm text-white/70">
-                Do you already have a business account
-                {selectedProvider ? ` with ${selectedProvider.name}` : " with this provider"}?
+                Understand what you need to connect {providerBrand}. You will not enter credentials
+                on this screen.
               </p>
             </div>
-            <div className="space-y-3">
-              <OptionCard
-                selected={businessAccount === "yes"}
-                title="Yes"
-                description="I already have a business shipping account."
-                onSelect={() => setBusinessAccount("yes")}
-              />
-              <OptionCard
-                selected={businessAccount === "no"}
-                title="No"
-                description="I do not have a business account yet."
-                onSelect={() => setBusinessAccount("no")}
-              />
-              <OptionCard
-                selected={businessAccount === "unsure"}
-                title="I'm not sure"
-                description="Help me understand what I need."
-                onSelect={() => setBusinessAccount("unsure")}
-              />
-            </div>
-            {businessAccount === "no" || businessAccount === "unsure" ? (
-              <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-50/95">
-                <p>
-                  A <strong className="font-semibold">business account</strong> with the courier is
-                  normally required for API integration. Unit311 will guide you through creating or
-                  finding that account when you are ready.
-                </p>
-                {selectedProvider ? (
-                  <p className="mt-2 text-amber-50/90">
-                    Example: to connect {selectedProvider.name} for automation, you typically need a{" "}
-                    {selectedProvider.name} business account first.
-                  </p>
-                ) : null}
-                <p className="mt-2 text-amber-50/90">
-                  You can skip provider setup and keep using Unit311 Logistics at any time.
-                </p>
-              </div>
-            ) : null}
-            <StepActions
-              onNotNow={handleNotNow}
-              onBack={() => setStep("provider")}
-              continueDisabled={!businessAccount}
-              onContinue={() => setStep("api_credentials")}
-            />
-          </div>
-        ) : null}
 
-        {step === "api_credentials" ? (
-          <div className="mt-4 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Step 5 – API Credentials</h2>
-              <p className="mt-1 text-sm text-white/70">Do you already have API credentials?</p>
+            <div className="rounded-2xl border border-white/12 bg-[#0b1524]/85 px-4 py-4 sm:px-5">
+              <div className="flex items-center gap-3">
+                {selectedProvider ? <ProviderLogoPlaceholder name={selectedProvider.name} /> : null}
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                    Selected provider
+                  </p>
+                  <p className="mt-1 text-xl font-semibold tracking-tight text-white">
+                    {selectedProvider?.name ?? providerBrand}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <p className="text-sm font-medium text-white/90">
+                  To connect {providerBrand} to Unit311 you will normally need:
+                </p>
+                <ul className="mt-3 space-y-2 text-sm text-white/80">
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+                    <span>A {providerBrand} Business Account</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+                    <span>Access to the {providerBrand} Developer Portal</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+                    <span>API credentials</span>
+                  </li>
+                </ul>
+                <p className="mt-4 text-sm leading-relaxed text-white/70">
+                  Don&apos;t worry if you don&apos;t have these yet.
+                  <br />
+                  We&apos;ll guide you through the process.
+                </p>
+              </div>
             </div>
+
             <div className="space-y-3">
-              <OptionCard
-                selected={apiCredentials === "yes"}
-                title="Yes"
-                description="I have API keys or developer credentials ready."
-                onSelect={() => setApiCredentials("yes")}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                Current status
+              </p>
+              <TriStateQuestion
+                name="business_account"
+                question="Do you already have a Business Account?"
+                value={businessAccount}
+                onChange={setBusinessAccount}
               />
-              <OptionCard
-                selected={apiCredentials === "no"}
-                title="No"
-                description="I do not have API credentials yet."
-                onSelect={() => setApiCredentials("no")}
+              <TriStateQuestion
+                name="online_access"
+                question="Do you already have online access to your account?"
+                value={onlineAccess}
+                onChange={setOnlineAccess}
               />
-              <OptionCard
-                selected={apiCredentials === "unsure"}
-                title="I'm not sure"
-                description="I am not sure what API credentials are."
-                onSelect={() => setApiCredentials("unsure")}
+              <TriStateQuestion
+                name="api_credentials"
+                question="Have you already created API credentials?"
+                value={apiCredentials}
+                onChange={setApiCredentials}
               />
             </div>
-            {apiCredentials === "no" || apiCredentials === "unsure" ? (
-              <div className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm leading-relaxed text-sky-50/95">
-                <p>
-                  Unit311 will guide you through obtaining the required credentials from the
-                  provider&apos;s developer portal when you configure the connection.
-                </p>
-                <p className="mt-2">
-                  You do not need to enter API keys in this setup step. Use{" "}
-                  <strong className="font-semibold">Configure Later</strong> or{" "}
-                  <strong className="font-semibold">Not now</strong> to open Logistics and finish
-                  provider connection when you are ready.
+
+            {accountGuidance ? (
+              <div
+                className={cn(
+                  "rounded-xl border px-4 py-3 text-sm leading-relaxed",
+                  accountGuidance.tone === "amber" &&
+                    "border-amber-400/25 bg-amber-500/10 text-amber-50/95",
+                  accountGuidance.tone === "sky" && "border-sky-400/25 bg-sky-500/10 text-sky-50/95",
+                  accountGuidance.tone === "emerald" &&
+                    "border-emerald-400/25 bg-emerald-500/10 text-emerald-50/95",
+                  accountGuidance.tone === "neutral" &&
+                    "border-white/12 bg-[#0b1524]/80 text-white/80",
+                )}
+              >
+                <p>{accountGuidance.message}</p>
+                {accountGuidance.showVisit && selectedProvider?.businessAccountUrl ? (
+                  <a
+                    href={selectedProvider.businessAccountUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(primaryBtnClassName, "mt-3 inline-flex gap-2")}
+                  >
+                    Visit {providerBrand}
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                  </a>
+                ) : null}
+                <p className="mt-3 text-white/70">
+                  You can choose Not Now to defer provider setup and keep using Unit311 Logistics
+                  immediately. Return later from {FUTURE_ACCESS_PATH}.
                 </p>
               </div>
             ) : null}
-            {apiCredentials === "yes" ? (
-              <div className="rounded-xl border border-white/12 bg-[#0b1524]/80 px-4 py-3 text-sm leading-relaxed text-white/75">
-                Credential entry uses the standard Integration Framework connection flow. For this
-                development phase, continue to the summary — live credential capture comes later.
-              </div>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4">
-              <button type="button" className={notNowBtnClassName} onClick={handleNotNow}>
-                Not now
+
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
+              <button
+                type="button"
+                className={secondaryBtnClassName}
+                onClick={() => setStep("provider")}
+              >
+                Back
               </button>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className={secondaryBtnClassName} onClick={handleConfigureLater}>
-                  Configure Later
-                </button>
-                <button
-                  type="button"
-                  className={secondaryBtnClassName}
-                  onClick={() => setStep("business_account")}
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  className={primaryBtnClassName}
-                  disabled={!apiCredentials}
-                  onClick={() => {
-                    // No live API connect yet — treat selected provider as deferred for summary.
-                    deferCurrentProviderIfAny();
-                    setStep("finish");
-                  }}
-                >
-                  Continue
-                </button>
-              </div>
+              <button type="button" className={notNowBtnClassName} onClick={handleNotNow}>
+                Not Now
+              </button>
+              <button
+                type="button"
+                className={cn(primaryBtnClassName, "ml-auto")}
+                disabled={!businessAccountReady}
+                onClick={finishBusinessAccountStep}
+              >
+                Continue
+              </button>
             </div>
           </div>
         ) : null}

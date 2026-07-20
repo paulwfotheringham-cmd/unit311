@@ -1,32 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  assertFileInClientSubtree,
+  assertFolderInClientSubtree,
+  resolveClientFilesRoot,
+} from "@/lib/client-files-root";
+import { filesApiErrorStatus, requireInternalFilesAccess } from "@/lib/files-api-auth";
 import { deleteFile, getFileDownloadUrl, updateFile } from "@/lib/internal-files-service";
-import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: RouteContext) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
 
+  const auth = await requireInternalFilesAccess();
+  if ("error" in auth) return auth.error;
+
   try {
-    await requirePlatformSession();
-    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
-    const download = await getFileDownloadUrl(id, { workspaceId: workspace.id });
+    const clientId = request.nextUrl.searchParams.get("clientId")?.trim() || null;
+    if (clientId) {
+      const root = await resolveClientFilesRoot(clientId, auth.workspace.id);
+      await assertFileInClientSubtree(id, root.rootFolderId, auth.workspace.id);
+    }
+
+    const download = await getFileDownloadUrl(id, { workspaceId: auth.workspace.id });
     return NextResponse.json(download);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to get download URL";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json(
+      { error: message },
+      { status: filesApiErrorStatus(message, error) },
+    );
   }
 }
 
@@ -35,15 +45,30 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
 
+  const auth = await requireInternalFilesAccess();
+  if ("error" in auth) return auth.error;
+
   try {
-    await requirePlatformSession();
-    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
     const body = (await request.json()) as {
       name?: string;
       folderId?: string | null;
       categoryId?: string | null;
+      clientId?: string | null;
     };
+
+    if (body.clientId?.trim()) {
+      const root = await resolveClientFilesRoot(body.clientId.trim(), auth.workspace.id);
+      await assertFileInClientSubtree(id, root.rootFolderId, auth.workspace.id);
+      if (body.folderId !== undefined) {
+        body.folderId = await assertFolderInClientSubtree(
+          body.folderId,
+          root.rootFolderId,
+          auth.workspace.id,
+          { allowNull: true },
+        );
+      }
+    }
 
     const file = await updateFile(
       id,
@@ -52,37 +77,42 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         folderId: body.folderId,
         categoryId: body.categoryId,
       },
-      { workspaceId: workspace.id },
+      { workspaceId: auth.workspace.id },
     );
 
     return NextResponse.json({ file });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update file";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json(
+      { error: message },
+      { status: filesApiErrorStatus(message, error) },
+    );
   }
 }
 
-export async function DELETE(_request: NextRequest, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
 
+  const auth = await requireInternalFilesAccess();
+  if ("error" in auth) return auth.error;
+
   try {
-    await requirePlatformSession();
-    const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
-    await deleteFile(id, { workspaceId: workspace.id });
+    const clientId = request.nextUrl.searchParams.get("clientId")?.trim() || null;
+    if (clientId) {
+      const root = await resolveClientFilesRoot(clientId, auth.workspace.id);
+      await assertFileInClientSubtree(id, root.rootFolderId, auth.workspace.id);
+    }
+
+    await deleteFile(id, { workspaceId: auth.workspace.id });
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete file";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json(
+      { error: message },
+      { status: filesApiErrorStatus(message, error) },
+    );
   }
 }

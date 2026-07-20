@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { filesApiErrorStatus, requireInternalFilesAccess } from "@/lib/files-api-auth";
 import { browseExternalFilesFromDb } from "@/lib/external-files-service";
-import { requirePlatformSession } from "@/lib/platform-session";
-import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireInternalFilesAccess();
+  if ("error" in auth) return auth.error;
+
   try {
-    await requirePlatformSession();
-    const workspace = await requireCurrentWorkspace();
     const folderId = request.nextUrl.searchParams.get("folderId");
     const query = request.nextUrl.searchParams.get("q") ?? undefined;
     const result = await browseExternalFilesFromDb(
@@ -17,15 +17,14 @@ export async function GET(request: NextRequest) {
         folderId: folderId || null,
         query,
       },
-      { workspaceId: workspace.id },
+      { workspaceId: auth.workspace.id },
     );
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to browse external files";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message, entries: [], breadcrumb: [] }, { status });
+    return NextResponse.json(
+      { error: message, entries: [], breadcrumb: [] },
+      { status: filesApiErrorStatus(message, error) },
+    );
   }
 }

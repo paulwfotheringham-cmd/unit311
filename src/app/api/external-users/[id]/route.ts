@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireInternalAdministratorSession } from "@/lib/internal-admin-auth";
+import { requireInternalAdministratorWorkspaceSession } from "@/lib/internal-admin-auth";
 import {
   deleteExternalUser,
   resetExternalUserPassword,
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -24,22 +24,35 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = (await request.json()) as {
       name?: string;
+      clientId?: string | null;
       organisation?: string;
       username?: string;
       redirectPath?: string;
       isActive?: boolean;
     };
 
-    const user = await updateExternalUser(id, body);
+    const user = await updateExternalUser(id, {
+      name: body.name,
+      clientId: body.clientId,
+      username: body.username,
+      redirectPath: body.redirectPath,
+      isActive: body.isActive,
+    });
     return NextResponse.json({ user });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update external user";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("migration 095")
+        ? 503
+        : message.includes("required") || message.includes("not found")
+          ? 400
+          : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -57,7 +70,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {

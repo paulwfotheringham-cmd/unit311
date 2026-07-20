@@ -26,8 +26,28 @@ Production includes the following recovery migrations (applied directly during t
 | `088_financials_files_workspace_isolation.sql` | Journal lines + treasury workspace isolation |
 | `089_messaging_email_support_workspace_isolation.sql` | Messaging / email / support tenant uniqueness |
 | `090_accounts_workspace_code_unique.sql` | Multi-tenant GL: `UNIQUE(workspace_id, code)` |
+| `091_hr_employee_foundation.sql` | HR employee foundation (MOD-071) |
+| `092_company_details.sql` | **Company Details** table (MOD-081) — required before enabling the feature |
+| `093_integration_framework_phase0.sql` | **Integration Framework Phase 0** — provider registry + workspace connections |
 
 **Note on 090:** Applied directly to production on 2026-07-19 during recovery closeout verification. The SQL file and pending-migrations allowlist entry are kept in-repo so the repository matches production. Re-applying 090 is idempotent (safe no-op when the composite unique already exists).
+
+**Note on 092:** Must be applied as a normal pre-deploy database step before shipping Company Details. The application never creates this table at runtime. Verify with `GET /api/internal/company-details-health` (`ok: true`).
+
+**Note on 093:** Required before storing Integration Framework credentials. Idempotent (`create … if not exists`, seed `on conflict do nothing`). Verify with `GET /api/internal/wave0-foundation-health` (integration table checks `ok: true`). Set Vercel Production **`INTEGRATION_CREDENTIALS_SECRET`** (never reuse `AUTH_SECRET`). Optional **`INTEGRATION_CREDENTIALS_KEY_ID`** defaults to `v1` for rotation.
+
+### Pre-deploy release checklist (database)
+
+1. Confirm origin is `Unit311central/unit311central` (`node scripts/assert-canonical-unit311-repo.mjs`).
+2. Apply pending migrations allowlist through **`097_demo_workspace.sql`** via `/api/internal/apply-unit311central-pending-migrations` (setup secret) or Supabase Management API / SQL editor.
+3. Add Vercel/DNS domain **`demo.unit311central.com`** to the same `unit311central` project (same build as Internal). See [DEMO_RELEASE_MODEL.md](./DEMO_RELEASE_MODEL.md).
+4. Confirm POST verification includes `company_details: true` (and Wave 0 health reports integration tables present).
+5. Confirm `GET /api/internal/company-details-health` returns `{ ok: true, ready: true }`.
+6. Confirm `GET /api/internal/wave0-foundation-health` returns `{ ok: true, ready: true }` after 093.
+7. Confirm Production env includes `INTEGRATION_CREDENTIALS_SECRET` before any Admin credential upsert.
+8. Merge/promote the app revision only after steps 2–7 pass.
+9. Smoke Corporate Information → Company Details (load / save) on Internal host.
+10. After deploy affecting the sales journey: `npm run demo:refresh` then smoke `https://demo.unit311central.com`.
 
 `supabase_migrations.schema_migrations` may remain empty; this project applies SQL out-of-band. Do not run `supabase db push` against production without an explicit ops plan.
 

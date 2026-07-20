@@ -60,7 +60,7 @@ async function ensurePendingClientRecord(input: {
       companyName: input.organisation.name,
       primaryContact: input.contactName,
       email: input.contactEmail,
-      accountStatus: "Pending",
+      accountStatus: "Workspace Provisioned",
       contractType: "Retainer",
       industry: "Other",
       region: "United Kingdom",

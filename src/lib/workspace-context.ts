@@ -3,10 +3,12 @@ import { headers } from "next/headers";
 
 import {
   getRequestHost,
+  isDemoDomainHost,
   isInternalDomainHost,
   parseClientPlatformSubdomainSafe,
 } from "@/lib/app-domains";
 import { getPlatformSession, type PlatformSession } from "@/lib/platform-session";
+import { demoWorkspaceSlug } from "@/lib/runtime-surface";
 import { authorizeUserForWorkspace } from "@/lib/workspace-authorization";
 import {
   INTERNAL_WORKSPACE_SLUG,
@@ -37,6 +39,7 @@ export type CurrentWorkspace = {
 export type WorkspaceContextSource =
   | "host_slug"
   | "internal_default"
+  | "demo_default"
   | "session_claim"
   | "none";
 
@@ -158,6 +161,7 @@ async function authorizeActiveWorkspace(
  *
  * Customer host: host workspace after identity + membership authorization.
  * Internal host: unit311 after authorization.
+ * Demo host: demo workspace after authorization (same Internal Ops UI).
  * Apex / other: session claim only if the user is authorised for that workspace.
  */
 export const getCurrentWorkspace = cache(async (): Promise<CurrentWorkspace | null> => {
@@ -234,6 +238,33 @@ export const getWorkspaceContextDiagnostics = cache(
         sessionWorkspace: fromSession,
         resolvedWorkspace: allowed ? workspace : null,
         source: allowed ? "host_slug" : "none",
+        authenticated: true,
+        authorized: allowed,
+      };
+    }
+
+    if (isDemoDomainHost(host)) {
+      const demo = await findWorkspaceBySlug(demoWorkspaceSlug());
+      if (!demo) {
+        return {
+          host,
+          sessionUser,
+          sessionWorkspace: fromSession,
+          resolvedWorkspace: null,
+          source: "none",
+          authenticated: true,
+          authorized: false,
+        };
+      }
+
+      const workspace = toCurrentWorkspace(demo);
+      const allowed = await authorizeActiveWorkspace(session, workspace);
+      return {
+        host,
+        sessionUser,
+        sessionWorkspace: fromSession,
+        resolvedWorkspace: allowed ? workspace : null,
+        source: allowed ? "demo_default" : "none",
         authenticated: true,
         authorized: allowed,
       };

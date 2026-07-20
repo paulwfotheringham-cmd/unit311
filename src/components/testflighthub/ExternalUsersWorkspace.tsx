@@ -6,6 +6,7 @@ import {
   formatExternalUserLastLogin,
   type ExternalUser,
 } from "@/lib/external-users-data";
+import type { ManagedClient } from "@/lib/client-management-data";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
 import { KeyRound, Loader2, Plus, Save, Trash2 } from "lucide-react";
@@ -38,6 +39,8 @@ type ExternalUsersWorkspaceProps = {
 
 export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersWorkspaceProps) {
   const [users, setUsers] = useState<ExternalUser[]>([]);
+  const [clients, setClients] = useState<ManagedClient[]>([]);
+  const [createClientId, setCreateClientId] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -57,7 +60,7 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
     if (!selectedUser || !savedSnapshot || savedSnapshot.id !== selectedUser.id) return true;
     return (
       selectedUser.name !== savedSnapshot.name ||
-      selectedUser.organisation !== savedSnapshot.organisation ||
+      selectedUser.clientId !== savedSnapshot.clientId ||
       selectedUser.username !== savedSnapshot.username ||
       selectedUser.redirectPath !== savedSnapshot.redirectPath
     );
@@ -76,11 +79,28 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
     setError(null);
 
     try {
-      const response = await fetch("/api/external-users", { cache: "no-store" });
-      const data = await readApiJson<{ users?: ExternalUser[]; error?: string }>(response);
-      if (!response.ok) throw new Error(data.error ?? "Failed to load external users");
+      const [usersResponse, clientsResponse] = await Promise.all([
+        fetch("/api/external-users", { cache: "no-store" }),
+        fetch("/api/clients", { cache: "no-store" }),
+      ]);
 
-      const nextUsers = data.users ?? [];
+      const usersData = await readApiJson<{ users?: ExternalUser[]; error?: string }>(
+        usersResponse,
+      );
+      if (!usersResponse.ok) {
+        throw new Error(usersData.error ?? "Failed to load external users");
+      }
+
+      const clientsData = await readApiJson<{ clients?: ManagedClient[]; error?: string }>(
+        clientsResponse,
+      );
+      if (clientsResponse.ok) {
+        const nextClients = clientsData.clients ?? [];
+        setClients(nextClients);
+        setCreateClientId((current) => current || nextClients[0]?.id || "");
+      }
+
+      const nextUsers = usersData.users ?? [];
       syncUsers(nextUsers);
       setSelectedUserId((current) => {
         if (current && nextUsers.some((user) => user.id === current)) return current;
@@ -120,6 +140,10 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
   function patchSelected(patch: Partial<ExternalUser>) {
     if (!selectedUser) return;
     const next = { ...selectedUser, ...patch };
+    if (patch.clientId !== undefined) {
+      const client = clients.find((item) => item.id === patch.clientId);
+      next.organisation = client?.companyName ?? next.organisation;
+    }
     syncUsers(users.map((user) => (user.id === next.id ? next : user)));
     setSaveMessage(null);
     setPasswordMessage(null);
@@ -127,6 +151,10 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
 
   async function handleSaveUser() {
     if (!selectedUser) return;
+    if (!selectedUser.clientId?.trim()) {
+      setError("Assign a Client Directory record before saving.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setSaveMessage(null);
@@ -137,7 +165,7 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: selectedUser.name,
-          organisation: selectedUser.organisation,
+          clientId: selectedUser.clientId,
           username: selectedUser.username,
           redirectPath: selectedUser.redirectPath,
         }),
@@ -158,11 +186,17 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
   }
 
   async function handleAddUser() {
+    if (!createClientId.trim()) {
+      setError("Select a Client before adding an external user.");
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setPasswordMessage(null);
 
     const username = `client${Date.now().toString(36)}`;
+    const client = clients.find((item) => item.id === createClientId);
 
     try {
       const response = await fetch("/api/external-users", {
@@ -170,7 +204,7 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: "New Client User",
-          organisation: "",
+          clientId: createClientId,
           username,
         }),
       });
@@ -186,7 +220,9 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
       setSelectedUserId(data.user.id);
       snapshottedIdRef.current = data.user.id;
       setSavedSnapshot(data.user);
-      setSaveMessage("User created");
+      setSaveMessage(
+        client ? `User created for ${client.companyName}` : "User created",
+      );
       if (data.temporaryPassword) {
         setPasswordMessage(`Temporary password: ${data.temporaryPassword}`);
       }
@@ -273,17 +309,40 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-white">External Users</h2>
-                  <p className="mt-1 text-xs text-white/45">{users.length} client portal accounts</p>
+                  <p className="mt-1 text-xs text-white/45">
+                    {users.length} client portal accounts · Client Directory FK required
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleAddUser()}
-                  disabled={busy}
-                  className="inline-flex items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20 disabled:opacity-60"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add user
-                </button>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-[12rem]">
+                    <FieldLabel>Client for new user</FieldLabel>
+                    <select
+                      className={inputClassName()}
+                      value={createClientId}
+                      onChange={(event) => setCreateClientId(event.target.value)}
+                      disabled={busy || clients.length === 0}
+                    >
+                      {clients.length === 0 ? (
+                        <option value="">No clients in Directory</option>
+                      ) : (
+                        clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.companyName}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleAddUser()}
+                    disabled={busy || !createClientId}
+                    className="inline-flex items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20 disabled:opacity-60"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add user
+                  </button>
+                </div>
               </div>
 
               <ul className="mt-4 space-y-2">
@@ -308,7 +367,11 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-semibold text-white">{user.name}</p>
-                            <p className="mt-1 text-xs text-white/45">{user.organisation || "No organisation"}</p>
+                            <p className="mt-1 text-xs text-white/45">
+                              {user.clientId
+                                ? user.organisation || "Linked client"
+                                : "Unlinked — assign Client"}
+                            </p>
                             <p className="mt-1 font-mono text-xs text-white/45">@{user.username}</p>
                           </div>
                           <p className="text-[10px] text-white/35">
@@ -376,6 +439,12 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
                   </p>
                 )}
 
+                {!selectedUser.clientId ? (
+                  <p className="mt-4 rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    Unlinked — assign a Client Directory record to restore PRM-001 identity.
+                  </p>
+                ) : null}
+
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   <div>
                     <FieldLabel>Name</FieldLabel>
@@ -387,13 +456,24 @@ export default function ExternalUsersWorkspace({ onUsersChange }: ExternalUsersW
                     />
                   </div>
                   <div>
-                    <FieldLabel>Organisation</FieldLabel>
-                    <input
+                    <FieldLabel>Client</FieldLabel>
+                    <select
                       className={inputClassName()}
-                      value={selectedUser.organisation}
-                      onChange={(event) => patchSelected({ organisation: event.target.value })}
-                      disabled={busy}
-                    />
+                      value={selectedUser.clientId ?? ""}
+                      onChange={(event) =>
+                        patchSelected({
+                          clientId: event.target.value || null,
+                        })
+                      }
+                      disabled={busy || clients.length === 0}
+                    >
+                      <option value="">Select Client…</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.companyName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <FieldLabel>Username</FieldLabel>

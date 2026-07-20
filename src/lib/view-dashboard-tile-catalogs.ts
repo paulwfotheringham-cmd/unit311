@@ -1,5 +1,8 @@
 import type { DashboardTileDefinition } from "@/lib/dashboard-view-tiles";
-import type { ManagedClient } from "@/lib/client-management-data";
+import {
+  isClientPreActiveStatus,
+  type ManagedClient,
+} from "@/lib/client-management-data";
 import { inferExpenseCategory, type FinancialExpense } from "@/lib/expenses-data";
 
 export const CRM_DASHBOARD_TILES: DashboardTileDefinition[] = [
@@ -10,23 +13,40 @@ export const CRM_DASHBOARD_TILES: DashboardTileDefinition[] = [
 ];
 
 export const CLIENTS_DASHBOARD_TILES: DashboardTileDefinition[] = [
+  { id: "total-clients", label: "Total clients", value: "0", hint: "Excludes archived" },
   { id: "active-clients", label: "Active clients", value: "0", hint: "Live accounts" },
   { id: "onboarding", label: "Onboarding", value: "0", hint: "In setup" },
-  { id: "open-tickets", label: "Open support", value: "0", hint: "Client issues" },
+  { id: "dormant", label: "Dormant", value: "0", hint: "Inactive accounts" },
+  { id: "open-tickets", label: "Open support", value: "—", hint: "Load support data on Clients Dashboard" },
+  { id: "active-projects", label: "Active projects", value: "—", hint: "Load projects on Clients Dashboard" },
+  { id: "portal-users", label: "Portal users", value: "—", hint: "Load external users on Clients Dashboard" },
+  { id: "renewals-30", label: "Renewals (30d)", value: "—", hint: "Requires renewal dates" },
 ];
 
 export function buildClientDashboardCatalog(clients: ManagedClient[]): DashboardTileDefinition[] {
-  const activeCount = clients.filter((client) => client.accountStatus === "Active").length;
-  const onboardingCount = clients.filter((client) => client.accountStatus === "Pending").length;
+  const directory = clients.filter((client) => client.accountStatus !== "Archived");
+  const activeCount = directory.filter((client) => client.accountStatus === "Active").length;
+  const onboardingCount = directory.filter((client) =>
+    isClientPreActiveStatus(client.accountStatus),
+  ).length;
+  const dormantCount = directory.filter((client) => client.accountStatus === "Dormant").length;
+  const hasRenewal = directory.some((client) => Boolean(client.renewalDate));
 
   return CLIENTS_DASHBOARD_TILES.map((tile) => {
     switch (tile.id) {
+      case "total-clients":
+        return { ...tile, value: String(directory.length) };
       case "active-clients":
         return { ...tile, value: String(activeCount) };
       case "onboarding":
         return { ...tile, value: String(onboardingCount) };
-      case "open-tickets":
-        return { ...tile, value: "0" };
+      case "dormant":
+        return { ...tile, value: String(dormantCount) };
+      case "renewals-30":
+        if (!hasRenewal) {
+          return { ...tile, value: "—", hint: "No renewal dates on file" };
+        }
+        return tile;
       default:
         return tile;
     }

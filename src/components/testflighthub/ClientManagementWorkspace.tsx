@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 import type { ClientFinanceSummary } from "@/lib/accounting/client-finance";
@@ -9,19 +10,15 @@ import {
   CLIENT_INDUSTRY_OPTIONS,
   CLIENT_REGION_OPTIONS,
   CLIENT_STATUS_OPTIONS,
+  canTransitionClientAccountStatus,
   clientFieldsEqual,
   clientStatusClass,
+  type ClientAccountStatus,
   type ManagedClient,
 } from "@/lib/client-management-data";
 import { isCrmLinkedClientNotes } from "@/lib/crm-lead-client-data";
 import { centralLoginUrl } from "@/lib/app-domains";
 import { useInternalOperationsBasePath } from "./InternalOperationsBasePathContext";
-import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
-import {
-  buildClientDashboardCatalog,
-  CLIENTS_DASHBOARD_TILES,
-  DEFAULT_CLIENTS_TILE_LAYOUT,
-} from "@/lib/view-dashboard-tile-catalogs";
 import { cn } from "@/lib/utils";
 import { ExternalLink, FolderOpen, FolderPlus, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
 
@@ -45,8 +42,6 @@ async function readApiJson<T>(response: Response): Promise<T> {
 
 type ClientManagementWorkspaceProps = {
   onClientsChange?: (clients: ManagedClient[]) => void;
-  /** Dashboard shows tiles/summary; directory shows the client explorer. */
-  mode?: "dashboard" | "directory";
 };
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -61,14 +56,15 @@ function inputClassName() {
   return "mt-1.5 w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/50";
 }
 
+/** Shared template for Client Directory header + rows (fixed tracks — no per-row `auto`). */
 const CLIENT_EXPLORER_ROW_GRID =
-  "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4 sm:gap-y-0";
+  "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_7.25rem_9.5rem] sm:items-center sm:gap-x-4 sm:gap-y-0";
 
 export default function ClientManagementWorkspace({
   onClientsChange,
-  mode = "directory",
 }: ClientManagementWorkspaceProps) {
   const basePath = useInternalOperationsBasePath();
+  const searchParams = useSearchParams();
   const [clients, setClients] = useState<ManagedClient[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +83,7 @@ export default function ClientManagementWorkspace({
   const [financeError, setFinanceError] = useState<string | null>(null);
   const snapshottedIdRef = useRef<string | null>(null);
   const detailSectionRef = useRef<HTMLElement>(null);
+  const deepLinkedClientRef = useRef<string | null>(null);
 
   const selectedClient = useMemo(
     () => clients.find((client) => client.id === selectedClientId) ?? null,
@@ -129,11 +126,6 @@ export default function ClientManagementWorkspace({
       return haystack.includes(query);
     });
   }, [clients, filterContract, filterIndustry, filterRegion, filterStatus, search]);
-
-  const clientDashboardCatalog = useMemo(
-    () => buildClientDashboardCatalog(clients),
-    [clients],
-  );
 
   function openClient(clientId: string) {
     setSelectedClientId(clientId);
@@ -180,6 +172,15 @@ export default function ClientManagementWorkspace({
       void loadClients();
     });
   }, [loadClients]);
+
+  useEffect(() => {
+    const deepLinkId = searchParams.get("clientId");
+    if (!deepLinkId || loading || clients.length === 0) return;
+    if (deepLinkedClientRef.current === deepLinkId) return;
+    if (!clients.some((client) => client.id === deepLinkId)) return;
+    deepLinkedClientRef.current = deepLinkId;
+    openClient(deepLinkId);
+  }, [searchParams, loading, clients]);
 
   useEffect(() => {
     startTransition(() => {
@@ -372,32 +373,27 @@ export default function ClientManagementWorkspace({
   }
 
   async function createClientFolder(client: ManagedClient) {
-    const folderName =
-      window.prompt("Folder name", client.companyName.trim() || "Client folder")?.trim() ||
-      client.companyName.trim() ||
-      "Client folder";
-
     setBusy(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/files/folders", {
+      const response = await fetch(`/api/clients/${encodeURIComponent(client.id)}/files-root`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: folderName, parentId: null }),
       });
-      const data = await readApiJson<{ folder?: { id: string; name: string }; error?: string }>(
-        response,
-      );
-      if (!response.ok || !data.folder) throw new Error(data.error ?? "Failed to create folder");
+      const data = await readApiJson<{
+        client?: ManagedClient;
+        error?: string;
+      }>(response);
+      if (!response.ok || !data.client) {
+        throw new Error(data.error ?? "Failed to ensure client folder");
+      }
 
-      const updated = {
-        ...client,
-        filesFolderId: data.folder.id,
-        filesFolderName: data.folder.name,
-      };
-      await saveClient(updated);
-      setSaveMessage(`Folder "${data.folder.name}" created and linked`);
+      setClients((current) =>
+        current.map((item) => (item.id === data.client!.id ? data.client! : item)),
+      );
+      setSaveMessage(
+        `Folder "${data.client.filesFolderName ?? data.client.companyName}" ready`,
+      );
     } catch (folderError) {
       setError(folderError instanceof Error ? folderError.message : "Failed to create folder");
     } finally {
@@ -407,15 +403,6 @@ export default function ClientManagementWorkspace({
 
   return (
     <div className="space-y-6">
-      {mode === "dashboard" ? (
-        <DashboardTopTilesBar
-          storageKey="unit311-clients-dashboard-tiles"
-          catalog={clientDashboardCatalog}
-          defaultLayout={DEFAULT_CLIENTS_TILE_LAYOUT}
-          title="Client key details"
-          showCustomizeHint={false}
-        />
-      ) : null}
       {error && (
         <p className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
@@ -429,25 +416,7 @@ export default function ClientManagementWorkspace({
         </p>
       )}
 
-      {mode === "dashboard" ? (
-        loading ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading clients…
-          </div>
-        ) : (
-          <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-            <h2 className="text-lg font-semibold text-white">Clients overview</h2>
-            <p className="mt-1 text-sm text-white/55">
-              {clients.length} accounts on record. Open Client Directory to manage accounts,
-              contracts, and contacts.
-            </p>
-          </section>
-        )
-      ) : null}
-
-      {mode === "directory" ? (
-        loading ? (
+      {loading ? (
           <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading clients…
@@ -457,7 +426,7 @@ export default function ClientManagementWorkspace({
           <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-white">Client Explorer</h2>
+                <h2 className="text-lg font-semibold text-white">Client Directory</h2>
                 <p className="mt-1 text-xs text-white/45">{clients.length} accounts</p>
               </div>
               <button
@@ -558,12 +527,12 @@ export default function ClientManagementWorkspace({
                     "hidden border-b border-white/10 px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40 sm:grid",
                   )}
                 >
-                  <span>Client name</span>
-                  <span>Primary contact</span>
-                  <span>Location</span>
-                  <span>Industry</span>
-                  <span>Status</span>
-                  <span className="text-right">Actions</span>
+                  <span className="min-w-0">Client name</span>
+                  <span className="min-w-0">Primary contact</span>
+                  <span className="min-w-0">Location</span>
+                  <span className="min-w-0">Industry</span>
+                  <span className="min-w-0">Status</span>
+                  <span className="min-w-0 text-right">Actions</span>
                 </div>
                 <ul className="divide-y divide-white/10">
                 {filteredClients.map((client) => {
@@ -584,15 +553,17 @@ export default function ClientManagementWorkspace({
                       <p className="min-w-0 truncate text-xs text-white/50">{client.primaryContact}</p>
                       <p className="min-w-0 truncate text-xs text-white/45">{client.region}</p>
                       <p className="min-w-0 truncate text-xs text-white/45">{client.industry}</p>
-                      <span
-                        className={cn(
-                          "w-fit rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
-                          clientStatusClass(client.accountStatus),
-                        )}
-                      >
-                        {client.accountStatus}
-                      </span>
-                      <div className="flex shrink-0 items-center justify-start gap-2 sm:justify-end">
+                      <div className="min-w-0">
+                        <span
+                          className={cn(
+                            "inline-block max-w-full truncate rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]",
+                            clientStatusClass(client.accountStatus),
+                          )}
+                        >
+                          {client.accountStatus}
+                        </span>
+                      </div>
+                      <div className="flex min-w-0 shrink-0 items-center justify-start gap-2 sm:justify-end">
                         <button
                           type="button"
                           onClick={() => openClient(client.id)}
@@ -648,13 +619,21 @@ export default function ClientManagementWorkspace({
                       Active projects ({selectedClient.activeProjects})
                     </Link>
                     {selectedClient.filesFolderId ? (
-                      <Link
-                        href={`${basePath}?view=files-internal&folderId=${encodeURIComponent(selectedClient.filesFolderId)}`}
-                        className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
-                      >
-                        <FolderOpen className="h-3.5 w-3.5" />
-                        Link to folder
-                      </Link>
+                      <>
+                        <Link
+                          href={`${basePath}?view=files-client`}
+                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          Open client files
+                        </Link>
+                        <Link
+                          href={`${basePath}?view=files-internal&folderId=${encodeURIComponent(selectedClient.filesFolderId)}`}
+                          className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.08]"
+                        >
+                          Open in internal files
+                        </Link>
+                      </>
                     ) : (
                       <button
                         type="button"
@@ -663,15 +642,9 @@ export default function ClientManagementWorkspace({
                         className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25 disabled:opacity-60"
                       >
                         <FolderPlus className="h-3.5 w-3.5" />
-                        Create folder
+                        Ensure files folder
                       </button>
                     )}
-                    <Link
-                      href={`${basePath}?view=files-client`}
-                      className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 text-xs font-semibold text-white/70 transition-colors hover:bg-white/[0.08]"
-                    >
-                      Client file explorer
-                    </Link>
                     {selectedClient.platformUrl && (
                       <Link
                         href={selectedClient.platformUrl}
@@ -831,48 +804,40 @@ export default function ClientManagementWorkspace({
                   </div>
                   <div>
                     <FieldLabel>Account Status</FieldLabel>
-                    {isCrmLinkedClientNotes(selectedClient.notes) ? (
-                      <div className="mt-1.5 space-y-1.5">
-                        <p
-                          className={cn(
-                            inputClassName(),
-                            "flex items-center justify-between gap-3",
-                            selectedClient.accountStatus === "Pending Payment" ||
-                              selectedClient.accountStatus === "Pending"
-                              ? "text-amber-100"
-                              : "text-emerald-200",
-                          )}
-                        >
-                          <span>{selectedClient.accountStatus}</span>
-                          <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
-                            CRM client
-                          </span>
-                        </p>
-                        {(selectedClient.accountStatus === "Pending Payment" ||
-                          selectedClient.accountStatus === "Pending") && (
-                          <p className="text-[11px] text-white/45">
-                            Linked from CRM — still awaiting payment confirmation before full activation.
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <select
-                        className={inputClassName()}
-                        value={selectedClient.accountStatus}
-                        onChange={(event) =>
-                          patchSelected({
-                            accountStatus: event.target.value as ManagedClient["accountStatus"],
-                          })
-                        }
-                        disabled={busy}
-                      >
-                        {CLIENT_STATUS_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <select
+                      className={inputClassName()}
+                      value={selectedClient.accountStatus}
+                      onChange={(event) =>
+                        patchSelected({
+                          accountStatus: event.target.value as ManagedClient["accountStatus"],
+                        })
+                      }
+                      disabled={busy || selectedClient.accountStatus === "Archived"}
+                    >
+                      {CLIENT_STATUS_OPTIONS.filter(
+                        (option) =>
+                          option === selectedClient.accountStatus ||
+                          canTransitionClientAccountStatus(
+                            selectedClient.accountStatus as ClientAccountStatus,
+                            option,
+                          ),
+                      ).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedClient.crmLeadId ||
+                    isCrmLinkedClientNotes(selectedClient.notes) ? (
+                      <p className="mt-1 text-[11px] text-white/45">
+                        CRM lineage linked — Directory owns lifecycle (Prospect remains in CRM).
+                      </p>
+                    ) : null}
+                    {selectedClient.accountStatus === "Archived" ? (
+                      <p className="mt-1 text-[11px] text-white/45">
+                        Archived is terminal and cannot transition to another status.
+                      </p>
+                    ) : null}
                   </div>
                   <div>
                     <FieldLabel>Contract Type</FieldLabel>
@@ -1130,8 +1095,7 @@ export default function ClientManagementWorkspace({
             </section>
           )}
         </div>
-        )
-      ) : null}
+        )}
     </div>
   );
 }

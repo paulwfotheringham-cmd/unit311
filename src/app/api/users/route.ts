@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireInternalAdministratorSession } from "@/lib/internal-admin-auth";
+import { requireInternalAdministratorWorkspaceSession } from "@/lib/internal-admin-auth";
 import { createInternalOperator, listInternalOperators } from "@/lib/internal-operators-service";
 import { ensureInternalOperatorsTable } from "@/lib/internal-db-migrations";
 import type { UserRegion, UserRole, UserStatus } from "@/lib/user-management-data";
@@ -9,7 +9,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -27,7 +27,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {

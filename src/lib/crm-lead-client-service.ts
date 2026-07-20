@@ -15,9 +15,16 @@ import {
 } from "@/lib/internal-clients-service";
 
 function clientMatchesCrmLead(client: ManagedClient, leadId: string) {
-  return client.notes.includes(`${CRM_LEAD_CLIENT_NOTE_PREFIX} ${leadId}`);
+  return (
+    client.crmLeadId === leadId ||
+    client.notes.includes(`${CRM_LEAD_CLIENT_NOTE_PREFIX} ${leadId}`)
+  );
 }
 
+/**
+ * Convert CRM Lead → Client Directory row.
+ * Prospect stays in CRM; Directory always starts at Client Created (FDR-MOD-011).
+ */
 export async function promoteCrmLeadToClient(
   leadId: string,
   scope?: CrmWorkspaceScope,
@@ -41,17 +48,19 @@ export async function promoteCrmLeadToClient(
     primaryContact: lead.contactName,
     email: lead.email,
     phone: lead.phone,
-    accountStatus: "Active" as const,
+    crmLeadId: leadId,
     notes: buildCrmLeadClientNotes(leadId, lead.notes),
   };
 
   if (existing) {
+    // Do not rewrite lifecycle on re-promote — status remains Directory-owned.
     return updateInternalClient(existing.id, clientPayload, { workspaceId });
   }
 
   return createInternalClient(
     {
       ...clientPayload,
+      accountStatus: "Client Created",
       industry: "Other",
       region: "United Kingdom",
       contractType: "Project-based",

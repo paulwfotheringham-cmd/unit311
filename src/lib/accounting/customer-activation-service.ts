@@ -612,7 +612,13 @@ export async function activateCustomerFromPendingClient(input: {
   if (clientError) throw new Error(clientError.message);
 
   const status = String(client.account_status ?? "");
-  const eligibleByStatus = status === "Pending Payment" || status === "Pending";
+  const eligibleByStatus =
+    status === "Workspace Provisioned" ||
+    status === "Client Created" ||
+    status === "Onboarding" ||
+    // Legacy pre-migration values (read normalize / until 094 applied)
+    status === "Pending Payment" ||
+    status === "Pending";
   if (!eligibleByStatus) {
     // Repair records whose account_status was incorrectly forced to Active while
     // payment onboarding was still incomplete, then continue activation.
@@ -627,12 +633,14 @@ export async function activateCustomerFromPendingClient(input: {
       (!fullClient?.payment_matched_at && stage === "awaiting_payment") ||
       sub === "pending_payment";
     if (!stillAwaiting) {
-      throw new Error("Manual activation is only available for Pending Payment clients.");
+      throw new Error(
+        "Manual activation is only available for Client Created / Workspace Provisioned / Onboarding clients.",
+      );
     }
     await supabase
       .from("internal_clients")
       .update({
-        account_status: "Pending Payment",
+        account_status: "Workspace Provisioned",
         subscription_status: "pending_payment",
         updated_at: new Date().toISOString(),
       })

@@ -29,7 +29,9 @@
     "diagram:vercel-architecture": "node --experimental-strip-types scripts/generate-vercel-architecture-diagram.mjs",
     "diagram:github-architecture": "node --experimental-strip-types scripts/generate-github-architecture-diagram.mjs",
     "guard:canonical-repo": "node scripts/assert-canonical-unit311-repo.mjs",
-    "deploy:prod": "node scripts/assert-canonical-unit311-repo.mjs && node -e \"console.error('BLOCKED: Use Git deploys from Unit311central/unit311central. See docs/PRODUCTION_DEPLOYMENT.md'); process.exit(1)\""
+    "deploy:prod": "node scripts/assert-canonical-unit311-repo.mjs && node -e \"console.error('BLOCKED: Use Git deploys from Unit311central/unit311central. See docs/PRODUCTION_DEPLOYMENT.md'); process.exit(1)\"",
+    "demo:refresh": "node scripts/refresh-demo-workspace.mjs",
+    "demo:verify": "node scripts/verify-demo-release.mjs"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",

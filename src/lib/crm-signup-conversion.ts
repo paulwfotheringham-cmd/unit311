@@ -156,7 +156,7 @@ export async function ensureClientFromSignup(input: {
     invoiceEmail: accountsPayableEmail,
     billingSameAsCompany: input.profile.billingSameAsCompany,
     billingAddress,
-    accountStatus: "Pending",
+    accountStatus: "Client Created",
     subscriptionStatus: "pending_payment",
     contractType: "Retainer",
     industry: "Other",

@@ -75,7 +75,11 @@ function resolveActiveFolderId(
   scope: FileRepositoryScope,
   folderId: string | null,
   breadcrumb: BreadcrumbSegment[],
+  clientRootFolderId?: string | null,
 ) {
+  if (scope === "client") {
+    return folderId ?? clientRootFolderId ?? breadcrumb[0]?.id ?? null;
+  }
   if (scope === "external" && !folderId) {
     return breadcrumb[0]?.id ?? null;
   }
@@ -112,6 +116,7 @@ function defaultRootLabel(scope: FileRepositoryScope, rootLabel?: string) {
 
 export default function FileRepositoryWorkspace({
   scope = "internal",
+  clientId,
   clientName,
   initialFolderId = null,
   rootLabel,
@@ -120,15 +125,21 @@ export default function FileRepositoryWorkspace({
   const usesExternalApi = scope === "external";
   const canMutate = usesApi || usesExternalApi;
   const resolvedRootLabel = defaultRootLabel(scope, rootLabel ?? clientName);
+  const clientRootFolderId = scope === "client" ? initialFolderId : null;
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const [folderId, setFolderId] = useState<string | null>(initialFolderId);
+  const [folderId, setFolderId] = useState<string | null>(
+    scope === "client" ? initialFolderId : initialFolderId,
+  );
   const [query, setQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [categories, setCategories] = useState<FileCategory[]>([]);
   const [entries, setEntries] = useState<BrowseEntry[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<BreadcrumbSegment[]>([
-    { id: null, name: resolvedRootLabel },
+    {
+      id: scope === "client" ? initialFolderId : null,
+      name: resolvedRootLabel,
+    },
   ]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -138,7 +149,10 @@ export default function FileRepositoryWorkspace({
   const [movePickerOpen, setMovePickerOpen] = useState(false);
   const [movePickerFolderId, setMovePickerFolderId] = useState<string | null>(null);
   const [movePickerBreadcrumb, setMovePickerBreadcrumb] = useState<BreadcrumbSegment[]>([
-    { id: null, name: resolvedRootLabel },
+    {
+      id: scope === "client" ? initialFolderId : null,
+      name: resolvedRootLabel,
+    },
   ]);
   const [movePickerFolders, setMovePickerFolders] = useState<FileFolder[]>([]);
   const [movePickerAllFolders, setMovePickerAllFolders] = useState<FileFolder[]>([]);
@@ -196,6 +210,7 @@ export default function FileRepositoryWorkspace({
       if (folderId) params.set("folderId", folderId);
       if (query) params.set("q", query);
       if (categoryFilter) params.set("categoryId", categoryFilter);
+      if (scope === "client" && clientId) params.set("clientId", clientId);
 
       const response = await fetch(`/api/files/browse?${params.toString()}`, { cache: "no-store" });
       const data = (await response.json()) as {
@@ -206,10 +221,9 @@ export default function FileRepositoryWorkspace({
 
       if (!response.ok) throw new Error(data.error ?? "Failed to load files");
 
-      const nextBreadcrumb = data.breadcrumb ?? [{ id: null, name: resolvedRootLabel }];
-      if (scope === "client" && nextBreadcrumb[0]?.name === "Internal Files") {
-        nextBreadcrumb[0] = { id: null, name: resolvedRootLabel };
-      }
+      const nextBreadcrumb =
+        data.breadcrumb ??
+        [{ id: scope === "client" ? folderId : null, name: resolvedRootLabel }];
 
       setEntries(data.entries ?? []);
       setBreadcrumb(nextBreadcrumb);
@@ -219,7 +233,7 @@ export default function FileRepositoryWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, folderId, query, resolvedRootLabel, scope, usesApi, usesExternalApi]);
+  }, [categoryFilter, clientId, folderId, query, resolvedRootLabel, scope, usesApi, usesExternalApi]);
 
   useEffect(() => {
     startTransition(() => {
@@ -258,15 +272,21 @@ export default function FileRepositoryWorkspace({
 
     setBusy(true);
     try {
-      const targetFolderId = resolveActiveFolderId(scope, folderId, breadcrumb);
+      const targetFolderId = resolveActiveFolderId(
+        scope,
+        folderId,
+        breadcrumb,
+        clientRootFolderId,
+      );
       const response = await fetch("/api/files/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          parentId: scope === "external" ? targetFolderId : folderId,
+          parentId: targetFolderId,
           categoryId: categoryFilter,
           externalScope: scope === "external",
+          clientId: scope === "client" ? clientId : undefined,
         }),
       });
       const data = (await response.json()) as { error?: string };
@@ -287,7 +307,12 @@ export default function FileRepositoryWorkspace({
     setBusy(true);
     setError(null);
 
-    const targetFolderId = resolveActiveFolderId(scope, folderId, breadcrumb);
+    const targetFolderId = resolveActiveFolderId(
+      scope,
+      folderId,
+      breadcrumb,
+      clientRootFolderId,
+    );
 
     try {
       for (const file of Array.from(files)) {
@@ -298,6 +323,7 @@ export default function FileRepositoryWorkspace({
             name: file.name,
             size: file.size,
             folderId: targetFolderId,
+            clientId: scope === "client" ? clientId : undefined,
           }),
         });
 
@@ -333,6 +359,7 @@ export default function FileRepositoryWorkspace({
             categoryId: categoryFilter,
             mimeType: file.type || null,
             size: file.size,
+            clientId: scope === "client" ? clientId : undefined,
           }),
         });
 
@@ -371,7 +398,10 @@ export default function FileRepositoryWorkspace({
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          clientId: scope === "client" ? clientId : undefined,
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Failed to rename item");
@@ -390,12 +420,18 @@ export default function FileRepositoryWorkspace({
     try {
       const params = new URLSearchParams();
       if (folderId) params.set("folderId", folderId);
+      if (scope === "client" && clientId) params.set("clientId", clientId);
+
+      const foldersUrl =
+        scope === "client" && clientId
+          ? `/api/files/folders?clientId=${encodeURIComponent(clientId)}`
+          : "/api/files/folders";
 
       const [browseResponse, foldersResponse] = await Promise.all([
         fetch(`/api/files/browse?${params.toString()}`, { cache: "no-store" }),
         movePickerAllFolders.length > 0
           ? Promise.resolve(null)
-          : fetch("/api/files/folders", { cache: "no-store" }),
+          : fetch(foldersUrl, { cache: "no-store" }),
       ]);
 
       const browseData = (await browseResponse.json()) as {
@@ -443,13 +479,19 @@ export default function FileRepositoryWorkspace({
   function openMovePicker() {
     if (!selectedId || !selectedKind) return;
 
+    const startFolderId = scope === "client" ? clientRootFolderId : null;
     setMovePickerOpen(true);
-    setMovePickerFolderId(null);
-    setMovePickerBreadcrumb([{ id: null, name: "Internal Files" }]);
+    setMovePickerFolderId(startFolderId);
+    setMovePickerBreadcrumb([
+      {
+        id: startFolderId,
+        name: scope === "client" ? resolvedRootLabel : "Internal Files",
+      },
+    ]);
     setMovePickerFolders([]);
     setMovePickerAllFolders([]);
     setMovePickerError(null);
-    void loadMovePicker(null);
+    void loadMovePicker(startFolderId);
   }
 
   function closeMovePicker() {
@@ -461,6 +503,11 @@ export default function FileRepositoryWorkspace({
     if (!selectedId || !selectedKind) return;
     if (isMoveDestinationDisabled(destinationId)) return;
 
+    const resolvedDestination =
+      scope === "client"
+        ? destinationId ?? clientRootFolderId
+        : destinationId;
+
     setBusy(true);
     setMovePickerError(null);
 
@@ -470,7 +517,16 @@ export default function FileRepositoryWorkspace({
           ? `/api/files/folders/${selectedId}`
           : `/api/files/objects/${selectedId}`;
 
-      const body = selectedKind === "folder" ? { parentId: destinationId } : { folderId: destinationId };
+      const body =
+        selectedKind === "folder"
+          ? {
+              parentId: resolvedDestination,
+              clientId: scope === "client" ? clientId : undefined,
+            }
+          : {
+              folderId: resolvedDestination,
+              clientId: scope === "client" ? clientId : undefined,
+            };
 
       const response = await fetch(endpoint, {
         method: "PATCH",
@@ -506,7 +562,10 @@ export default function FileRepositoryWorkspace({
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryId }),
+        body: JSON.stringify({
+          categoryId,
+          clientId: scope === "client" ? clientId : undefined,
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Failed to update category");
@@ -529,6 +588,16 @@ export default function FileRepositoryWorkspace({
 
     if (!target) return;
 
+    if (
+      scope === "client" &&
+      target.kind === "folder" &&
+      clientRootFolderId &&
+      target.item.id === clientRootFolderId
+    ) {
+      setError("The client root folder cannot be deleted.");
+      return;
+    }
+
     const confirmed = window.confirm(`Delete "${target.item.name}"?`);
     if (!confirmed) return;
 
@@ -539,7 +608,12 @@ export default function FileRepositoryWorkspace({
           ? `/api/files/folders/${target.item.id}`
           : `/api/files/objects/${target.item.id}`;
 
-      const response = await fetch(endpoint, { method: "DELETE" });
+      const deleteUrl =
+        scope === "client" && clientId
+          ? `${endpoint}?clientId=${encodeURIComponent(clientId)}`
+          : endpoint;
+
+      const response = await fetch(deleteUrl, { method: "DELETE" });
       const data = await readApiJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(data.error ?? "Failed to delete item");
 
@@ -563,7 +637,11 @@ export default function FileRepositoryWorkspace({
   async function handleDownload(fileId: string) {
     setBusy(true);
     try {
-      const response = await fetch(`/api/files/objects/${fileId}`);
+      const downloadUrl =
+        scope === "client" && clientId
+          ? `/api/files/objects/${fileId}?clientId=${encodeURIComponent(clientId)}`
+          : `/api/files/objects/${fileId}`;
+      const response = await fetch(downloadUrl);
       const data = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !data.url) throw new Error(data.error ?? "Failed to download file");
       window.open(data.url, "_blank", "noopener,noreferrer");
@@ -672,7 +750,9 @@ export default function FileRepositoryWorkspace({
                 <button
                   type="button"
                   onClick={() => {
-                    setFolderId(segment.id);
+                    const nextId =
+                      scope === "client" && !segment.id ? clientRootFolderId : segment.id;
+                    setFolderId(nextId);
                     setSelectedId(null);
                     setSelectedKind(null);
                     setSearchInput("");

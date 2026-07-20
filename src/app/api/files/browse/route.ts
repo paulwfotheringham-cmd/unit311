@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { browseClientFiles } from "@/lib/client-files-root";
+import { filesApiErrorStatus, requireInternalFilesAccess } from "@/lib/files-api-auth";
 import { browseFolder } from "@/lib/internal-files-service";
-import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { requireCurrentWorkspace } from "@/lib/workspace-context";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +15,25 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const auth = await requireInternalFilesAccess();
+  if ("error" in auth) return auth.error;
+
   try {
-    await requirePlatformSession();
-    const workspace = await requireCurrentWorkspace();
     const folderId = request.nextUrl.searchParams.get("folderId");
     const query = request.nextUrl.searchParams.get("q") ?? undefined;
     const categoryId = request.nextUrl.searchParams.get("categoryId");
+    const clientId = request.nextUrl.searchParams.get("clientId")?.trim() || null;
+
+    if (clientId) {
+      const result = await browseClientFiles({
+        clientId,
+        folderId: folderId || null,
+        query,
+        categoryId: categoryId || null,
+        workspaceId: auth.workspace.id,
+      });
+      return NextResponse.json(result);
+    }
 
     const result = await browseFolder(
       {
@@ -28,16 +41,15 @@ export async function GET(request: NextRequest) {
         query,
         categoryId: categoryId || null,
       },
-      { workspaceId: workspace.id },
+      { workspaceId: auth.workspace.id },
     );
 
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to browse files";
-    const status =
-      message.includes("Authentication required") || message.includes("Workspace context")
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json(
+      { error: message },
+      { status: filesApiErrorStatus(message, error) },
+    );
   }
 }

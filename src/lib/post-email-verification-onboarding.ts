@@ -33,7 +33,8 @@ import {
 import { findWorkspaceBySlug } from "@/lib/workspace-host";
 
 const INTERNAL_WORKSPACE_SLUG = "unit311";
-const CLIENT_PENDING_PAYMENT_STATUS = "Pending Payment" as const;
+/** Directory lifecycle after email verify + workspace provision (FDR-MOD-011). */
+const CLIENT_PENDING_PAYMENT_STATUS = "Workspace Provisioned" as const;
 
 type PlatformUserWithLinks = PlatformUserRecord & {
   email?: string | null;

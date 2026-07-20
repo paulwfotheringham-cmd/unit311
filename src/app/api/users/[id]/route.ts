@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireInternalAdministratorSession } from "@/lib/internal-admin-auth";
+import { requireInternalAdministratorWorkspaceSession } from "@/lib/internal-admin-auth";
 import {
   deleteInternalOperator,
   setInternalOperatorPassword,
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -45,7 +45,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {

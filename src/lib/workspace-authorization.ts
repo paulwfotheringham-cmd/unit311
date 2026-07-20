@@ -1,9 +1,11 @@
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { DEMO_WORKSPACE_SLUG } from "@/lib/app-domains";
 import {
   INTERNAL_WORKSPACE_SLUG,
   findWorkspaceById,
   type WorkspaceHostRecord,
 } from "@/lib/workspace-host";
+import { demoWorkspaceSlug } from "@/lib/runtime-surface";
 
 /**
  * Shared workspace authorization (RC1-C07).
@@ -23,6 +25,7 @@ export type WorkspaceAuthorizationDecision = {
     | "primary_workspace"
     | "workspace_membership"
     | "internal_unit311"
+    | "internal_demo"
     | "user_not_found"
     | "user_inactive"
     | "workspace_missing"
@@ -117,13 +120,16 @@ export async function authorizeWorkspaceAccess(
       return { allowed: true, reason: "workspace_membership", userType };
     }
 
-    // Internal operators may access the canonical internal workspace only.
+    // Internal operators may access the canonical Internal workspace and the Demo workspace.
     // Customer hosts still require explicit membership (no universal cross-tenant access).
-    if (
-      userType === "internal" &&
-      workspace.slug.trim().toLowerCase() === INTERNAL_WORKSPACE_SLUG
-    ) {
-      return { allowed: true, reason: "internal_unit311", userType };
+    if (userType === "internal") {
+      const slug = workspace.slug.trim().toLowerCase();
+      if (slug === INTERNAL_WORKSPACE_SLUG) {
+        return { allowed: true, reason: "internal_unit311", userType };
+      }
+      if (slug === demoWorkspaceSlug() || slug === DEMO_WORKSPACE_SLUG) {
+        return { allowed: true, reason: "internal_demo", userType };
+      }
     }
 
     return { allowed: false, reason: "not_a_member", userType };

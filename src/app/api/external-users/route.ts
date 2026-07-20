@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireInternalAdministratorSession } from "@/lib/internal-admin-auth";
+import { requireInternalAdministratorWorkspaceSession } from "@/lib/internal-admin-auth";
 import {
   createExternalUser,
   listExternalUsers,
@@ -10,7 +10,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -22,12 +22,13 @@ export async function GET() {
     return NextResponse.json({ users });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load external users";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("migration 095") ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireInternalAdministratorSession();
+  const auth = await requireInternalAdministratorWorkspaceSession();
   if ("error" in auth) return auth.error;
 
   if (!isSupabaseConfigured()) {
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       name?: string;
+      clientId?: string;
       organisation?: string;
       username?: string;
       redirectPath?: string;
@@ -46,10 +48,16 @@ export async function POST(request: NextRequest) {
     if (!body.username?.trim()) {
       return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
+    if (!body.clientId?.trim()) {
+      return NextResponse.json(
+        { error: "clientId is required (Client Directory FK)." },
+        { status: 400 },
+      );
+    }
 
     const result = await createExternalUser({
       name: body.name ?? "",
-      organisation: body.organisation ?? "",
+      clientId: body.clientId,
       username: body.username,
       redirectPath: body.redirectPath,
       password: body.password,
@@ -61,6 +69,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create external user";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes("migration 095")
+        ? 503
+        : message.includes("required") || message.includes("not found")
+          ? 400
+          : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

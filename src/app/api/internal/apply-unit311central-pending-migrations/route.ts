@@ -55,6 +55,11 @@ const MIGRATIONS = [
   "supabase/migrations/090_accounts_workspace_code_unique.sql",
   "supabase/migrations/091_hr_employee_foundation.sql",
   "supabase/migrations/092_company_details.sql",
+  "supabase/migrations/093_integration_framework_phase0.sql",
+  "supabase/migrations/094_client_lifecycle_status.sql",
+  "supabase/migrations/095_platform_users_client_id.sql",
+  "supabase/migrations/096_client_files_root_integrity.sql",
+  "supabase/migrations/097_demo_workspace.sql",
 ];
 
 function isAuthorized(request: NextRequest) {

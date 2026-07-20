@@ -86,37 +86,37 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 
 | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Financials Overview | Business Central → Financials → Overview | Not Started | PRM-001 | Clients | |
-| General Ledger | Business Central → Financials → General Ledger | Not Started | PRM-002 | Workspace tenancy | |
-| Accounts Receivable | Business Central → Financials → Accounts Receivable | Not Started | PRM-001 | Client Directory | AR keyed by Client |
-| Accounts Payable | Business Central → Financials → Accounts Payable | Not Started | — | — | |
-| Expenses | Business Central → Financials → Expenses | Not Started | — | — | |
-| Wise | Business Central → Financials → Wise | Not Started | PRM-001, PRM-002 | AR, Client activation | Internal label; customer later = Bank |
-| Financial Reports | Business Central → Financials → Reports | Not Started | PRM-001 | GL, AR, AP | |
+| Financials Overview | Financials → Overview | Not Started | PRM-001 | Clients | Top-level Financials section |
+| General Ledger | Financials → General Ledger | Not Started | PRM-002 | Workspace tenancy | |
+| Accounts Receivable | Financials → Accounts Receivable | Not Started | PRM-001 | Client Directory | AR keyed by Client |
+| Accounts Payable | Financials → Accounts Payable | Not Started | — | — | |
+| Expenses | Financials → Expenses | Not Started | — | — | |
+| Bank | Financials → Bank | Not Started | PRM-001, PRM-002 | AR, Client activation | Platform term Bank; Internal impl may remain Wise |
+| Financial Reports | Financials → Reports | Not Started | PRM-001 | GL, AR, AP | |
 
 ### Business Central — Human Resources
 
 | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
 | --- | --- | --- | --- | --- | --- |
-| HR Dashboard | Business Central → Human Resources → Dashboard | Not Started | — | Employees | |
-| Employees | Business Central → Human Resources → Employees | **Implementing** | PRM-002 · **PRM-003** (optional IdP) | Internal Users (optional link) | [FDR-MOD-071](./FDR-MOD-071-EMPLOYEES.md) **APPROVED**. Phase 1 plans **APPROVED**. Go-Live **Needs Work**. |
-| Leave | Business Central → Human Resources → Leave | Not Started | — | Employees | Coming Soon UI |
-| Performance | Business Central → Human Resources → Performance | Not Started | — | Employees | Coming Soon UI |
-| Recruitment | Business Central → Human Resources → Recruitment | Not Started | — | — | Coming Soon UI |
+| HR Dashboard | Human Resources → Dashboard | Not Started | — | Employees | Top-level HR section |
+| Employees | Human Resources → Employees | **Implementing** | PRM-002 · **PRM-003** (optional IdP) | Internal Users (optional link) | [FDR-MOD-071](./FDR-MOD-071-EMPLOYEES.md) **APPROVED**. Phase 1 plans **APPROVED**. Go-Live **Needs Work**. |
+| Leave | Human Resources → Leave | Not Started | — | Employees | Coming Soon UI |
+| Performance | Human Resources → Performance | Not Started | — | Employees | Coming Soon UI |
+| Recruitment | Human Resources → Recruitment | Not Started | — | — | Coming Soon UI |
 
 ### Business Central — Corporate Information
 
 | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Corporate Dashboard | Business Central → Corporate Information → Dashboard | Not Started | — | Corporate children | Coming Soon UI |
-| Company Details | Business Central → Corporate Information → Company Details | Not Started | PRM-002 §9 | — | Unit311 the company — not a Client |
-| Office Locations | Business Central → Corporate Information → Office Locations | Not Started | — | — | Implemented UI |
-| Bank Accounts | Business Central → Corporate Information → Bank Accounts | Not Started | — | — | Coming Soon UI |
-| Professional Advisors | Business Central → Corporate Information → Professional Advisors | Not Started | — | — | Coming Soon UI |
-| Software & Licences | Business Central → Corporate Information → Software & Licences | Not Started | — | — | Implemented UI |
-| Contracts | Business Central → Corporate Information → Contracts | Not Started | — | — | Coming Soon UI |
-| Unit311 Details | Business Central → Corporate Information → Unit311 Details → Overview | Not Started | PRM-002 §9 | Company Details | Nav moved; merge into Company Details is a module concern later |
-| Module Go-Live | Business Central → Corporate Information → Unit311 Details → Module Go-Live | Implemented | — | — | Authoritative readiness register (ID / Module / Status). Persisted via Unit311 Details content store. Not a project tool. |
+| Corporate Dashboard | Corporate Information → Dashboard | Not Started | — | Corporate children | Coming Soon UI · top-level section |
+| Company Details | Corporate Information → Corporate Information (tab) | Not Started | PRM-002 §9 | — | Tab in consolidated Corporate Information workspace; own API/table |
+| Office Locations | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab in consolidated workspace |
+| Bank Accounts | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · Coming Soon content |
+| Professional Advisors | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · Coming Soon content |
+| Software & Licences | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · own API/table |
+| Contracts | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · Coming Soon content |
+| Unit311 Details | Corporate Information → Unit311 Details → Overview | Not Started | PRM-002 §9 | — | Platform admin — separate from company tabs |
+| Module Go-Live | Corporate Information → Unit311 Details → Module Go-Live | Implemented | — | — | Authoritative readiness register. Persisted via Unit311 Details content store. |
 
 ### Assets
 

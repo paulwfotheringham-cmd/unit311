@@ -32,10 +32,11 @@ npm run diagram:vercel-architecture
 | `www.unit311central.com` | Alias / redirect to apex | Production |
 | `unit311central.com/login` | Shared login entry (apex path) | Production |
 | `internal.unit311central.com` | Unit311 Internal operations app | Production |
+| `demo.unit311central.com` | Demo surface — **same build** as Internal; Demo workspace content | Production (add domain) |
 | `*.unit311central.com` | Wildcard for customer workspace hosts | Required in Vercel + DNS |
 | `{slug}.unit311central.com` | Future customer workspace host | Gateway ready; product UI later |
 
-Reserved subdomains (never customer slugs): `www`, `internal`, `unit311`, `api`, `app`, `admin`, `mail`, `status`, `docs`, `cdn`, `assets`, `static`.
+Reserved subdomains (never customer slugs): `www`, `internal`, `demo`, `unit311`, `api`, `app`, `admin`, `mail`, `status`, `docs`, `cdn`, `assets`, `static`.
 
 ---
 
@@ -62,8 +63,9 @@ Implemented in `src/middleware.ts` and `src/lib/app-domains.ts`.
 | Normalization | Lowercase, strip port |
 | Public hosts | `unit311central.com`, `www.unit311central.com` |
 | Internal hosts | `internal.unit311central.com`, `internal.localhost` |
+| Demo hosts | `demo.unit311central.com`, `demo.localhost` (same Internal Ops UI; workspace `demo`) |
 | Workspace host | `{slug}.unit311central.com` when slug is not reserved |
-| Cookie domain | `.unit311central.com` so apex login can share session with Internal / future workspaces |
+| Cookie domain | `.unit311central.com` so apex login can share session with Internal / Demo / future workspaces |
 
 ---
 
@@ -77,6 +79,7 @@ Implemented in `src/middleware.ts` and `src/lib/app-domains.ts`.
 | `internal.*` `/` | Rewrite → `/internaldashboard` |
 | `internal.*` marketing paths | Redirect → apex |
 | `internal.*` `/login` | Redirect → apex `/login` |
+| `demo.*` | Same rewrites as Internal; tenancy = Demo workspace |
 | `{slug}.*` | Rewrite → `/ws/[slug]` (workspace gateway) |
 | `{slug}.*` `/login` | Redirect → apex `/login` |
 | `unit311.unit311central.com` | Redirect → `internal.unit311central.com` |

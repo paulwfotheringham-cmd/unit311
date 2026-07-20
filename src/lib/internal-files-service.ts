@@ -529,6 +529,23 @@ export async function uploadFile(
   );
 }
 
+export async function getFileById(
+  id: string,
+  scope?: FilesWorkspaceScope,
+): Promise<FileObject | null> {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+  const supabase = requireFilesSupabase();
+  const { data, error } = await supabase
+    .from("file_objects")
+    .select("*")
+    .eq("id", id)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ? mapFile(data as DbFile) : null;
+}
+
 export async function updateFile(
   id: string,
   updates: { name?: string; folderId?: string | null; categoryId?: string | null },

@@ -1,9 +1,12 @@
 import {
+  assertClientAccountStatusTransition,
   createBlankClient,
+  isClientAccountStatus,
   mapInternalClient,
+  normalizeClientAccountStatus,
+  type ClientAccountStatus,
   type ManagedClient,
 } from "@/lib/client-management-data";
-import { isCrmLinkedClientNotes } from "@/lib/crm-lead-client-data";
 import {
   ensureClientBillingProfileColumns,
   ensureInternalClientsFilesFolderColumns,
@@ -43,6 +46,15 @@ export async function resolveClientsWorkspaceId(
   return workspace.id;
 }
 
+/** PRM-001: CRM lineage lives on crm_lead_id only — strip legacy notes markers. */
+function sanitizeClientNotes(notes: string): string {
+  return notes
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*CRM Lead ID\s*:/i.test(line))
+    .join("\n")
+    .trim();
+}
+
 function buildClientPayload(input: Partial<ManagedClient>) {
   const payload: Record<string, string | number | boolean | null> = {
     updated_at: new Date().toISOString(),
@@ -54,7 +66,14 @@ function buildClientPayload(input: Partial<ManagedClient>) {
   if (input.email !== undefined) payload.email = input.email.trim();
   if (input.phone !== undefined) payload.phone = input.phone.trim();
   if (input.region !== undefined) payload.region = input.region;
-  if (input.accountStatus !== undefined) payload.account_status = input.accountStatus;
+  if (input.accountStatus !== undefined) {
+    if (!isClientAccountStatus(input.accountStatus)) {
+      throw new Error(
+        `Invalid accountStatus "${String(input.accountStatus)}". Use PRM-001 lifecycle values.`,
+      );
+    }
+    payload.account_status = input.accountStatus;
+  }
   if (input.contractType !== undefined) payload.contract_type = input.contractType;
   if (input.taxId !== undefined) payload.tax_id = input.taxId.trim();
   if (input.billingAddress !== undefined) payload.billing_address = input.billingAddress.trim();
@@ -79,8 +98,8 @@ function buildClientPayload(input: Partial<ManagedClient>) {
   if (input.platformOrganisationId !== undefined) {
     payload.platform_organisation_id = input.platformOrganisationId?.trim() || null;
   }
-  if (input.activeProjects !== undefined) payload.active_projects = input.activeProjects;
-  if (input.notes !== undefined) payload.notes = input.notes.trim();
+  // PRM-001: active_projects is derived — never accept client/API writes.
+  if (input.notes !== undefined) payload.notes = sanitizeClientNotes(input.notes);
   if (input.platformUrl !== undefined) payload.platform_url = input.platformUrl.trim() || null;
   if (input.filesFolderId !== undefined) payload.files_folder_id = input.filesFolderId?.trim() || null;
   if (input.filesFolderName !== undefined) {
@@ -196,14 +215,14 @@ export async function createInternalClient(
         email: input.email?.trim() ?? blank.email,
         phone: input.phone?.trim() ?? blank.phone,
         region: input.region ?? blank.region,
-        account_status:
-          input.accountStatus ??
-          (isCrmLinkedClientNotes(input.notes) ? "Active" : blank.accountStatus),
+        // FDR-MOD-011: every new Directory client starts as Client Created.
+        account_status: "Client Created" satisfies ClientAccountStatus,
         contract_type: input.contractType ?? blank.contractType,
         tax_id: input.taxId?.trim() ?? blank.taxId,
         billing_address: input.billingAddress?.trim() ?? blank.billingAddress,
-        active_projects: input.activeProjects ?? blank.activeProjects,
-        notes: input.notes?.trim() ?? blank.notes,
+        // PRM-001: derived field — always start at 0; projects modules update later.
+        active_projects: 0,
+        notes: sanitizeClientNotes(input.notes ?? blank.notes),
         platform_url: input.platformUrl?.trim() || null,
         platform_organisation_id: input.platformOrganisationId?.trim() || null,
       };
@@ -236,7 +255,15 @@ export async function createInternalClient(
         const { data, error } = await supabase.from("internal_clients").insert(row).select("*").single();
 
         if (!error && data) {
-          return mapInternalClient(data as DbClient);
+          const created = mapInternalClient(data as DbClient);
+          try {
+            const { ensureClientFilesRootFolder } = await import(
+              "@/lib/client-files-root"
+            );
+            return await ensureClientFilesRootFolder(created, { workspaceId });
+          } catch {
+            return created;
+          }
         }
 
         if (error) {
@@ -274,7 +301,15 @@ export async function updateInternalClient(
   return withInternalClientsFilesFolderColumns(() =>
     withInternalClientsTable(async () => {
       const supabase = requireClientsSupabase();
-      await requireInternalClientInWorkspace(id, { workspaceId });
+      const existing = await requireInternalClientInWorkspace(id, { workspaceId });
+      if (patch.accountStatus !== undefined) {
+        const from = normalizeClientAccountStatus(existing.accountStatus);
+        const to = isClientAccountStatus(patch.accountStatus)
+          ? patch.accountStatus
+          : normalizeClientAccountStatus(patch.accountStatus);
+        assertClientAccountStatusTransition(from, to);
+        patch = { ...patch, accountStatus: to };
+      }
       const payload = buildClientPayload(patch);
 
       const { data, error } = await supabase

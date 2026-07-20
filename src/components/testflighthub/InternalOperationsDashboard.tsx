@@ -37,6 +37,7 @@ import { InternalOperationsBasePathProvider } from "./InternalOperationsBasePath
 import AssetManagementWorkspace from "./AssetManagementWorkspace";
 import BoardPackCustomizerWorkspace from "./BoardPackCustomizerWorkspace";
 import ClientManagementWorkspace from "./ClientManagementWorkspace";
+import ClientsDashboardWorkspace from "./ClientsDashboardWorkspace";
 import ClientOnboardingWorkspace from "./ClientOnboardingWorkspace";
 import CalendarWorkspace from "./CalendarWorkspace";
 import CompetitorsWorkspace from "./CompetitorsWorkspace";
@@ -481,11 +482,11 @@ export default function InternalOperationsDashboard({
           )}
 
           {activeView === "clients" && (
-            <ClientManagementWorkspace onClientsChange={setClients} mode="directory" />
+            <ClientManagementWorkspace onClientsChange={setClients} />
           )}
 
           {activeView === "clients-dashboard" && (
-            <ClientManagementWorkspace onClientsChange={setClients} mode="dashboard" />
+            <ClientsDashboardWorkspace onClientsChange={setClients} />
           )}
 
           {activeView === "client-onboarding" && <ClientOnboardingWorkspace />}

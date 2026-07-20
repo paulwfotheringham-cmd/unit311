@@ -7,7 +7,7 @@ import type { ManagedClient } from "@/lib/client-management-data";
 import { clientStatusClass } from "@/lib/client-management-data";
 import { useInternalOperationsBasePath } from "./InternalOperationsBasePathContext";
 import { cn } from "@/lib/utils";
-import { FolderOpen, Loader2, Search } from "lucide-react";
+import { FolderOpen, FolderPlus, Loader2, Search } from "lucide-react";
 
 import FileRepositoryWorkspace from "./FileRepositoryWorkspace";
 
@@ -27,6 +27,7 @@ export default function ClientFilesExplorerWorkspace() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [ensuring, setEnsuring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadClients = useCallback(async () => {
@@ -64,12 +65,7 @@ export default function ClientFilesExplorerWorkspace() {
     if (!query) return clients;
 
     return clients.filter((client) => {
-      const haystack = [
-        client.companyName,
-        client.primaryContact,
-        client.region,
-        client.industry,
-      ]
+      const haystack = [client.companyName, client.primaryContact, client.region, client.industry]
         .join(" ")
         .toLowerCase();
       return haystack.includes(query);
@@ -80,6 +76,47 @@ export default function ClientFilesExplorerWorkspace() {
     () => clients.find((client) => client.id === selectedClientId) ?? null,
     [clients, selectedClientId],
   );
+
+  const ensureSelectedRoot = useCallback(async () => {
+    if (!selectedClientId) return null;
+
+    setEnsuring(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/clients/${encodeURIComponent(selectedClientId)}/files-root`, {
+        method: "POST",
+      });
+      const data = await readApiJson<{
+        client?: ManagedClient;
+        rootFolderId?: string;
+        error?: string;
+      }>(response);
+      if (!response.ok || !data.client?.filesFolderId) {
+        throw new Error(data.error ?? "Failed to provision client files folder");
+      }
+
+      setClients((current) =>
+        current.map((client) => (client.id === data.client!.id ? data.client! : client)),
+      );
+      return data.client;
+    } catch (ensureError) {
+      setError(
+        ensureError instanceof Error ? ensureError.message : "Failed to provision client files folder",
+      );
+      return null;
+    } finally {
+      setEnsuring(false);
+    }
+  }, [selectedClientId]);
+
+  useEffect(() => {
+    if (!selectedClientId) return;
+    if (selectedClient?.filesFolderId) return;
+
+    startTransition(() => {
+      void ensureSelectedRoot();
+    });
+  }, [ensureSelectedRoot, selectedClient?.filesFolderId, selectedClientId]);
 
   return (
     <div className="space-y-4">
@@ -97,18 +134,31 @@ export default function ClientFilesExplorerWorkspace() {
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white">Client file explorer</h2>
             <p className="mt-1 text-xs text-white/45">
-              Browse deliverables and shared folders per client account.
+              Document workspace for each Client Directory account.
             </p>
           </div>
-          {selectedClient?.filesFolderId && (
-            <Link
-              href={`${basePath}?view=files-internal&folderId=${encodeURIComponent(selectedClient.filesFolderId)}`}
-              className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
-            >
-              <FolderOpen className="h-3.5 w-3.5" />
-              Open in internal files
-            </Link>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedClient && !selectedClient.filesFolderId ? (
+              <button
+                type="button"
+                disabled={ensuring}
+                onClick={() => void ensureSelectedRoot()}
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25 disabled:opacity-60"
+              >
+                {ensuring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderPlus className="h-3.5 w-3.5" />}
+                Ensure folder
+              </button>
+            ) : null}
+            {selectedClient?.filesFolderId ? (
+              <Link
+                href={`${basePath}?view=files-internal&folderId=${encodeURIComponent(selectedClient.filesFolderId)}`}
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 transition-colors hover:border-sky-400/60 hover:bg-sky-500/25"
+              >
+                <FolderOpen className="h-3.5 w-3.5" />
+                Open in internal files
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <div className="relative mt-4">
@@ -165,7 +215,11 @@ export default function ClientFilesExplorerWorkspace() {
                       {client.industry} · {client.region}
                     </p>
                     <p className="mt-1 text-[11px] text-white/35">
-                      {client.filesFolderName ? `Folder: ${client.filesFolderName}` : "No linked folder"}
+                      {client.filesFolderName
+                        ? `Folder: ${client.filesFolderName}`
+                        : ensuring && selected
+                          ? "Provisioning folder…"
+                          : "No linked folder"}
                     </p>
                   </button>
                 );
@@ -175,15 +229,36 @@ export default function ClientFilesExplorerWorkspace() {
         )}
       </section>
 
-      {selectedClient ? (
+      {selectedClient?.filesFolderId ? (
         <FileRepositoryWorkspace
-          key={`${selectedClient.id}-${selectedClient.filesFolderId ?? "root"}`}
+          key={`${selectedClient.id}-${selectedClient.filesFolderId}`}
           scope="client"
           clientId={selectedClient.id}
           clientName={selectedClient.companyName}
-          initialFolderId={selectedClient.filesFolderId ?? null}
+          initialFolderId={selectedClient.filesFolderId}
           rootLabel={selectedClient.companyName}
         />
+      ) : selectedClient ? (
+        <section className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-12 text-center text-sm text-white/45">
+          {ensuring ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Provisioning document workspace…
+            </span>
+          ) : (
+            <div className="space-y-3">
+              <p>This client does not have a linked document folder yet.</p>
+              <button
+                type="button"
+                onClick={() => void ensureSelectedRoot()}
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/15 px-3 text-xs font-semibold text-sky-300"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+                Ensure folder
+              </button>
+            </div>
+          )}
+        </section>
       ) : (
         <section className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-12 text-center text-sm text-white/45">
           Select a client to browse their file workspace.

@@ -10,7 +10,7 @@ export type ModuleGoLiveEntry = {
 
 /** Permanent module IDs — never change. */
 export const MODULE_GO_LIVE_CATALOG: readonly Omit<ModuleGoLiveEntry, "status">[] = [
-  { id: "MOD-001", module: "Home Dashboard" },
+  { id: "MOD-001", module: "Dashboard" },
   { id: "MOD-002", module: "Executive Assistant" },
   { id: "MOD-010", module: "Clients Dashboard" },
   { id: "MOD-011", module: "Client Directory" },
@@ -82,11 +82,26 @@ export function isModuleGoLiveStatus(value: unknown): value is ModuleGoLiveStatu
   );
 }
 
+/** Wave 0 verified defaults when no stored status exists. */
+const MODULE_GO_LIVE_DEFAULT_STATUS: Readonly<Partial<Record<string, ModuleGoLiveStatus>>> = {
+  "MOD-071": "Needs Work",
+  /** Profile bound to session / whoami (Wave 0). */
+  "MOD-170": "Ready",
+  /** Wave 1 — Client Directory lifecycle rewrite (FDR-MOD-011-LIFECYCLE). */
+  "MOD-011": "Ready",
+  /** Wave 1 — External Users client_id FK (FDR-MOD-161). */
+  "MOD-161": "Ready",
+  /** MOD-103 Client Files — contained document workspace per Client Directory. */
+  "MOD-103": "Ready",
+  /** Wave 1 — Clients Dashboard tiles aligned to lifecycle buckets. */
+  "MOD-010": "Ready",
+};
+
 export function buildDefaultModuleGoLiveRegister(): ModuleGoLiveEntry[] {
   return MODULE_GO_LIVE_CATALOG.map((entry) => ({
     id: entry.id,
     module: entry.module,
-    status: entry.id === "MOD-071" ? ("Needs Work" as const) : ("Not Started" as const),
+    status: MODULE_GO_LIVE_DEFAULT_STATUS[entry.id] ?? ("Not Started" as const),
   }));
 }
 
@@ -116,14 +131,19 @@ export function mergeModuleGoLiveRegister(
 
   return MODULE_GO_LIVE_CATALOG.map((entry) => {
     const storedStatus = byId.get(entry.id);
-    // MOD-071: architecture + Phase 1 plans approved; work remains — Needs Work (not Not Started).
-    if (entry.id === "MOD-071" && (!storedStatus || storedStatus === "Not Started")) {
-      return { id: entry.id, module: entry.module, status: "Needs Work" as const };
+    const defaultStatus = MODULE_GO_LIVE_DEFAULT_STATUS[entry.id];
+    // Preserve intentional stored statuses; seed Wave 0 defaults when unset / Not Started.
+    if (
+      defaultStatus &&
+      (!storedStatus || storedStatus === "Not Started") &&
+      defaultStatus !== "Not Started"
+    ) {
+      return { id: entry.id, module: entry.module, status: defaultStatus };
     }
     return {
       id: entry.id,
       module: entry.module,
-      status: storedStatus ?? "Not Started",
+      status: storedStatus ?? defaultStatus ?? "Not Started",
     };
   });
 }

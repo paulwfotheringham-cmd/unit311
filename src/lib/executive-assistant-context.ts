@@ -21,10 +21,11 @@ export type ExecutivePlatformSnapshot = {
   clients: {
     total: number;
     active: number;
+    clientCreated: number;
+    workspaceProvisioned: number;
     onboarding: number;
-    prospect: number;
-    onHold: number;
-    inactive: number;
+    dormant: number;
+    archived: number;
     topActive: string[];
   } | null;
   projects: {
@@ -184,10 +185,14 @@ export async function buildExecutivePlatformSnapshot(): Promise<ExecutivePlatfor
       : {
           total: clients.length,
           active: clients.filter((client) => client.accountStatus === "Active").length,
-          onboarding: clients.filter((client) => client.accountStatus === "Pending").length,
-          prospect: clients.filter((client) => client.accountStatus === "Prospect").length,
-          onHold: clients.filter((client) => client.accountStatus === "On Hold").length,
-          inactive: clients.filter((client) => client.accountStatus === "Inactive").length,
+          clientCreated: clients.filter((client) => client.accountStatus === "Client Created")
+            .length,
+          workspaceProvisioned: clients.filter(
+            (client) => client.accountStatus === "Workspace Provisioned",
+          ).length,
+          onboarding: clients.filter((client) => client.accountStatus === "Onboarding").length,
+          dormant: clients.filter((client) => client.accountStatus === "Dormant").length,
+          archived: clients.filter((client) => client.accountStatus === "Archived").length,
           topActive: clients
             .filter((client) => client.accountStatus === "Active")
             .slice(0, 8)

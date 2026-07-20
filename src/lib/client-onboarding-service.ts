@@ -172,7 +172,7 @@ async function handlePaymentReceivedSideEffects(record: ClientOnboardingRecord) 
     await updateInternalClient(
       linkedClient.id,
       {
-        accountStatus: "Pending",
+        accountStatus: "Onboarding",
         platformOrganisationId: organisationId,
         notes: `${linkedClient.notes}\nPayment received ${new Date().toISOString()}.`.trim(),
       },

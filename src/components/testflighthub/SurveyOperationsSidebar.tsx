@@ -501,16 +501,20 @@ export default function SurveyOperationsSidebar({
       <div
         className={cn(
           "flex shrink-0 items-center justify-between border-b border-white/[0.08]",
-          isInternalCompact ? "px-2.5 pb-2 pt-2 lg:px-3" : "px-3 pb-4 pt-2.5 lg:px-3.5 lg:pb-5 lg:pt-3",
+          // Match main chrome header height (h-14 / lg:h-16) — do not grow this slot.
+          isInternalCompact
+            ? "h-14 px-2.5 lg:h-16 lg:px-3"
+            : "px-3 pb-4 pt-2.5 lg:px-3.5 lg:pb-5 lg:pt-3",
         )}
       >
         {mode === "internal" ? (
-          <div className="min-w-0 flex-1 overflow-visible">
+          <div className="flex h-full min-w-0 flex-1 items-center overflow-hidden py-1.5">
             <Logo
               variant="hero"
+              fillContainer
               height={LOGO_SIDEBAR_HEIGHT}
               href={logoHref}
-              className="drop-shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+              className="origin-left drop-shadow-[0_4px_20px_rgba(0,0,0,0.35)] [transform:scale(1.95)]"
             />
           </div>
         ) : (

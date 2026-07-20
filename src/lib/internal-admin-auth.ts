@@ -89,3 +89,19 @@ export async function requireInternalWorkspaceSession(): Promise<
     return { error: NextResponse.json({ error: message }, { status: 401 }) };
   }
 }
+
+/**
+ * Admin operator on an authorised internal workspace host.
+ * Does not change the global operators catalogue — only gates API access.
+ */
+export async function requireInternalAdministratorWorkspaceSession(): Promise<
+  { error: NextResponse } | { session: PlatformSession; workspace: CurrentWorkspace }
+> {
+  const workspaceAuth = await requireInternalWorkspaceSession();
+  if ("error" in workspaceAuth) return workspaceAuth;
+
+  const adminAuth = await requireInternalAdministratorSession();
+  if ("error" in adminAuth) return adminAuth;
+
+  return { session: adminAuth.session, workspace: workspaceAuth.workspace };
+}
