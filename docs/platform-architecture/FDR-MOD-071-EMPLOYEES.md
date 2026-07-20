@@ -407,7 +407,7 @@ Governed by **§E Integration Principles**.
 | --- | --- |
 | **Financials / Payroll** | Own transactions; Employees displays history and offboarding payment outcomes by reference |
 | **Leave (MOD-072)** | Owns requests & balances; Employees Leave tab displays |
-| **Recruitment (MOD-074)** | Owns pipeline; creates/activates Employee at Offer Accepted |
+| **Recruitment (MOD-201)** | Owns pipeline; creates/activates Employee at Offer Accepted |
 | **Performance (MOD-073)** | Owns reviews; Employees Performance tab displays |
 | **Training / QMS** | Own records/certs; reference `employee_id`; may surface docs |
 | **Projects / Engineering** | Allocations reference `employee_id` |
@@ -532,7 +532,7 @@ Implementation is authorised **only** to proceed in approved phases conforming t
 | Performance (MOD-073) | Owns reviews | Phase 5 |
 | Financials / Payroll | Transactions & offboarding money | Phase 2 display; Phase 6 outcomes |
 | Users linking | Accounts Disabled | Phase 6 |
-| Recruitment (MOD-074) | Lifecycle entry | Phase 7 |
+| Recruitment (MOD-201) | Lifecycle entry | Phase 7 |
 | Projects / Engineering / Assets | Consume `employee_id` | Parallel |
 
 ---
@@ -576,7 +576,7 @@ Implementation is authorised **only** to proceed in approved phases conforming t
 | Document storage | Pending implementation choice (Internal Files vs HR bucket) — must not change ownership rules |
 | Employee ID format | Pending implementation choice — must remain permanent |
 | Contractors | Include via Employment Type unless a future FDR splits them |
-| Module Go-Live (demo) | **Ready** 2026-07-21 via [MOD-200](./MOD-200-HR-DOMAIN.md); [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) backlog for live 360 data |
+| Module Go-Live (demo) | **Ready** / closed under [MOD-200](./MOD-200-HR-DOMAIN.md) 2026-07-21 (SHA `7d88199`); sole backlog [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) |
 
 ---
 
