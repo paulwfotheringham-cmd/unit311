@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Check,
   Copy,
   Download,
@@ -36,6 +39,9 @@ import {
 } from "@/lib/financial-reports-mock-data";
 import { cn } from "@/lib/utils";
 
+type LibrarySortKey = "category" | "period" | "createdBy";
+type LibrarySortDirection = "asc" | "desc";
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <label className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
@@ -68,6 +74,51 @@ function formatHistoryWhen(iso: string) {
   });
 }
 
+function compareText(a: string, b: string) {
+  return a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
+}
+
+function sortValueForKey(report: FinancialReportRecord, key: LibrarySortKey) {
+  if (key === "category") return report.category;
+  if (key === "createdBy") return report.createdBy;
+  // Period: prefer human label, fall back to kind for stable grouping.
+  return `${report.periodLabel} ${report.periodKind}`;
+}
+
+function SortableHeader({
+  label,
+  columnKey,
+  activeKey,
+  direction,
+  onSort,
+}: {
+  label: string;
+  columnKey: LibrarySortKey;
+  activeKey: LibrarySortKey | null;
+  direction: LibrarySortDirection;
+  onSort: (key: LibrarySortKey) => void;
+}) {
+  const active = activeKey === columnKey;
+  const Icon = !active ? ArrowUpDown : direction === "asc" ? ArrowUp : ArrowDown;
+
+  return (
+    <th className="px-3 py-2.5 font-medium">
+      <button
+        type="button"
+        onClick={() => onSort(columnKey)}
+        className={cn(
+          "inline-flex items-center gap-1.5 uppercase tracking-[0.12em] transition-colors",
+          active ? "text-sky-200" : "text-white/40 hover:text-white/70",
+        )}
+        aria-label={`Sort by ${label}`}
+      >
+        {label}
+        <Icon className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
+      </button>
+    </th>
+  );
+}
+
 const WIZARD_STEPS = [
   "Report type",
   "Period",
@@ -81,6 +132,8 @@ export default function FinancialReportsWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [rowMenuId, setRowMenuId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<LibrarySortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("asc");
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -91,6 +144,25 @@ export default function FinancialReportsWorkspace() {
     () => reports.find((report) => report.id === selectedId) ?? null,
     [reports, selectedId],
   );
+
+  const sortedReports = useMemo(() => {
+    if (!sortKey) return reports;
+    const ordered = [...reports];
+    ordered.sort((a, b) => {
+      const result = compareText(sortValueForKey(a, sortKey), sortValueForKey(b, sortKey));
+      return sortDirection === "asc" ? result : -result;
+    });
+    return ordered;
+  }, [reports, sortKey, sortDirection]);
+
+  function toggleSort(key: LibrarySortKey) {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection("asc");
+  }
 
   function flash(message: string) {
     setActionMessage(message);
@@ -328,9 +400,27 @@ export default function FinancialReportsWorkspace() {
               <thead className="border-b border-white/10 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
                 <tr>
                   <th className="px-3 py-2.5 font-medium">Report Name</th>
-                  <th className="px-3 py-2.5 font-medium">Category</th>
-                  <th className="px-3 py-2.5 font-medium">Reporting Period</th>
-                  <th className="px-3 py-2.5 font-medium">Created By</th>
+                  <SortableHeader
+                    label="Category"
+                    columnKey="category"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={toggleSort}
+                  />
+                  <SortableHeader
+                    label="Reporting Period"
+                    columnKey="period"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={toggleSort}
+                  />
+                  <SortableHeader
+                    label="Created By"
+                    columnKey="createdBy"
+                    activeKey={sortKey}
+                    direction={sortDirection}
+                    onSort={toggleSort}
+                  />
                   <th className="px-3 py-2.5 font-medium">Last Generated</th>
                   <th className="px-3 py-2.5 font-medium">Format</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
@@ -338,7 +428,7 @@ export default function FinancialReportsWorkspace() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {reports.map((report) => {
+                {sortedReports.map((report) => {
                   const active = report.id === selectedId;
                   return (
                     <tr
