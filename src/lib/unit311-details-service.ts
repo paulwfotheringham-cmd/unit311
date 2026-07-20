@@ -17,6 +17,7 @@ import {
   type Unit311DetailCategoryId,
   type Unit311DetailTask,
 } from "@/lib/unit311-details-data";
+import { DOMAIN_GO_LIVE_STORAGE_CATEGORY_ID } from "@/lib/domain-go-live-data";
 import { MODULE_GO_LIVE_STORAGE_CATEGORY_ID } from "@/lib/module-go-live-data";
 import {
   browseFolder,
@@ -30,6 +31,13 @@ import {
   resolveFilesWorkspaceId,
   type FilesWorkspaceScope,
 } from "@/lib/files-workspace";
+
+function isGoLiveStorageCategory(categoryId: string) {
+  return (
+    categoryId === MODULE_GO_LIVE_STORAGE_CATEGORY_ID ||
+    categoryId === DOMAIN_GO_LIVE_STORAGE_CATEGORY_ID
+  );
+}
 
 const VOICE_AND_VIDEO_DOC_PATH = "docs/VOICE_AND_VIDEO_ARCHITECTURE.md";
 
@@ -433,7 +441,7 @@ export async function getUnit311DetailsOverview(scope?: FilesWorkspaceScope) {
   const tasks: Record<string, Unit311DetailTask[]> = {};
 
   for (const category of bootstrap.categories) {
-    if (category.id === MODULE_GO_LIVE_STORAGE_CATEGORY_ID) {
+    if (isGoLiveStorageCategory(category.id)) {
       continue;
     }
 
@@ -453,7 +461,7 @@ export async function getUnit311DetailsOverview(scope?: FilesWorkspaceScope) {
     rootFolderId: bootstrap.rootFolderId,
     folders: bootstrap.folders,
     categories: bootstrap.categories.filter(
-      (category) => category.id !== MODULE_GO_LIVE_STORAGE_CATEGORY_ID,
+      (category) => !isGoLiveStorageCategory(category.id),
     ),
     contents,
     tasks,

@@ -79,62 +79,103 @@ export default function ModuleGoLiveWorkspace() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const warnings: string[] = [];
+
     try {
       const [moduleResponse, domainResponse] = await Promise.all([
         fetch("/api/module-go-live", { cache: "no-store" }),
         fetch("/api/domain-go-live", { cache: "no-store" }),
       ]);
 
-      const moduleData = await readApiJson<{
-        modules?: ModuleGoLiveEntry[];
-        error?: string;
-      }>(moduleResponse);
-      if (!moduleResponse.ok) {
-        throw new Error(moduleData.error ?? "Failed to load Module Go-Live register");
-      }
+      let nextModules: ModuleGoLiveEntry[] = [];
+      let nextDomains: DomainGoLiveEntry[] = [];
 
-      const domainData = await readApiJson<{
-        domains?: DomainGoLiveEntry[];
-        coverage?: {
-          ok?: boolean;
-          unmappedModuleIds?: string[];
-          unknownDomainModuleIds?: string[];
-          duplicateModuleIds?: string[];
-        };
-        error?: string;
-      }>(domainResponse);
-      if (!domainResponse.ok) {
-        throw new Error(domainData.error ?? "Failed to load Domain Go-Live register");
-      }
-
-      setModules(moduleData.modules ?? []);
-      setDomains(domainData.domains ?? []);
-
-      const coverage = domainData.coverage;
-      if (coverage && coverage.ok === false) {
-        setCoverageWarning(
-          [
-            "Domain ↔ module catalogue drift detected.",
-            coverage.unmappedModuleIds?.length
-              ? `Unmapped: ${coverage.unmappedModuleIds.join(", ")}`
-              : null,
-            coverage.unknownDomainModuleIds?.length
-              ? `Unknown: ${coverage.unknownDomainModuleIds.join(", ")}`
-              : null,
-            coverage.duplicateModuleIds?.length
-              ? `Duplicates: ${coverage.duplicateModuleIds.join(", ")}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" "),
+      try {
+        const moduleData = await readApiJson<{
+          modules?: ModuleGoLiveEntry[];
+          error?: string;
+        }>(moduleResponse);
+        if (!moduleResponse.ok) {
+          throw new Error(moduleData.error ?? "Failed to load Module Go-Live register");
+        }
+        nextModules = moduleData.modules ?? [];
+      } catch (moduleError) {
+        const message =
+          moduleError instanceof Error
+            ? moduleError.message
+            : "Failed to load Module Go-Live register";
+        console.warn("[module-go-live] module load failed", moduleError);
+        warnings.push(
+          /unknown category/i.test(message)
+            ? "Module register storage is not ready yet. Showing catalogue defaults where possible."
+            : `Modules could not be fully loaded: ${message}`,
         );
-      } else {
-        setCoverageWarning(null);
+      }
+
+      try {
+        const domainData = await readApiJson<{
+          domains?: DomainGoLiveEntry[];
+          coverage?: {
+            ok?: boolean;
+            unmappedModuleIds?: string[];
+            unknownDomainModuleIds?: string[];
+            duplicateModuleIds?: string[];
+          };
+          error?: string;
+        }>(domainResponse);
+        if (!domainResponse.ok) {
+          throw new Error(domainData.error ?? "Failed to load Domain Go-Live register");
+        }
+        nextDomains = domainData.domains ?? [];
+
+        const coverage = domainData.coverage;
+        if (coverage && coverage.ok === false) {
+          warnings.push(
+            [
+              "Domain ↔ module catalogue drift detected.",
+              coverage.unmappedModuleIds?.length
+                ? `Unmapped: ${coverage.unmappedModuleIds.join(", ")}`
+                : null,
+              coverage.unknownDomainModuleIds?.length
+                ? `Unknown: ${coverage.unknownDomainModuleIds.join(", ")}`
+                : null,
+              coverage.duplicateModuleIds?.length
+                ? `Duplicates: ${coverage.duplicateModuleIds.join(", ")}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" "),
+          );
+        }
+      } catch (domainError) {
+        const message =
+          domainError instanceof Error
+            ? domainError.message
+            : "Failed to load Domain Go-Live register";
+        console.warn("[module-go-live] domain load failed", domainError);
+        warnings.push(
+          /unknown category/i.test(message)
+            ? "Domain register storage is not ready yet. Domains will appear after the next successful save or refresh."
+            : `Domains could not be fully loaded: ${message}`,
+        );
+      }
+
+      setModules(nextModules);
+      setDomains(nextDomains);
+      setCoverageWarning(warnings.length ? warnings.join(" ") : null);
+
+      if (!nextModules.length && !nextDomains.length && warnings.length) {
+        setError(
+          "Module Go-Live could not load readiness data. Check workspace file storage and try again.",
+        );
       }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load register");
-      setModules([]);
-      setDomains([]);
+      console.warn("[module-go-live] unexpected load failure", loadError);
+      setCoverageWarning(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unexpected error while loading Module Go-Live.",
+      );
     } finally {
       setLoading(false);
     }

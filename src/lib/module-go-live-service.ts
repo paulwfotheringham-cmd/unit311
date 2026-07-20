@@ -3,6 +3,7 @@ import {
   MODULE_GO_LIVE_STORAGE_CATEGORY_ID,
   type ModuleGoLiveEntry,
   type ModuleGoLiveStatus,
+  buildDefaultModuleGoLiveRegister,
   isModuleGoLiveStatus,
   mergeModuleGoLiveRegister,
   parseModuleGoLiveRegister,
@@ -13,11 +14,26 @@ import {
   saveUnit311DetailContent,
 } from "@/lib/unit311-details-service";
 
+function isUnknownCategoryError(error: unknown) {
+  return error instanceof Error && /unknown category/i.test(error.message);
+}
+
 export async function getModuleGoLiveRegister(
   scope?: FilesWorkspaceScope,
 ): Promise<ModuleGoLiveEntry[]> {
-  const detail = await loadUnit311DetailContent(MODULE_GO_LIVE_STORAGE_CATEGORY_ID, scope);
-  return parseModuleGoLiveRegister(detail.content ?? "");
+  try {
+    const detail = await loadUnit311DetailContent(MODULE_GO_LIVE_STORAGE_CATEGORY_ID, scope);
+    return parseModuleGoLiveRegister(detail.content ?? "");
+  } catch (error) {
+    if (isUnknownCategoryError(error)) {
+      console.warn(
+        "[module-go-live] Storage category missing; using catalogue defaults.",
+        error,
+      );
+      return buildDefaultModuleGoLiveRegister();
+    }
+    throw error;
+  }
 }
 
 export async function saveModuleGoLiveRegister(

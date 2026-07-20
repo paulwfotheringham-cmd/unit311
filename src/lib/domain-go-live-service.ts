@@ -16,14 +16,29 @@ import {
   saveUnit311DetailContent,
 } from "@/lib/unit311-details-service";
 
+function isUnknownCategoryError(error: unknown) {
+  return error instanceof Error && /unknown category/i.test(error.message);
+}
+
 export async function getDomainGoLiveOverrides(
   scope?: FilesWorkspaceScope,
 ): Promise<DomainGoLiveOverride[]> {
-  const detail = await loadUnit311DetailContent(
-    DOMAIN_GO_LIVE_STORAGE_CATEGORY_ID,
-    scope,
-  );
-  return parseDomainGoLiveOverrides(detail.content ?? "");
+  try {
+    const detail = await loadUnit311DetailContent(
+      DOMAIN_GO_LIVE_STORAGE_CATEGORY_ID,
+      scope,
+    );
+    return parseDomainGoLiveOverrides(detail.content ?? "");
+  } catch (error) {
+    if (isUnknownCategoryError(error)) {
+      console.warn(
+        "[domain-go-live] Storage category missing; using empty overrides.",
+        error,
+      );
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function saveDomainGoLiveOverrides(

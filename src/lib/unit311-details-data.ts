@@ -22,7 +22,8 @@ export type Unit311BuiltinCategoryId =
   | "voice-and-video"
   | "software-asset-register"
   | "architecture-diagrams"
-  | "module-go-live";
+  | "module-go-live"
+  | "domain-go-live";
 
 export type Unit311DetailCategoryId = Unit311BuiltinCategoryId | `custom-${string}`;
 
@@ -99,6 +100,12 @@ export const UNIT311_DETAIL_CATEGORIES: readonly Unit311DetailCategory[] = [
     id: "module-go-live",
     label: "Module Go-Live",
     folderName: "Module Go-Live",
+    builtin: true,
+  },
+  {
+    id: "domain-go-live",
+    label: "Domain Go-Live",
+    folderName: "Domain Go-Live",
     builtin: true,
   },
 ] as const;
