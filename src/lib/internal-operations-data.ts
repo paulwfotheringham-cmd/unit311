@@ -423,12 +423,13 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         icon: "MapPin",
         children: [
           { label: "Dashboard", view: "corporate-dashboard" as const },
-          {
-            label: "Company Details",
-            view: "corporate-information" as const,
-            query: { tab: "company-details" },
-          },
+          { label: "Company Details", view: "corporate-company-details" as const },
           { label: "Cap Table", view: "corporate-cap-table" as const },
+          { label: "Office Locations", view: "office-locations" as const },
+          { label: "Bank Accounts", view: "corporate-bank-accounts" as const },
+          { label: "Professional Advisors", view: "corporate-advisers" as const },
+          { label: "Software & Licences", view: "corporate-software" as const },
+          { label: "Contracts", view: "corporate-contracts" as const },
           {
             label: "Unit311 Details",
             children: [
