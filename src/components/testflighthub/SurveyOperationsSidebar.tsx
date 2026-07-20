@@ -508,13 +508,13 @@ export default function SurveyOperationsSidebar({
         )}
       >
         {mode === "internal" ? (
-          <div className="flex h-full min-w-0 flex-1 items-center overflow-hidden py-1.5">
+          <div className="flex h-full min-w-0 flex-1 items-center justify-start overflow-hidden py-1.5">
             <Logo
               variant="hero"
               fillContainer
               height={LOGO_SIDEBAR_HEIGHT}
               href={logoHref}
-              className="origin-left drop-shadow-[0_4px_20px_rgba(0,0,0,0.35)] [transform:scale(1.95)]"
+              className="origin-left drop-shadow-[0_4px_20px_rgba(0,0,0,0.35)] [transform:scale(0.975)]"
             />
           </div>
         ) : (
