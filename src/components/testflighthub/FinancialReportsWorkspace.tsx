@@ -134,6 +134,9 @@ export default function FinancialReportsWorkspace() {
   const [rowMenuId, setRowMenuId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<LibrarySortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<LibrarySortDirection>("asc");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterPeriod, setFilterPeriod] = useState("all");
+  const [filterCreatedBy, setFilterCreatedBy] = useState("all");
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -145,15 +148,41 @@ export default function FinancialReportsWorkspace() {
     [reports, selectedId],
   );
 
-  const sortedReports = useMemo(() => {
-    if (!sortKey) return reports;
-    const ordered = [...reports];
+  const filterOptions = useMemo(() => {
+    const categories = new Set<string>();
+    const periods = new Set<string>();
+    const creators = new Set<string>();
+    for (const report of reports) {
+      categories.add(report.category);
+      periods.add(report.periodLabel);
+      creators.add(report.createdBy);
+    }
+    return {
+      categories: [...categories].sort((a, b) => compareText(a, b)),
+      periods: [...periods].sort((a, b) => compareText(a, b)),
+      creators: [...creators].sort((a, b) => compareText(a, b)),
+    };
+  }, [reports]);
+
+  const visibleReports = useMemo(() => {
+    const filtered = reports.filter((report) => {
+      if (filterCategory !== "all" && report.category !== filterCategory) return false;
+      if (filterPeriod !== "all" && report.periodLabel !== filterPeriod) return false;
+      if (filterCreatedBy !== "all" && report.createdBy !== filterCreatedBy) return false;
+      return true;
+    });
+
+    if (!sortKey) return filtered;
+    const ordered = [...filtered];
     ordered.sort((a, b) => {
       const result = compareText(sortValueForKey(a, sortKey), sortValueForKey(b, sortKey));
       return sortDirection === "asc" ? result : -result;
     });
     return ordered;
-  }, [reports, sortKey, sortDirection]);
+  }, [reports, filterCategory, filterPeriod, filterCreatedBy, sortKey, sortDirection]);
+
+  const filtersActive =
+    filterCategory !== "all" || filterPeriod !== "all" || filterCreatedBy !== "all";
 
   function toggleSort(key: LibrarySortKey) {
     if (sortKey === key) {
@@ -162,6 +191,12 @@ export default function FinancialReportsWorkspace() {
     }
     setSortKey(key);
     setSortDirection("asc");
+  }
+
+  function clearFilters() {
+    setFilterCategory("all");
+    setFilterPeriod("all");
+    setFilterCreatedBy("all");
   }
 
   function flash(message: string) {
