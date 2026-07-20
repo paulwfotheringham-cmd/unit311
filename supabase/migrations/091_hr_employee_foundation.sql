@@ -80,9 +80,9 @@ where currency is null or currency = '';
 with ordered as (
   select
     id,
-    coalesce(workspace_id, '') as ws,
+    coalesce(workspace_id::text, '') as ws,
     row_number() over (
-      partition by coalesce(workspace_id, '')
+      partition by coalesce(workspace_id::text, '')
       order by date_joined asc nulls last, id asc
     ) as rn
   from public.hr_employees
@@ -93,9 +93,9 @@ set employee_number = 'EMP-' || lpad(ordered.rn::text, 4, '0')
 from ordered
 where e.id = ordered.id;
 
--- Ensure unique employee_number where present
+-- Ensure unique employee_number per workspace where present
 create unique index if not exists hr_employees_employee_number_uidx
-  on public.hr_employees (employee_number)
+  on public.hr_employees (workspace_id, employee_number)
   where employee_number is not null and employee_number <> '';
 
 create index if not exists hr_employees_workspace_status_idx
@@ -107,7 +107,7 @@ create index if not exists hr_employees_manager_idx
 -- Seed number sequence from max assigned
 insert into public.hr_employee_number_seq (workspace_id, next_value)
 select
-  coalesce(workspace_id, ''),
+  coalesce(workspace_id::text, ''),
   coalesce(
     max(
       nullif(regexp_replace(employee_number, '^EMP-', ''), '')::int
@@ -116,7 +116,7 @@ select
   ) + 1
 from public.hr_employees
 where employee_number ~ '^EMP-[0-9]+$'
-group by coalesce(workspace_id, '')
+group by coalesce(workspace_id::text, '')
 on conflict (workspace_id) do update
 set next_value = greatest(public.hr_employee_number_seq.next_value, excluded.next_value);
 
@@ -235,7 +235,7 @@ insert into public.hr_employee_compensation_history (
 )
 select
   'comp-seed-sal-prev-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'salary',
   e.date_joined,
@@ -256,7 +256,7 @@ insert into public.hr_employee_compensation_history (
 )
 select
   'comp-seed-sal-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'salary',
   coalesce(e.salary_increase_date, e.date_joined),
@@ -277,7 +277,7 @@ insert into public.hr_employee_compensation_history (
 )
 select
   'comp-seed-bonus-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'bonus',
   coalesce(e.salary_increase_date, e.date_joined),
@@ -297,7 +297,7 @@ insert into public.hr_employee_timeline_events (
 )
 select
   'tl-joined-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'joined',
   e.date_joined::timestamptz,
@@ -315,7 +315,7 @@ insert into public.hr_employee_documents (
 )
 select
   'doc-legacy-resume-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'resume',
   'Resume',
@@ -332,7 +332,7 @@ insert into public.hr_employee_documents (
 )
 select
   'doc-legacy-contract-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'employment_contract',
   'Employment Contract',
@@ -349,7 +349,7 @@ insert into public.hr_employee_documents (
 )
 select
   'doc-legacy-share-' || e.id,
-  coalesce(e.workspace_id, ''),
+  coalesce(e.workspace_id::text, ''),
   e.id,
   'share_option_agreement',
   'Share Option Agreement',
@@ -368,7 +368,7 @@ from public.hr_employees m
 where e.manager_employee_id is null
   and coalesce(e.manager, '') <> ''
   and lower(trim(m.full_name)) = lower(trim(e.manager))
-  and coalesce(m.workspace_id, '') = coalesce(e.workspace_id, '')
+  and coalesce(m.workspace_id::text, '') = coalesce(e.workspace_id::text, '')
   and m.id <> e.id;
 
 alter table public.hr_employee_compensation_history enable row level security;
