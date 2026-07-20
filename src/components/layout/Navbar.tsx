@@ -49,7 +49,10 @@ export default function Navbar() {
     return onInternalHost || onCustomerHost;
   });
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login" || pathname === "/clientlogin";
+  const isLoginPage =
+    pathname === "/login" ||
+    pathname === "/clientlogin" ||
+    pathname === "/resetpassword";
   const isHomePage = pathname === "/" || pathname === null;
   const isMarketingPage = isMarketingRoute(pathname);
   const isBookPage = pathname === "/book";

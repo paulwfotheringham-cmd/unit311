@@ -24,6 +24,7 @@ export default function FooterGate() {
   if (
     isInternalAppHost ||
     pathname === "/login" ||
+    pathname === "/resetpassword" ||
     pathname?.startsWith("/ws/") ||
     pathname === "/clientlogin" ||
     pathname?.startsWith("/meet/") ||

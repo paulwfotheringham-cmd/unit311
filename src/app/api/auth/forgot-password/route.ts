@@ -7,14 +7,13 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { username?: string; email?: string };
+    const body = (await request.json()) as { email?: string; username?: string };
 
-    if (!body.username?.trim() || !body.email?.trim()) {
-      return NextResponse.json({ error: "Username and email are required." }, { status: 400 });
+    if (!body.email?.trim()) {
+      return NextResponse.json({ error: "Email address is required." }, { status: 400 });
     }
 
     const result = await requestPlatformPasswordReset({
-      username: body.username,
       email: body.email,
     });
 

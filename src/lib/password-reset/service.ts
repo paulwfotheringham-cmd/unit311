@@ -12,13 +12,16 @@ import {
   normalizePlatformUsername,
   type PlatformUserRecord,
 } from "@/lib/platform-auth";
-import { findPlatformUserByUsername } from "@/lib/platform-users-service";
+import {
+  findPlatformUserByUsername,
+  findPlatformUsersByEmail,
+} from "@/lib/platform-users-service";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export const PASSWORD_RESET_EXPIRY_MINUTES = 60;
 
 const GENERIC_RESET_MESSAGE =
-  "If an account matches that username and email, we sent a password reset link.";
+  "If an account matches that email address, we sent a password reset link.";
 
 function requireSupabase() {
   if (!isSupabaseConfigured()) {
@@ -54,6 +57,10 @@ function validateNewPassword(password: string, confirmPassword: string) {
 }
 
 async function resolveUserEmail(user: PlatformUserRecord): Promise<string | null> {
+  if (user.email?.trim()) {
+    return normalizeEmail(user.email);
+  }
+
   const supabase = requireSupabase();
   const username = normalizePlatformUsername(user.username);
 
@@ -72,31 +79,60 @@ async function resolveUserEmail(user: PlatformUserRecord): Promise<string | null
   return null;
 }
 
-export async function requestPlatformPasswordReset(input: {
-  username: string;
-  email: string;
-}) {
+async function findUserForPasswordResetByEmail(
+  submittedEmail: string,
+): Promise<PlatformUserRecord | null> {
+  const matches = await findPlatformUsersByEmail(submittedEmail);
+  for (const user of matches) {
+    if (!user.is_active) continue;
+    const accountEmail = await resolveUserEmail(user);
+    if (accountEmail === submittedEmail) return user;
+  }
+
+  // Internal operators often store email on internal_operators, not platform_users.
+  const supabase = requireSupabase();
+  const { data: operator, error } = await supabase
+    .from("internal_operators")
+    .select("username, email")
+    .ilike("email", submittedEmail)
+    .maybeSingle();
+
+  if (error && !error.message.includes("email")) {
+    throw new Error(error.message);
+  }
+
+  if (operator?.username) {
+    const user = await findPlatformUserByUsername(String(operator.username));
+    if (user?.is_active) {
+      const accountEmail = await resolveUserEmail(user);
+      if (accountEmail === submittedEmail) return user;
+      if (operator.email && normalizeEmail(String(operator.email)) === submittedEmail) {
+        return user;
+      }
+    }
+  }
+
+  return null;
+}
+
+export async function requestPlatformPasswordReset(input: { email: string }) {
   await ensurePlatformPasswordResetTokensTable();
 
-  const username = normalizePlatformUsername(input.username);
   const submittedEmail = normalizeEmail(input.email);
 
-  if (!username || !submittedEmail) {
-    throw new Error("Username and email are required.");
+  if (!submittedEmail) {
+    throw new Error("Email address is required.");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(submittedEmail)) {
     throw new Error("Please enter a valid email address.");
   }
 
-  const user = await findPlatformUserByUsername(username);
+  const user = await findUserForPasswordResetByEmail(submittedEmail);
   if (!user) {
     return { message: GENERIC_RESET_MESSAGE };
   }
 
-  const accountEmail = await resolveUserEmail(user);
-  if (!accountEmail || accountEmail !== submittedEmail) {
-    return { message: GENERIC_RESET_MESSAGE };
-  }
+  const accountEmail = (await resolveUserEmail(user)) ?? submittedEmail;
 
   const token = createResetTokenValue();
   const tokenHash = hashResetToken(token);

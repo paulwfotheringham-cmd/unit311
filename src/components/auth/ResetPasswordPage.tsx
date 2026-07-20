@@ -5,10 +5,15 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import Logo from "@/components/layout/Logo";
+import MarketingPageShell from "@/components/layout/MarketingPageShell";
+import { marketingFadeIn, MARKETING_CONTENT_CLASS } from "@/lib/marketing-ui";
 import { SITE_NAME } from "@/lib/site";
 
-const LOGIN_BACKGROUND = "/images/construction-bg.jpg";
+/** Match Workspace Login visuals. */
+const LOGIN_BACKGROUND = "/images/login-workspace-bg.jpg";
+const LOGIN_LOGO = "/images/unit311central-login.png";
+const LOGIN_LOGO_WIDTH = 1462;
+const LOGIN_LOGO_HEIGHT = 334;
 
 async function readApiJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -30,9 +35,7 @@ export default function ResetPasswordPage({
   const isResetStep = token.length > 0;
 
   const isCentral = variant === "central";
-  const workspaceName = isCentral ? "Unit311 Central" : SITE_NAME;
 
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,7 +44,7 @@ export default function ResetPasswordPage({
   const [busy, setBusy] = useState(false);
 
   const heading = useMemo(
-    () => (isResetStep ? "Choose a new password" : "Reset password"),
+    () => (isResetStep ? "Choose a New Password" : "Reset Password"),
     [isResetStep],
   );
 
@@ -49,7 +52,7 @@ export default function ResetPasswordPage({
     () =>
       isResetStep
         ? "Enter your new password twice to finish resetting your account."
-        : "Enter your username and email address. We will send you a link to reset your password.",
+        : "Enter your email address. We will send you a link to reset your password.",
     [isResetStep],
   );
 
@@ -63,7 +66,7 @@ export default function ResetPasswordPage({
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await readApiJson<{ message?: string; error?: string }>(response);
@@ -73,7 +76,7 @@ export default function ResetPasswordPage({
 
       setSuccess(
         data.message ??
-          "If an account matches that username and email, we sent a password reset link.",
+          "If an account matches that email address, we sent a password reset link.",
       );
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to send reset email.");
@@ -113,48 +116,48 @@ export default function ResetPasswordPage({
   }
 
   return (
-    <div className="safe-area-px safe-area-pb relative flex min-h-dvh w-full flex-col items-center justify-center overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6 sm:py-10">
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <Image
-          src={LOGIN_BACKGROUND}
-          alt=""
-          fill
-          priority
-          className="object-cover object-center grayscale"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-[#020617]/86" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.72) 55%, rgba(2, 6, 23, 0.92) 100%), radial-gradient(ellipse 70% 55% at 50% 0%, rgba(37, 99, 235, 0.14), transparent 68%)",
-          }}
-        />
-      </div>
-
-      <div className="relative w-full max-w-md space-y-6 sm:space-y-8">
-        <div className="text-center">
-          <div className="mx-auto inline-flex justify-center">
-            <Logo
-              height={240}
-              href={undefined}
-              variant="hero"
-              className="drop-shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+    <MarketingPageShell
+      backgroundImage={LOGIN_BACKGROUND}
+      backgroundImageClassName="object-cover object-[center_35%] opacity-80 sm:object-center"
+      backgroundImageQuality={92}
+      overlayClassName="absolute inset-0 bg-[#020617]/45"
+      contentClassName={`${MARKETING_CONTENT_CLASS} flex min-h-[100dvh] flex-col items-center justify-center py-12 sm:py-16`}
+    >
+      <div className={`flex w-full max-w-[480px] flex-col items-center ${marketingFadeIn}`}>
+        <div className="flex w-full items-center justify-center px-2">
+          <div
+            className="relative w-full max-w-[min(100%,240px)] sm:max-w-[280px]"
+            style={{ aspectRatio: `${LOGIN_LOGO_WIDTH} / ${LOGIN_LOGO_HEIGHT}` }}
+          >
+            <Image
+              src={LOGIN_LOGO}
+              alt={SITE_NAME}
+              fill
+              priority
+              sizes="(max-width: 640px) 240px, 280px"
+              className="object-contain object-center drop-shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
             />
           </div>
-          <h1 className="mt-6 text-xl font-semibold tracking-tight text-white sm:mt-8 sm:text-2xl md:text-3xl">
-            {heading}
-          </h1>
-          <p className="mt-2 px-2 text-sm leading-relaxed text-white/55">{description}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.12] bg-[#07111f]/72 p-5 shadow-xl shadow-black/40 backdrop-blur-md sm:p-8">
+        <div className="mt-10 w-full text-center sm:mt-12">
+          <h1 className="text-[1.75rem] font-semibold tracking-[-0.035em] text-white sm:text-[2.125rem]">
+            {heading}
+          </h1>
+          <p className="mx-auto mt-3 max-w-[22rem] text-[14px] leading-relaxed text-white/55 sm:mt-3.5 sm:text-[15px]">
+            {description}
+          </p>
+        </div>
+
+        <div className="mt-9 w-full rounded-[26px] border border-white/[0.1] bg-gradient-to-b from-white/[0.1] to-white/[0.035] p-8 shadow-[0_40px_120px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:mt-11 sm:rounded-[30px] sm:p-10">
           {isResetStep ? (
-            <form onSubmit={handleCompleteReset} className="space-y-4 sm:space-y-5">
+            <form onSubmit={handleCompleteReset} className="space-y-7">
               <div>
-                <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-white/80">
-                  New password
+                <label
+                  htmlFor="password"
+                  className="mb-2.5 block text-[13px] font-medium tracking-[0.01em] text-white/70"
+                >
+                  New Password
                 </label>
                 <input
                   id="password"
@@ -165,7 +168,7 @@ export default function ResetPasswordPage({
                   minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
+                  className="w-full rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-[15px] text-white placeholder:text-white/30 focus:border-[#3b82f6] focus:outline-none focus:ring-1 focus:ring-[#3b82f6] disabled:opacity-60"
                   placeholder="At least 8 characters"
                 />
               </div>
@@ -173,9 +176,9 @@ export default function ResetPasswordPage({
               <div>
                 <label
                   htmlFor="confirmPassword"
-                  className="mb-1.5 block text-sm font-medium text-white/80"
+                  className="mb-2.5 block text-[13px] font-medium tracking-[0.01em] text-white/70"
                 >
-                  Confirm new password
+                  Confirm New Password
                 </label>
                 <input
                   id="confirmPassword"
@@ -186,53 +189,39 @@ export default function ResetPasswordPage({
                   minLength={8}
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
+                  className="w-full rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-[15px] text-white placeholder:text-white/30 focus:border-[#3b82f6] focus:outline-none focus:ring-1 focus:ring-[#3b82f6] disabled:opacity-60"
                   placeholder="Enter password again"
                 />
               </div>
 
-              {error && (
-                <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error ? (
+                <p className="rounded-xl border border-red-400/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-300">
                   {error}
                 </p>
-              )}
+              ) : null}
 
-              {success && (
-                <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              {success ? (
+                <p className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-200">
                   {success}
                 </p>
-              )}
+              ) : null}
 
               <button
                 type="submit"
                 disabled={busy}
-                className="inline-flex h-12 w-full touch-manipulation items-center justify-center rounded-md bg-[#0b2d63] px-4 text-base font-semibold text-white transition-colors hover:bg-[#082652] disabled:cursor-not-allowed disabled:opacity-70 sm:h-11 sm:text-sm"
+                className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-xl bg-[#2563eb] px-6 text-[15px] font-semibold text-white shadow-[0_0_40px_rgba(37,99,235,0.28)] transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy ? "Updating password…" : "Update password"}
+                {busy ? "Updating Password…" : "Update Password"}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleRequestReset} className="space-y-4 sm:space-y-5">
+            <form onSubmit={handleRequestReset} className="space-y-7">
               <div>
-                <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-white/80">
-                  Username
-                </label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
-                  placeholder="Enter username"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-white/80">
-                  Email address
+                <label
+                  htmlFor="email"
+                  className="mb-2.5 block text-[13px] font-medium tracking-[0.01em] text-white/70"
+                >
+                  Email Address
                 </label>
                 <input
                   id="email"
@@ -242,50 +231,43 @@ export default function ResetPasswordPage({
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent sm:py-2.5 sm:text-sm"
-                  placeholder="Enter email address"
+                  className="w-full rounded-xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-[15px] text-white placeholder:text-white/30 focus:border-[#3b82f6] focus:outline-none focus:ring-1 focus:ring-[#3b82f6] disabled:opacity-60"
+                  placeholder={isCentral ? "you@unit311central.com" : "Enter email address"}
                 />
               </div>
 
-              {error && (
-                <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error ? (
+                <p className="rounded-xl border border-red-400/25 bg-red-500/[0.08] px-4 py-3 text-sm text-red-300">
                   {error}
                 </p>
-              )}
+              ) : null}
 
-              {success && (
-                <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              {success ? (
+                <p className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-3 text-sm text-emerald-200">
                   {success}
                 </p>
-              )}
+              ) : null}
 
               <button
                 type="submit"
                 disabled={busy}
-                className="inline-flex h-12 w-full touch-manipulation items-center justify-center rounded-md bg-[#0b2d63] px-4 text-base font-semibold text-white transition-colors hover:bg-[#082652] disabled:cursor-not-allowed disabled:opacity-70 sm:h-11 sm:text-sm"
+                className="inline-flex h-[3.25rem] w-full items-center justify-center rounded-xl bg-[#2563eb] px-6 text-[15px] font-semibold text-white shadow-[0_0_40px_rgba(37,99,235,0.28)] transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy ? "Sending link…" : "Send reset link"}
+                {busy ? "Sending Link…" : "Send Reset Link"}
               </button>
             </form>
           )}
 
-          <p className="mt-5 text-center text-sm">
+          <p className="mt-7 pt-1 text-center text-sm">
             <Link
               href="/login"
-              className="touch-manipulation font-medium text-sky-400/80 underline-offset-2 hover:text-sky-300 hover:underline"
+              className="font-medium text-[#93c5fd]/90 transition-colors hover:text-[#bfdbfe] hover:underline"
             >
-              Back to sign in
+              Back to Sign In
             </Link>
           </p>
         </div>
       </div>
-
-      <p className="relative mt-8 text-center text-xs text-white/35 sm:mt-10">
-        © {new Date().getFullYear()} {workspaceName}
-        {isCentral ? (
-          <span className="mt-1 block text-[10px] text-white/25">unit311central.com</span>
-        ) : null}
-      </p>
-    </div>
+    </MarketingPageShell>
   );
 }
