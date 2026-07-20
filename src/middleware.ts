@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   CENTRAL_SITE_URL,
+  DEMO_SITE_URL,
+  DEMO_WORKSPACE_SLUG,
   INTERNAL_SITE_URL,
   UNIT311_SITE_HOST,
   WORKSPACE_HOST_ROUTE_PREFIX,
   buildInternalHostRedirectUrl,
   getRequestHost,
+  isDemoDomainHost,
   isInternalDomainHost,
   isLocalDevHost,
   isPublicMarketingPath,
@@ -24,11 +27,16 @@ import {
 
 function withHostHeaders(
   request: NextRequest,
-  flags: { public?: boolean; internal?: boolean; workspaceSlug?: string },
+  flags: { public?: boolean; internal?: boolean; demo?: boolean; workspaceSlug?: string },
 ) {
   const requestHeaders = new Headers(request.headers);
   if (flags.public) requestHeaders.set("x-unit311-central", "1");
   if (flags.internal) requestHeaders.set("x-unit311-internal", "1");
+  if (flags.demo) {
+    requestHeaders.set("x-unit311-demo", "1");
+    requestHeaders.set("x-unit311-internal", "1");
+    requestHeaders.set("x-unit311-workspace-slug", DEMO_WORKSPACE_SLUG);
+  }
   if (flags.workspaceSlug) {
     requestHeaders.set("x-unit311-workspace-slug", flags.workspaceSlug);
   }
@@ -166,6 +174,80 @@ export async function middleware(request: NextRequest) {
     return rewriteTo(request, gatewayPath, headers, workspaceResponseHeaders);
   }
 
+  // --- Demo application host (same Internal Ops build; Demo workspace content) ---
+  if (isDemoDomainHost(host)) {
+    const headers = withHostHeaders(request, { demo: true });
+    const shellHeaders = {
+      "x-unit311-internal": "1",
+      "x-unit311-demo": "1",
+      "x-unit311-workspace-slug": DEMO_WORKSPACE_SLUG,
+    };
+
+    if (pathname === "/login" || pathname.startsWith("/login/")) {
+      if (isLocalDevHost(host)) {
+        const port = request.nextUrl.port || "3000";
+        return redirectExternal(`http://localhost:${port}/login${search}`);
+      }
+      const loginUrl = new URL(`${CENTRAL_SITE_URL}/login`);
+      loginUrl.search = search;
+      loginUrl.searchParams.set("return_to", DEMO_SITE_URL);
+      return redirectExternal(loginUrl.toString());
+    }
+
+    if (isPublicMarketingPath(pathname)) {
+      if (isLocalDevHost(host)) {
+        const port = request.nextUrl.port || "3000";
+        return redirectExternal(`http://localhost:${port}${pathname}${search}`);
+      }
+      return redirectExternal(`${CENTRAL_SITE_URL}${pathname}${search}`);
+    }
+
+    if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) {
+      return NextResponse.next({ request: { headers } });
+    }
+
+    if (pathname === "/" || pathname === "") {
+      return rewriteTo(request, "/internaldashboard", headers, shellHeaders);
+    }
+
+    if (pathname === "/executive-assistant") {
+      return rewriteTo(request, "/internaldashboard/executive-assistant", headers, shellHeaders);
+    }
+
+    if (pathname === "/client-onboarding") {
+      return rewriteTo(request, "/internaldashboard/client-onboarding", headers, shellHeaders);
+    }
+
+    if (pathname === "/corporate-information/cap-table") {
+      return rewriteTo(
+        request,
+        "/internaldashboard/corporate-information/cap-table",
+        headers,
+        shellHeaders,
+      );
+    }
+
+    const viewMap = legacyViewRedirects();
+    if (viewMap[pathname]) {
+      const dest = viewMap[pathname];
+      const destination = request.nextUrl.clone();
+      destination.pathname = "/internaldashboard";
+      destination.search = dest.includes("?") ? dest.slice(dest.indexOf("?")) : search;
+      const response = NextResponse.rewrite(destination, { request: { headers } });
+      for (const [key, value] of Object.entries(shellHeaders)) {
+        response.headers.set(key, value);
+      }
+      response.headers.set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate");
+      return response;
+    }
+
+    const response = NextResponse.next({ request: { headers } });
+    for (const [key, value] of Object.entries(shellHeaders)) {
+      response.headers.set(key, value);
+    }
+    return response;
+  }
+
   // --- Internal application host ---
   if (isInternalDomainHost(host)) {
     const headers = withHostHeaders(request, { internal: true });
@@ -202,6 +284,12 @@ export async function middleware(request: NextRequest) {
 
     if (pathname === "/client-onboarding") {
       return rewriteTo(request, "/internaldashboard/client-onboarding", headers, {
+        "x-unit311-internal": "1",
+      });
+    }
+
+    if (pathname === "/corporate-information/cap-table") {
+      return rewriteTo(request, "/internaldashboard/corporate-information/cap-table", headers, {
         "x-unit311-internal": "1",
       });
     }
@@ -254,6 +342,17 @@ export async function middleware(request: NextRequest) {
     const headers = withHostHeaders(request, { internal: true });
     if (pathname === "/" || pathname === "") {
       return rewriteTo(request, "/internaldashboard", headers, { "x-unit311-internal": "1" });
+    }
+    return NextResponse.next({ request: { headers } });
+  }
+
+  if (normalizedHost.startsWith("demo.")) {
+    const headers = withHostHeaders(request, { demo: true });
+    if (pathname === "/" || pathname === "") {
+      return rewriteTo(request, "/internaldashboard", headers, {
+        "x-unit311-internal": "1",
+        "x-unit311-demo": "1",
+      });
     }
     return NextResponse.next({ request: { headers } });
   }

@@ -48,6 +48,7 @@ import FileRepositoryWorkspace from "./FileRepositoryWorkspace";
 import Unit311DetailsWorkspace from "./Unit311DetailsWorkspace";
 import CorporateInformationWorkspace from "./CorporateInformationWorkspace";
 import ModuleGoLiveWorkspace from "./ModuleGoLiveWorkspace";
+import CapTableWorkspace from "./CapTableWorkspace";
 import ClientFilesExplorerWorkspace from "./ClientFilesExplorerWorkspace";
 import AccountsPayableWorkspace from "./AccountsPayableWorkspace";
 import AccountsReceivableWorkspace from "./AccountsReceivableWorkspace";
@@ -173,6 +174,13 @@ function isExecutiveAssistantPath(pathname: string) {
   );
 }
 
+function isCapTablePath(pathname: string) {
+  return (
+    pathname.endsWith("/corporate-information/cap-table") ||
+    pathname.includes("/corporate-information/cap-table")
+  );
+}
+
 function readInitialView(
   searchParams: ReturnType<typeof useSearchParams>,
   pathname: string,
@@ -184,6 +192,10 @@ function readInitialView(
 
   if (isClientOnboardingPath(pathname)) {
     return "client-onboarding";
+  }
+
+  if (isCapTablePath(pathname)) {
+    return "corporate-cap-table";
   }
 
   if (isExecutiveAssistantPath(pathname)) {
@@ -300,6 +312,10 @@ export default function InternalOperationsDashboard({
         setActiveView("executive-assistant");
         return;
       }
+      if (isCapTablePath(pathname)) {
+        setActiveView("corporate-cap-table");
+        return;
+      }
       if (!viewParam) {
         setActiveView(initialView ?? "home");
       }
@@ -340,7 +356,25 @@ export default function InternalOperationsDashboard({
       return;
     }
 
-    if (isClientOnboardingPath(url.pathname) || isExecutiveAssistantPath(url.pathname)) {
+    if (activeView === "corporate-cap-table") {
+      if (isCapTablePath(url.pathname)) {
+        return;
+      }
+      url.pathname =
+        basePath === "/"
+          ? "/corporate-information/cap-table"
+          : `${basePath}/corporate-information/cap-table`;
+      url.searchParams.delete("view");
+      url.searchParams.delete("tab");
+      window.history.replaceState({}, "", url.toString());
+      return;
+    }
+
+    if (
+      isClientOnboardingPath(url.pathname) ||
+      isExecutiveAssistantPath(url.pathname) ||
+      isCapTablePath(url.pathname)
+    ) {
       url.pathname = basePath;
     }
 
@@ -564,6 +598,7 @@ export default function InternalOperationsDashboard({
           {activeView === "corporate-dashboard" && <PlaceholderForView view="corporate-dashboard" />}
 
           {activeView === "corporate-information" && <CorporateInformationWorkspace />}
+          {activeView === "corporate-cap-table" && <CapTableWorkspace />}
 
           {activeView === "external-client-access" && (
             <PlaceholderForView view="external-client-access" />

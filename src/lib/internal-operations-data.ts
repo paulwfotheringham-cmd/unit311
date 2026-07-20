@@ -14,6 +14,7 @@ export type InternalOperationsView =
   | "corporate-dashboard"
   | "corporate-information"
   | "corporate-company-details"
+  | "corporate-cap-table"
   | "corporate-bank-accounts"
   | "corporate-advisers"
   | "corporate-insurance"
@@ -131,6 +132,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "corporate-dashboard",
   "corporate-information",
   "corporate-company-details",
+  "corporate-cap-table",
   "corporate-bank-accounts",
   "corporate-advisers",
   "corporate-insurance",
@@ -239,6 +241,7 @@ export function isInternalOperationsView(value: string | null): value is Interna
 /** Corporate Information workspace tabs (UI shell only — APIs remain per capability). */
 export const CORPORATE_INFORMATION_TABS = [
   { key: "company-details", label: "Company Details" },
+  { key: "cap-table", label: "Cap Table" },
   { key: "office-locations", label: "Office Locations" },
   { key: "bank-accounts", label: "Bank Accounts" },
   { key: "professional-advisors", label: "Professional Advisors" },
@@ -420,7 +423,12 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
         icon: "MapPin",
         children: [
           { label: "Dashboard", view: "corporate-dashboard" as const },
-          { label: "Corporate Information", view: "corporate-information" as const },
+          {
+            label: "Company Details",
+            view: "corporate-information" as const,
+            query: { tab: "company-details" },
+          },
+          { label: "Cap Table", view: "corporate-cap-table" as const },
           {
             label: "Unit311 Details",
             children: [
@@ -566,6 +574,7 @@ export const internalViewTitles: Record<
   "corporate-dashboard": { title: "Dashboard", subtitle: "Corporate Information" },
   "corporate-information": { title: "Corporate Information", subtitle: "Corporate Information" },
   "corporate-company-details": { title: "Company Details", subtitle: "Corporate Information" },
+  "corporate-cap-table": { title: "Cap Table", subtitle: "Corporate Information" },
   "corporate-bank-accounts": { title: "Bank Accounts", subtitle: "Corporate Information" },
   "corporate-advisers": { title: "Professional Advisors", subtitle: "Corporate Information" },
   "corporate-insurance": { title: "Insurance", subtitle: "Corporate Information" },
@@ -819,6 +828,10 @@ export function getInternalNavHref(
     return joinBasePath(basePath, "/executive-assistant");
   }
 
+  if (view === "corporate-cap-table") {
+    return joinBasePath(basePath, "/corporate-information/cap-table");
+  }
+
   if (view === "corporate-information") {
     const params = new URLSearchParams({
       view: "corporate-information",
@@ -900,6 +913,16 @@ export function isInternalNavChildActive(
       activeView === "executive-assistant" ||
       pathname === assistantPath ||
       pathname.startsWith(`${assistantPath}/`)
+    );
+  }
+  if (item.view === "corporate-cap-table") {
+    const capTablePath = joinBasePath(basePath, "/corporate-information/cap-table");
+    return (
+      activeView === "corporate-cap-table" ||
+      pathname === capTablePath ||
+      pathname.startsWith(`${capTablePath}/`) ||
+      (activeView === "corporate-information" &&
+        searchParams?.get("tab") === "cap-table")
     );
   }
   // Shared implementations (Projects / Engineering / Assets) must highlight only the

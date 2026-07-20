@@ -1,9 +1,14 @@
 export const CENTRAL_SITE_HOST = "unit311central.com";
 export const UNIT311_SITE_HOST = CENTRAL_SITE_HOST;
 export const INTERNAL_SITE_HOST = `internal.${UNIT311_SITE_HOST}`;
+export const DEMO_SITE_HOST = `demo.${UNIT311_SITE_HOST}`;
 
 export const CENTRAL_SITE_URL = `https://${CENTRAL_SITE_HOST}`;
 export const INTERNAL_SITE_URL = `https://${INTERNAL_SITE_HOST}`;
+export const DEMO_SITE_URL = `https://${DEMO_SITE_HOST}`;
+
+/** Canonical Demo workspace slug (content tenancy; same build as Internal). */
+export const DEMO_WORKSPACE_SLUG = "demo";
 
 /** Apex / www public marketing site hosts. */
 const PUBLIC_SITE_HOSTS = new Set([CENTRAL_SITE_HOST, `www.${CENTRAL_SITE_HOST}`]);
@@ -15,6 +20,7 @@ const PUBLIC_SITE_HOSTS = new Set([CENTRAL_SITE_HOST, `www.${CENTRAL_SITE_HOST}`
 export const RESERVED_UNIT311_SUBDOMAINS = new Set([
   "www",
   "internal",
+  "demo",
   "unit311", // Internal workspace slug — use internal.unit311central.com
   "api",
   "app",
@@ -111,6 +117,23 @@ export function isInternalDomainHost(host: string | null | undefined): boolean {
   // Local convenience: internal.localhost
   if (normalized === "internal.localhost") return true;
   return false;
+}
+
+/**
+ * Demo surface host — same Internal Operations application build as Internal.
+ * Content tenancy is the Demo workspace (see DEMO_WORKSPACE_SLUG), not a fork.
+ */
+export function isDemoDomainHost(host: string | null | undefined): boolean {
+  const normalized = normalizeHost(host);
+  if (!normalized) return false;
+  if (normalized === DEMO_SITE_HOST) return true;
+  if (normalized === "demo.localhost") return true;
+  return false;
+}
+
+/** Internal Ops shell hosts (live Internal or Demo). Same UI routes. */
+export function isInternalOpsShellHost(host: string | null | undefined): boolean {
+  return isInternalDomainHost(host) || isDemoDomainHost(host);
 }
 
 /** Any host under unit311central.com (public, internal, or future workspace). */
@@ -302,6 +325,7 @@ export function isInternalAppPath(pathname: string): boolean {
     pathname.startsWith("/testflighthub/") ||
     pathname === "/executive-assistant" ||
     pathname === "/client-onboarding" ||
+    pathname === "/corporate-information/cap-table" ||
     pathname === "/crm" ||
     pathname === "/financials" ||
     pathname === "/messaging" ||

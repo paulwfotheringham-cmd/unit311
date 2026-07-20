@@ -53,6 +53,8 @@ const MIGRATIONS = [
   "supabase/migrations/088_financials_files_workspace_isolation.sql",
   "supabase/migrations/089_messaging_email_support_workspace_isolation.sql",
   "supabase/migrations/090_accounts_workspace_code_unique.sql",
+  "supabase/migrations/091_hr_employee_foundation.sql",
+  "supabase/migrations/092_company_details.sql",
 ];
 
 function isAuthorized(request: NextRequest) {
@@ -184,6 +186,7 @@ export async function POST(request: NextRequest) {
     executive_call_guest_admission?: boolean;
     crm_client_report_file_id?: boolean;
     crm_discovery_questionnaire?: boolean;
+    company_details?: boolean;
     simon_meeting_slug?: string | null;
   }>(
     `select
@@ -228,6 +231,11 @@ export async function POST(request: NextRequest) {
           and table_name = 'crm_leads'
           and column_name = 'discovery_questionnaire'
       )) as crm_discovery_questionnaire,
+      (select exists (
+        select 1 from information_schema.tables
+        where table_schema = 'public'
+          and table_name = 'company_details'
+      )) as company_details,
       (select meeting_slug from public.founder_session_bookings
        where id = '4e92abae-4d94-430e-8888-c2ecb95d8552') as simon_meeting_slug`,
   );
@@ -243,6 +251,7 @@ export async function POST(request: NextRequest) {
         executive_call_guest_admission: boolean;
         crm_client_report_file_id: boolean;
         crm_discovery_questionnaire: boolean;
+        company_details: boolean;
         simon_meeting_slug: string | null;
       }>(
         `select
@@ -287,6 +296,11 @@ export async function POST(request: NextRequest) {
               and table_name = 'crm_leads'
               and column_name = 'discovery_questionnaire'
           )) as crm_discovery_questionnaire,
+          (select exists (
+            select 1 from information_schema.tables
+            where table_schema = 'public'
+              and table_name = 'company_details'
+          )) as company_details,
           (select meeting_slug from public.founder_session_bookings
            where id = '4e92abae-4d94-430e-8888-c2ecb95d8552') as simon_meeting_slug`,
       );
