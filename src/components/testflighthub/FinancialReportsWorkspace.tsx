@@ -425,8 +425,66 @@ export default function FinancialReportsWorkspace() {
                 Report library
               </p>
               <h3 className="mt-1 text-base font-semibold text-white">
-                {reports.length} reports in workspace
+                {visibleReports.length}
+                {filtersActive ? ` of ${reports.length}` : ""} reports in workspace
               </h3>
+            </div>
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-[11px] font-medium text-sky-300/90 transition-colors hover:text-sky-200"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <FieldLabel>Category</FieldLabel>
+              <select
+                value={filterCategory}
+                onChange={(event) => setFilterCategory(event.target.value)}
+                className={inputClassName()}
+              >
+                <option value="all">All categories</option>
+                {filterOptions.categories.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Period</FieldLabel>
+              <select
+                value={filterPeriod}
+                onChange={(event) => setFilterPeriod(event.target.value)}
+                className={inputClassName()}
+              >
+                <option value="all">All periods</option>
+                {filterOptions.periods.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Created by</FieldLabel>
+              <select
+                value={filterCreatedBy}
+                onChange={(event) => setFilterCreatedBy(event.target.value)}
+                className={inputClassName()}
+              >
+                <option value="all">All people</option>
+                {filterOptions.creators.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -463,7 +521,14 @@ export default function FinancialReportsWorkspace() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {sortedReports.map((report) => {
+                {visibleReports.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-8 text-center text-sm text-white/45">
+                      No reports match the selected filters.
+                    </td>
+                  </tr>
+                ) : null}
+                {visibleReports.map((report) => {
                   const active = report.id === selectedId;
                   return (
                     <tr
