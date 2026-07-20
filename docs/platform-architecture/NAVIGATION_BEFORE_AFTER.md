@@ -36,7 +36,7 @@ Navigation refactor only (2026-07-19). Existing routes preserved.
 
 | Kind | Where |
 | --- | --- |
-| **Uses current implementation** | Projects Dashboard / Internal / External · Inventory Management · Engineering Dashboard / Resource Breakdown |
+| **Uses current implementation** | Projects Dashboard / Internal / External · Engineering Dashboard / Resource Breakdown |
 | **Coming Soon** | Existing empty modules (HR Leave/Performance/Recruitment, Corporate placeholders, Training Dashboard, External Client Access Dashboard, etc.) |
 
 ## Intentionally still reachable outside sidebar
