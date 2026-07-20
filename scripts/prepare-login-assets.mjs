@@ -64,7 +64,7 @@ if (existsSync("public/images/login-workspace-bg.jpg")) {
 
 await sharp("public/images/topography.png")
   .resize(3840, 2160, { fit: "cover", position: "centre", kernel: sharp.kernel.lanczos3 })
-  .modulate({ brightness: 0.36, saturation: 0.5 })
+  .modulate({ brightness: 0.72, saturation: 0.65 })
   .jpeg({ quality: 90, mozjpeg: true, progressive: true })
   .toFile("public/images/login-workspace-bg.jpg");
 

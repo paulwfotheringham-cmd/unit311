@@ -179,16 +179,16 @@ export default function Unit311LoginPage({
   return (
     <MarketingPageShell
       backgroundImage={LOGIN_BACKGROUND}
-      backgroundImageClassName="object-cover object-[center_35%] opacity-50 sm:object-center"
+      backgroundImageClassName="object-cover object-[center_35%] opacity-80 sm:object-center"
       backgroundImageQuality={92}
-      overlayClassName="absolute inset-0 bg-[#020617]/72"
+      overlayClassName="absolute inset-0 bg-[#020617]/45"
       contentClassName={`${MARKETING_CONTENT_CLASS} flex min-h-[100dvh] flex-col items-center justify-center py-12 sm:py-16`}
     >
       <div className={`flex w-full max-w-[480px] flex-col items-center ${marketingFadeIn}`}>
-        {/* Fixed aspect logo slot — ~2× previous display size, no CLS */}
+        {/* Fixed aspect logo slot — compact mark above the card */}
         <div className="flex w-full items-center justify-center px-2">
           <div
-            className="relative w-full max-w-[min(100%,420px)] sm:max-w-[520px]"
+            className="relative w-full max-w-[min(100%,240px)] sm:max-w-[280px]"
             style={{ aspectRatio: `${LOGIN_LOGO_WIDTH} / ${LOGIN_LOGO_HEIGHT}` }}
           >
             <Image
@@ -196,8 +196,8 @@ export default function Unit311LoginPage({
               alt={SITE_NAME}
               fill
               priority
-              sizes="(max-width: 640px) 420px, 520px"
-              className="object-contain object-center drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+              sizes="(max-width: 640px) 240px, 280px"
+              className="object-contain object-center drop-shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
             />
           </div>
         </div>
