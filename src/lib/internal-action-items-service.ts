@@ -1,3 +1,4 @@
+import { internalAppPath } from "@/lib/app-domains";
 import {
   ensureInternalActionItemsTable,
   withInternalActionItemsTable,
@@ -271,7 +272,7 @@ export async function syncBookingActionItems(
       assignedTo: "Team",
       dueLabel: gmtWhen,
       dueAt: booking.starts_at,
-      href: "/internaldashboard?view=crm-meetings",
+      href: internalAppPath("crm-meetings"),
       crmLeadId: booking.crm_lead_id,
       bookingId: booking.id,
       workspaceId,

@@ -6,6 +6,7 @@ import {
   type PlatformSession,
   type PlatformUserRecord,
 } from "@/lib/platform-auth";
+import { canonicalizeStoredRedirectPath } from "@/lib/app-domains";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { resolveWorkspaceOnboardingRedirectForUser } from "@/lib/workspace-customer-onboarding-service";
 import { formatWorkspaceDisplayStatus } from "@/lib/workspace-host";
@@ -282,7 +283,7 @@ export async function createSessionForUser(
   return {
     session,
     token: await createPlatformSessionToken(session),
-    redirectPath: user.redirect_path,
+    redirectPath: canonicalizeStoredRedirectPath(user.redirect_path),
   };
 }
 

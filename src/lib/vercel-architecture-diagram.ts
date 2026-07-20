@@ -245,8 +245,8 @@ export function buildVercelArchitectureSvg(
     "Internal application",
     [
       "internal.unit311central.com",
-      "/ → rewrite /internaldashboard",
-      "Ops UI (Unit311 Details, CRM, …)",
+      "/ → rewrite /internaldashboard (impl)",
+      "Browser: / only (308 legacy paths)",
       "Login → apex /login",
     ],
     "internal",

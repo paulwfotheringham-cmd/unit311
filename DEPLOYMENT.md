@@ -153,11 +153,12 @@ Protect with `CRON_SECRET` (or setup secret where implemented).
 
 1. https://unit311central.com — marketing home
 2. https://unit311central.com/login — login page
-3. https://internal.unit311central.com — Internal app (`X-Matched-Path: /internaldashboard`)
-4. https://unit311central.com/internaldashboard — redirects to Internal host
-5. https://acme.unit311central.com — Workspace unavailable (after wildcard DNS)
-6. Create a `workspaces` row with `slug=acme` — onboarding placeholder appears
-7. `GET https://unit311central.com/api/internal/company-details-health` — must return `{ ok: true, ready: true }` (fails **503** if migration **092** is not applied)
+3. https://internal.unit311central.com — Internal app (browser `/`; rewrite to `/internaldashboard`)
+4. https://unit311central.com/internaldashboard — **308** to https://internal.unit311central.com/
+5. https://internal.unit311central.com/internaldashboard — **308** to https://internal.unit311central.com/
+6. https://acme.unit311central.com — Workspace unavailable (after wildcard DNS)
+7. Create a `workspaces` row with `slug=acme` — onboarding placeholder appears
+8. `GET https://unit311central.com/api/internal/company-details-health` — must return `{ ok: true, ready: true }` (fails **503** if migration **092** is not applied)
 
 ## Rollback
 

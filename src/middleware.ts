@@ -15,6 +15,7 @@ import {
   isPublicMarketingPath,
   isPublicSiteHost,
   legacyViewRedirects,
+  mapLegacyInternalPathToInternalHostPath,
   normalizeHost,
   parseClientPlatformSubdomainSafe,
   parseValidWorkspaceReturnTo,
@@ -43,8 +44,38 @@ function withHostHeaders(
   return requestHeaders;
 }
 
-function redirectExternal(url: string) {
-  return NextResponse.redirect(url, 307);
+function redirectExternal(url: string, status: 307 | 308 = 307) {
+  return NextResponse.redirect(url, status);
+}
+
+/** Permanent redirect for deprecated browser URLs (bookmarks / old links). */
+function redirectPermanent(request: NextRequest, pathnameWithSearch: string) {
+  const destination = request.nextUrl.clone();
+  const parsed = new URL(pathnameWithSearch, request.nextUrl.origin);
+  destination.pathname = parsed.pathname;
+  destination.search = parsed.search;
+  destination.hash = parsed.hash;
+  return NextResponse.redirect(destination, 308);
+}
+
+function isLegacyInternalBrowserPath(pathname: string) {
+  return (
+    pathname === "/internaldashboard" ||
+    pathname.startsWith("/internaldashboard/") ||
+    pathname === "/testflighthub" ||
+    pathname.startsWith("/testflighthub/")
+  );
+}
+
+/**
+ * If the browser still requests the legacy App Router path, send them to the
+ * canonical internal-host URL. Middleware continues to *rewrite* `/` onto
+ * `/internaldashboard` as the implementation path — that is not a public URL.
+ */
+function redirectLegacyInternalBrowserPath(request: NextRequest, pathname: string, search: string) {
+  if (!isLegacyInternalBrowserPath(pathname)) return null;
+  const mapped = mapLegacyInternalPathToInternalHostPath(pathname, search);
+  return redirectPermanent(request, mapped);
 }
 
 function rewriteTo(
@@ -66,8 +97,9 @@ function rewriteTo(
 }
 
 /**
- * Apex (public site): marketing + redirects old internal paths.
- * Internal host: rewrite onto /internaldashboard.
+ * Apex (public site): marketing + permanent redirects of legacy internal paths.
+ * Internal/demo hosts: rewrite `/` onto /internaldashboard (App Router); never
+ * expose /internaldashboard as a public browser URL.
  * Customer hosts `{slug}.unit311central.com`: rewrite onto /ws/[slug] gateway.
  *
  * RC1-C07: on customer hosts, host is the tenant boundary. Valid sessions that
@@ -206,6 +238,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next({ request: { headers } });
     }
 
+    const legacyBrowserRedirect = redirectLegacyInternalBrowserPath(request, pathname, search);
+    if (legacyBrowserRedirect) return legacyBrowserRedirect;
+
     if (pathname === "/" || pathname === "") {
       return rewriteTo(request, "/internaldashboard", headers, shellHeaders);
     }
@@ -272,6 +307,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next({ request: { headers } });
     }
 
+    const legacyBrowserRedirect = redirectLegacyInternalBrowserPath(request, pathname, search);
+    if (legacyBrowserRedirect) return legacyBrowserRedirect;
+
     if (pathname === "/" || pathname === "") {
       return rewriteTo(request, "/internaldashboard", headers, { "x-unit311-internal": "1" });
     }
@@ -317,7 +355,7 @@ export async function middleware(request: NextRequest) {
 
     const viewMap = legacyViewRedirects();
     if (viewMap[pathname]) {
-      return redirectExternal(`${INTERNAL_SITE_URL}${viewMap[pathname]}`);
+      return redirectExternal(`${INTERNAL_SITE_URL}${viewMap[pathname]}`, 308);
     }
 
     if (
@@ -328,7 +366,7 @@ export async function middleware(request: NextRequest) {
       pathname === "/internaldashboard_grants" ||
       pathname.startsWith("/internaldashboard_grants/")
     ) {
-      return redirectExternal(buildInternalHostRedirectUrl(pathname, search));
+      return redirectExternal(buildInternalHostRedirectUrl(pathname, search), 308);
     }
 
     return NextResponse.next({ request: { headers } });
@@ -340,6 +378,8 @@ export async function middleware(request: NextRequest) {
 
   if (normalizedHost.startsWith("internal.")) {
     const headers = withHostHeaders(request, { internal: true });
+    const legacyBrowserRedirect = redirectLegacyInternalBrowserPath(request, pathname, search);
+    if (legacyBrowserRedirect) return legacyBrowserRedirect;
     if (pathname === "/" || pathname === "") {
       return rewriteTo(request, "/internaldashboard", headers, { "x-unit311-internal": "1" });
     }
@@ -348,6 +388,8 @@ export async function middleware(request: NextRequest) {
 
   if (normalizedHost.startsWith("demo.")) {
     const headers = withHostHeaders(request, { demo: true });
+    const legacyBrowserRedirect = redirectLegacyInternalBrowserPath(request, pathname, search);
+    if (legacyBrowserRedirect) return legacyBrowserRedirect;
     if (pathname === "/" || pathname === "") {
       return rewriteTo(request, "/internaldashboard", headers, {
         "x-unit311-internal": "1",

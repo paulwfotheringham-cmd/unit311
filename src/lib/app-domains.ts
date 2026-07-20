@@ -194,9 +194,97 @@ export function parseValidWorkspaceReturnTo(value: string | null | undefined): s
   }
 }
 
+export type LoginReturnTarget =
+  | { kind: "workspace"; origin: string }
+  | { kind: "demo"; origin: string }
+  | { kind: "internal"; origin: string };
+
+/**
+ * Accept customer workspace, Demo, or Internal origins as post-login return targets.
+ * Used when middleware sends users from demo/internal hosts to apex `/login`.
+ */
+export function parseLoginReturnTo(value: string | null | undefined): LoginReturnTarget | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    const host = url.host;
+    const protocolOk =
+      url.protocol === "https:" ||
+      (url.protocol === "http:" && isLocalDevHost(host));
+    if (!protocolOk) return null;
+
+    if (isDemoDomainHost(host)) {
+      return {
+        kind: "demo",
+        origin: isLocalDevHost(host) ? `${url.protocol}//${host}` : DEMO_SITE_URL,
+      };
+    }
+    if (isInternalDomainHost(host)) {
+      return {
+        kind: "internal",
+        origin: isLocalDevHost(host) ? `${url.protocol}//${host}` : INTERNAL_SITE_URL,
+      };
+    }
+
+    const workspace = parseValidWorkspaceReturnTo(
+      url.protocol === "https:" ? url.origin : null,
+    );
+    if (workspace) return { kind: "workspace", origin: workspace };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Safe post-login deep link (`/?view=clients`, `/executive-assistant`, legacy mapped).
+ * Returns canonical path+query only (never a legacy /internaldashboard browser path).
+ */
+export function parseSafePostLoginNext(value: string | null | undefined): string | null {
+  if (!value?.trim()) return null;
+  const raw = value.trim();
+
+  try {
+    let pathname: string;
+    let search: string;
+
+    if (/^https?:\/\//i.test(raw)) {
+      const url = new URL(raw);
+      if (!isInternalOpsShellHost(url.host) && !isLocalDevHost(url.host)) return null;
+      pathname = url.pathname;
+      search = url.search;
+    } else {
+      if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+      const url = new URL(raw, "https://placeholder.local");
+      if (url.pathname.includes("..")) return null;
+      pathname = url.pathname;
+      search = url.search;
+    }
+
+    const mapped = isLegacyInternalPathname(pathname)
+      ? mapLegacyInternalPathToInternalHostPath(pathname, search)
+      : `${pathname === "" ? "/" : pathname}${search}`;
+
+    const mappedUrl = new URL(mapped, "https://placeholder.local");
+    if (!isInternalAppPath(mappedUrl.pathname) && mappedUrl.pathname !== "/") {
+      return null;
+    }
+    // Never expose the App Router implementation path in the browser.
+    if (isLegacyInternalPathname(mappedUrl.pathname)) {
+      return mapLegacyInternalPathToInternalHostPath(mappedUrl.pathname, mappedUrl.search);
+    }
+    return `${mappedUrl.pathname}${mappedUrl.search}`;
+  } catch {
+    return null;
+  }
+}
+
 export function centralLoginUrl(returnTo?: string | null) {
   const base = `${CENTRAL_SITE_URL}${centralLoginPath()}`;
-  const validated = parseValidWorkspaceReturnTo(returnTo);
+  const validated =
+    parseValidWorkspaceReturnTo(returnTo) ??
+    parseLoginReturnTo(returnTo)?.origin ??
+    null;
   if (!validated) return base;
   const url = new URL(base);
   url.searchParams.set("return_to", validated);
@@ -279,38 +367,142 @@ function isLegacyInternalPathname(pathname: string) {
   );
 }
 
+function joinOriginAndPath(origin: string, pathAndQuery: string) {
+  const base = origin.replace(/\/$/, "");
+  const path = pathAndQuery.startsWith("/") ? pathAndQuery : `/${pathAndQuery}`;
+  return `${base}${path}`;
+}
+
+/**
+ * Normalize stored redirect_path values (DB / session) to the canonical browser path.
+ * Strips legacy `/internaldashboard` prefixes; defaults to `/`.
+ * Absolute URLs keep their origin and only have the path canonicalized.
+ */
+export function canonicalizeStoredRedirectPath(redirectPath: string | null | undefined): string {
+  const raw = (redirectPath ?? "").trim() || "/";
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      const url = new URL(raw);
+      const path = isLegacyInternalPathname(url.pathname)
+        ? mapLegacyInternalPathToInternalHostPath(url.pathname, url.search)
+        : `${url.pathname}${url.search}`;
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+      return `${url.origin}${normalizedPath}`;
+    }
+    const url = new URL(raw, "https://placeholder.local");
+    if (isLegacyInternalPathname(url.pathname)) {
+      return mapLegacyInternalPathToInternalHostPath(url.pathname, url.search) || "/";
+    }
+    return `${url.pathname}${url.search}` || "/";
+  } catch {
+    return "/";
+  }
+}
+
+export type ResolveBrowserRedirectOptions = {
+  /** When set, bare `/` from internal operators is sent to the Internal host from apex. */
+  userType?: "internal" | "external" | string | null;
+  /** Preferred ops shell origin (demo vs internal) when upgrading relative paths. */
+  opsOrigin?: string | null;
+};
+
+function resolveOpsShellOrigin(
+  requestHost: string | null | undefined,
+  absoluteHost: string | null,
+  opsOriginOption?: string | null,
+): string {
+  if (opsOriginOption?.trim()) return opsOriginOption.replace(/\/$/, "");
+  const host = absoluteHost || normalizeHost(requestHost);
+  if (isDemoDomainHost(host)) {
+    return isLocalDevHost(host) ? `http://${host}` : DEMO_SITE_URL;
+  }
+  if (isInternalDomainHost(host) && isLocalDevHost(host)) {
+    return `http://${host}`;
+  }
+  return INTERNAL_SITE_URL;
+}
+
+function isCanonicalOpsBrowserPath(pathAndQuery: string): boolean {
+  const url = new URL(pathAndQuery, "https://placeholder.local");
+  if (url.pathname === "/" || pathAndQuery.startsWith("/?")) return true;
+  return isInternalAppPath(url.pathname);
+}
+
 /**
  * Resolve a stored/login redirect_path into a browser navigation target for the
- * request host. Legacy `/internaldashboard…` maps to the internal host URL layout.
+ * request host. Never returns a visible `/internaldashboard` URL outside local
+ * path-based development.
  */
 export function resolveBrowserRedirectPathForHost(
   redirectPath: string,
   requestHost: string | null | undefined,
+  options?: ResolveBrowserRedirectOptions,
 ): string {
-  const raw = redirectPath.trim() || "/internaldashboard";
-  if (/^https?:\/\//i.test(raw)) return raw;
+  const normalized = canonicalizeStoredRedirectPath(redirectPath);
 
-  const url = new URL(raw, "https://placeholder.local");
-  const pathname = url.pathname;
-  const search = url.search;
+  let absoluteHost: string | null = null;
+  let canonicalPath: string;
 
-  // Local path-based development (localhost): keep legacy paths.
-  if (isLocalDevHost(requestHost) && !isInternalDomainHost(requestHost)) {
-    return `${pathname}${search}`;
+  if (/^https?:\/\//i.test(normalized)) {
+    try {
+      const url = new URL(normalized);
+      absoluteHost = url.host;
+      canonicalPath = `${url.pathname}${url.search}` || "/";
+    } catch {
+      canonicalPath = "/";
+    }
+  } else {
+    canonicalPath = normalized;
   }
 
-  if (isLegacyInternalPathname(pathname)) {
-    const mapped = mapLegacyInternalPathToInternalHostPath(pathname, search);
-    if (isInternalDomainHost(requestHost)) {
-      return mapped;
+  const canonicalUrl = new URL(canonicalPath, "https://placeholder.local");
+
+  // Local path-based development: App Router still lives under /internaldashboard.
+  if (isLocalDevHost(requestHost) && !isInternalOpsShellHost(requestHost) && !absoluteHost) {
+    if (options?.userType === "internal" || isCanonicalOpsBrowserPath(canonicalPath)) {
+      if (canonicalUrl.pathname === "/") {
+        return `/internaldashboard${canonicalUrl.search}`;
+      }
+      return `/internaldashboard${canonicalUrl.pathname}${canonicalUrl.search}`;
     }
-    if (normalizeHost(requestHost) === "internal.localhost") {
-      return `http://internal.localhost${mapped}`;
-    }
-    return `${INTERNAL_SITE_URL}${mapped}`;
+    return canonicalPath;
   }
 
-  return `${pathname}${search}`;
+  // Already on Internal/Demo — relative canonical path only.
+  if (isInternalOpsShellHost(requestHost)) {
+    return canonicalPath;
+  }
+
+  const opsOrigin = resolveOpsShellOrigin(requestHost, absoluteHost, options?.opsOrigin);
+
+  // Absolute URL to ops or customer host: keep origin, canonicalize path.
+  if (absoluteHost) {
+    if (isDemoDomainHost(absoluteHost) || isInternalDomainHost(absoluteHost)) {
+      return joinOriginAndPath(opsOrigin, canonicalPath);
+    }
+    if (parseClientPlatformSubdomainSafe(absoluteHost)) {
+      return joinOriginAndPath(`https://${normalizeHost(absoluteHost)}`, canonicalPath);
+    }
+    // Other absolute URLs (e.g. already-canonicalized external) — return as-is.
+    return normalized;
+  }
+
+  // External users stay on apex for non-ops destinations (/payment, etc.).
+  if (options?.userType === "external" && !isCanonicalOpsBrowserPath(canonicalPath)) {
+    return canonicalPath;
+  }
+
+  // Internal operators and ops destinations: always land on the ops host from apex.
+  if (options?.userType === "internal" || isCanonicalOpsBrowserPath(canonicalPath)) {
+    return joinOriginAndPath(
+      options?.userType === "internal" && !opsOrigin.includes("demo.")
+        ? INTERNAL_SITE_URL
+        : opsOrigin,
+      canonicalPath,
+    );
+  }
+
+  return canonicalPath;
 }
 
 /** Paths that belong to the internal app (legacy + new layout). */

@@ -1,5 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
+import { canonicalizeStoredRedirectPath } from "@/lib/app-domains";
 import {
   PLATFORM_SESSION_COOKIE,
   PLATFORM_SESSION_MAX_AGE_SECONDS,
@@ -76,7 +77,7 @@ export function buildPlatformSession(
     username: user.username,
     displayName: user.display_name,
     userType: user.user_type,
-    redirectPath: user.redirect_path,
+    redirectPath: canonicalizeStoredRedirectPath(user.redirect_path),
     exp: Date.now() + PLATFORM_SESSION_MAX_AGE_SECONDS * 1000,
     ...(workspace
       ? {

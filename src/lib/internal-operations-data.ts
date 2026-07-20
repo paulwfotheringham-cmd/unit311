@@ -101,7 +101,12 @@ export function resolveInternalOperationsBasePath(
   hostname?: string | null,
 ): SurveyOperationsBasePath {
   const host = (hostname ?? "").split(":")[0].trim().toLowerCase();
-  if (host === "internal.unit311central.com" || host === "internal.localhost") {
+  if (
+    host === "internal.unit311central.com" ||
+    host === "internal.localhost" ||
+    host === "demo.unit311central.com" ||
+    host === "demo.localhost"
+  ) {
     return "/";
   }
   // Customer workspace hosts use /dashboard as the public app URL.
@@ -109,11 +114,17 @@ export function resolveInternalOperationsBasePath(
     host.endsWith(".unit311central.com") &&
     host !== "unit311central.com" &&
     host !== "www.unit311central.com" &&
-    host !== "internal.unit311central.com"
+    host !== "internal.unit311central.com" &&
+    host !== "demo.unit311central.com"
   ) {
     return "/dashboard";
   }
-  if (host.endsWith(".localhost") && host !== "localhost" && host !== "internal.localhost") {
+  if (
+    host.endsWith(".localhost") &&
+    host !== "localhost" &&
+    host !== "internal.localhost" &&
+    host !== "demo.localhost"
+  ) {
     return "/dashboard";
   }
   return INTERNAL_OPERATIONS_BASE_PATH;

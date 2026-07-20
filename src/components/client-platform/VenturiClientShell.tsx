@@ -19,6 +19,7 @@ import {
 
 import Logo from "@/components/layout/Logo";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { internalAppPath, internalAppUrl } from "@/lib/app-domains";
 import {
   VENTURI_CLIENT,
   VENTURI_NAV_ITEMS,
@@ -71,7 +72,7 @@ export default function VenturiClientShell({
       >
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-white/[0.08] px-3 lg:h-14 lg:px-4">
           <div className="min-w-0 flex-1 rounded-lg bg-white px-2.5 py-1.5">
-            <Logo height={28} href="/internaldashboard" className="block w-full max-w-none" />
+            <Logo height={28} href={internalAppUrl()} className="block w-full max-w-none" />
           </div>
           <button
             type="button"
@@ -148,7 +149,7 @@ export default function VenturiClientShell({
 
         <div className="shrink-0 border-t border-white/[0.08] p-3">
           <Link
-            href="/internaldashboard?view=clients"
+            href={internalAppUrl(internalAppPath("clients"))}
             className="block rounded-xl border border-white/[0.08] px-3 py-2 text-center text-xs text-white/45 hover:bg-white/[0.04] hover:text-white/70"
           >
             Back to internal workspace

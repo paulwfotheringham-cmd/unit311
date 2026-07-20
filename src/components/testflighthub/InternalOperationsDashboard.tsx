@@ -15,7 +15,7 @@ import {
   createInitialRepresentatives,
   type Representative,
 } from "@/lib/representatives-data";
-import { isInternalDomainHost } from "@/lib/app-domains";
+import { isDemoDomainHost, isInternalDomainHost } from "@/lib/app-domains";
 import { EXECUTIVE_ASSISTANT_VISIBLE } from "@/lib/product-surface-flags";
 import {
   INTERNAL_OPERATIONS_BASE_PATH,
@@ -219,16 +219,27 @@ export default function InternalOperationsDashboard({
 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname() ?? "";
-  const [resolvedBasePath] = useState<SurveyOperationsBasePath>(() => {
+  const [resolvedBasePath, setResolvedBasePath] = useState<SurveyOperationsBasePath>(() => {
     if (basePathProp) return basePathProp;
     if (typeof window !== "undefined") {
       return resolveInternalOperationsBasePath(window.location.hostname);
     }
-    return INTERNAL_OPERATIONS_BASE_PATH;
+    // Prefer canonical `/` during SSR when host is unknown — never default to the
+    // legacy App Router folder or history.replaceState will expose /internaldashboard.
+    return "/";
   });
   const basePath = resolvedBasePath;
+
+  useEffect(() => {
+    if (basePathProp) {
+      setResolvedBasePath(basePathProp);
+      return;
+    }
+    setResolvedBasePath(resolveInternalOperationsBasePath(window.location.hostname));
+  }, [basePathProp]);
+
   const [isInternalHost] = useState(() => {
-    // Customer workspace hosts use /dashboard; Internal ops use / or /internaldashboard.
+    // Customer workspace hosts use /dashboard; Internal ops use / (canonical).
     if (resolvedBasePath === "/dashboard") return false;
     if (typeof window !== "undefined" && isInternalDomainHost(window.location.hostname)) {
       return true;
@@ -336,11 +347,18 @@ export default function InternalOperationsDashboard({
 
   useEffect(() => {
     const url = new URL(window.location.href);
+    const host = window.location.hostname;
+    const onOpsHost = isInternalDomainHost(host) || isDemoDomainHost(host);
+    // Never expose the App Router implementation path on Internal/Demo hosts.
+    const publicBasePath =
+      onOpsHost && basePath === INTERNAL_OPERATIONS_BASE_PATH ? "/" : basePath;
+
     if (activeView === "client-onboarding") {
       if (isClientOnboardingPath(url.pathname)) {
         return;
       }
-      url.pathname = basePath === "/" ? "/client-onboarding" : `${basePath}/client-onboarding`;
+      url.pathname =
+        publicBasePath === "/" ? "/client-onboarding" : `${publicBasePath}/client-onboarding`;
       url.searchParams.delete("view");
       window.history.replaceState({}, "", url.toString());
       return;
@@ -351,7 +369,7 @@ export default function InternalOperationsDashboard({
         return;
       }
       url.pathname =
-        basePath === "/" ? "/executive-assistant" : `${basePath}/executive-assistant`;
+        publicBasePath === "/" ? "/executive-assistant" : `${publicBasePath}/executive-assistant`;
       url.searchParams.delete("view");
       window.history.replaceState({}, "", url.toString());
       return;
@@ -362,9 +380,9 @@ export default function InternalOperationsDashboard({
         return;
       }
       url.pathname =
-        basePath === "/"
+        publicBasePath === "/"
           ? "/corporate-information/cap-table"
-          : `${basePath}/corporate-information/cap-table`;
+          : `${publicBasePath}/corporate-information/cap-table`;
       url.searchParams.delete("view");
       url.searchParams.delete("tab");
       window.history.replaceState({}, "", url.toString());
@@ -376,7 +394,7 @@ export default function InternalOperationsDashboard({
       isExecutiveAssistantPath(url.pathname) ||
       isCapTablePath(url.pathname)
     ) {
-      url.pathname = basePath;
+      url.pathname = publicBasePath === "/" ? "/" : publicBasePath;
     }
 
     if (activeView === "home") {

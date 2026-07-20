@@ -1,3 +1,4 @@
+import { internalAppPath } from "@/lib/app-domains";
 import { buildCrmEmailModuleHref } from "@/lib/crm-contact-data";
 import {
   ENQUIRIES_CHANNEL_NAME,
@@ -102,8 +103,8 @@ export async function postWebsiteEnquiryToEnquiriesChannel(
 ) {
   const channel = await ensureEnquiriesChannel(scope);
   const contactName = [input.firstName, input.surname].filter(Boolean).join(" ").trim();
-  const crmHref = `/internaldashboard?view=crm&leadId=${encodeURIComponent(input.leadId)}`;
-  const replyHref = `/internaldashboard?view=info-email&composeTo=${encodeURIComponent(input.email)}`;
+  const crmHref = `${internalAppPath("crm")}&leadId=${encodeURIComponent(input.leadId)}`;
+  const replyHref = `${internalAppPath("info-email")}&composeTo=${encodeURIComponent(input.email)}`;
 
   await sendMessage(
     {
@@ -147,13 +148,13 @@ export async function postEnquiryReplyToEnquiriesChannel(
   const lines = [`Reply sent to ${input.organisation}`];
   if (input.leadId) {
     lines.push(
-      `Open CRM Lead: /internaldashboard?view=crm&leadId=${encodeURIComponent(input.leadId)}`,
+      `Open CRM Lead: ${internalAppPath("crm")}&leadId=${encodeURIComponent(input.leadId)}`,
     );
   }
   if (input.replyEmailMessageId) {
     const emailHref = buildCrmEmailModuleHref({
       emailMessageId: input.replyEmailMessageId,
-    }).replace("/?", "/internaldashboard?");
+    });
     lines.push(`Open email: ${emailHref}`);
   }
 

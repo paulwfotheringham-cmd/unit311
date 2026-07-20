@@ -1,3 +1,4 @@
+import { internalAppPath } from "@/lib/app-domains";
 import { createLead } from "@/lib/crm-leads-service";
 import { ensureExternalClientFolder } from "@/lib/external-files-service";
 import { formatLondonDateTime } from "@/lib/founder-booking/slots";
@@ -60,8 +61,8 @@ export async function runFounderBookingSideEffects(
   };
 
   const gmtWhen = formatLondonDateTime(input.startsAt);
-  const meetingDashboardHref = "/internaldashboard?view=crm-meetings";
-  const crmDashboardHref = "/internaldashboard?view=crm";
+  const meetingDashboardHref = internalAppPath("crm-meetings");
+  const crmDashboardHref = internalAppPath("crm");
   const internal = await resolveWorkspaceBinding({ fallbackInternal: true });
 
   try {

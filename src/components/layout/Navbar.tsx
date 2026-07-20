@@ -101,7 +101,7 @@ export default function Navbar() {
     return () => window.removeEventListener(BOOK_SUBMITTED_EVENT, handleBookSubmitted);
   }, [pathname]);
 
-  if (isDashboard || isClientCallPage) {
+  if (isDashboard || isClientCallPage || isLoginPage) {
     return null;
   }
 

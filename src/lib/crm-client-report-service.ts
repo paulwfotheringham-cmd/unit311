@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { CENTRAL_SITE_URL } from "@/lib/app-domains";
+import { CENTRAL_SITE_URL, internalAppPath } from "@/lib/app-domains";
 import { buildCrmSignupInviteUrl } from "@/lib/crm-signup-invite";
 import type { CrmLead } from "@/lib/crm-data";
 import {
@@ -177,7 +177,7 @@ export async function generateCrmClientReportPptxDraft(
       task: `Review PowerPoint report — ${lead.companyName} (${lead.contactName})`,
       assignedTo: "Team",
       dueLabel: formatLondonDateTime(generatedAt),
-      href: "/internaldashboard?view=crm",
+      href: internalAppPath("crm"),
       crmLeadId: lead.id,
     });
     alertCreated = true;
@@ -334,7 +334,7 @@ export async function generateAndSendCrmClientReportPdf(
       task: `Report sent — ${lead.companyName} (${lead.contactName})`,
       assignedTo: "Team",
       dueLabel: formatLondonDateTime(sentAt),
-      href: "/internaldashboard?view=messaging",
+      href: internalAppPath("messaging"),
       crmLeadId: lead.id,
     });
     alertCreated = true;

@@ -23,6 +23,7 @@ export default function FooterGate() {
 
   if (
     isInternalAppHost ||
+    pathname === "/login" ||
     pathname?.startsWith("/ws/") ||
     pathname === "/clientlogin" ||
     pathname?.startsWith("/meet/") ||

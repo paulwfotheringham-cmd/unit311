@@ -1,8 +1,14 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 
 import InternalOperationsDashboard from "@/components/testflighthub/InternalOperationsDashboard";
+import { getRequestHost } from "@/lib/app-domains";
+import { resolveInternalOperationsBasePath } from "@/lib/internal-operations-data";
 
-export default function ClientOnboardingPage() {
+export default async function ClientOnboardingPage() {
+  const host = getRequestHost({ headers: await headers() });
+  const basePath = resolveInternalOperationsBasePath(host);
+
   return (
     <Suspense
       fallback={
@@ -11,7 +17,7 @@ export default function ClientOnboardingPage() {
         </div>
       }
     >
-      <InternalOperationsDashboard initialView="client-onboarding" />
+      <InternalOperationsDashboard basePath={basePath} initialView="client-onboarding" />
     </Suspense>
   );
 }

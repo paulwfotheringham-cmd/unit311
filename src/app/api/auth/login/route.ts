@@ -10,6 +10,8 @@ import { applyPlatformSessionCookie } from "@/lib/platform-session-cookie";
 import {
   getRequestHost,
   parseClientPlatformSubdomainSafe,
+  parseLoginReturnTo,
+  parseSafePostLoginNext,
   parseValidWorkspaceReturnTo,
   resolveBrowserRedirectPathForHost,
   workspacePostLoginUrl,
@@ -28,7 +30,7 @@ export const dynamic = "force-dynamic";
 const DEMO_LOGIN = {
   username: "client",
   password: "client",
-  redirectPath: "/internaldashboard",
+  redirectPath: "/",
   userId: "00000000-0000-4000-8000-000000000001",
 } as const;
 
@@ -47,47 +49,99 @@ function isDemoLoginEnabled(): boolean {
   return process.env.ENABLE_DEMO_LOGIN === "true";
 }
 
-/**
- * When the user started from a customer workspace (`return_to`), always send them
- * back to that host after login — never strand them on apex /payment, /questions, etc.
- * Onboarding vs dashboard is decided from workspace state on the customer host.
- */
-async function resolveRedirectWithWorkspaceReturn(
-  redirectPath: string,
-  requestHost: string | null,
-  returnTo: string | null,
-): Promise<string> {
-  if (returnTo) {
-    const slug = parseClientPlatformSubdomainSafe(new URL(returnTo).host);
-    let needsOnboarding = false;
-    if (slug) {
-      try {
-        needsOnboarding = await workspaceNeedsCustomerOnboarding(slug);
-      } catch {
-        // Prefer dashboard over failing the whole login when onboarding lookup errors.
-        needsOnboarding = false;
-      }
-    }
-    return workspacePostLoginUrl(returnTo, needsOnboarding ? "onboarding" : "dashboard");
-  }
-
-  return resolveBrowserRedirectPathForHost(redirectPath, requestHost);
-}
-
 function returnToFromReferer(request: NextRequest): string | null {
   const referer = request.headers.get("referer");
   if (!referer) return null;
   try {
-    return parseValidWorkspaceReturnTo(new URL(referer).searchParams.get("return_to"));
+    return new URL(referer).searchParams.get("return_to");
   } catch {
     return null;
   }
 }
 
-async function createDemoLoginResponse(request: NextRequest, returnTo: string | null) {
-  const workspaceSlug = returnTo
-    ? parseClientPlatformSubdomainSafe(new URL(returnTo).host)
-    : null;
+function nextFromReferer(request: NextRequest): string | null {
+  const referer = request.headers.get("referer");
+  if (!referer) return null;
+  try {
+    return new URL(referer).searchParams.get("next");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve post-login navigation.
+ * Priority: workspace return_to → demo/internal return_to (+ optional next) →
+ * deep-link next → stored redirect_path (canonicalized).
+ */
+async function resolvePostLoginRedirect(options: {
+  redirectPath: string;
+  requestHost: string | null;
+  returnToRaw: string | null;
+  nextRaw: string | null;
+  userType: string;
+}): Promise<string> {
+  const { redirectPath, requestHost, returnToRaw, nextRaw, userType } = options;
+  const loginReturn = parseLoginReturnTo(returnToRaw);
+  const nextPath = parseSafePostLoginNext(nextRaw);
+
+  if (loginReturn?.kind === "workspace") {
+    const slug = parseClientPlatformSubdomainSafe(new URL(loginReturn.origin).host);
+    let needsOnboarding = false;
+    if (slug) {
+      try {
+        needsOnboarding = await workspaceNeedsCustomerOnboarding(slug);
+      } catch {
+        needsOnboarding = false;
+      }
+    }
+    return workspacePostLoginUrl(loginReturn.origin, needsOnboarding ? "onboarding" : "dashboard");
+  }
+
+  if (loginReturn?.kind === "demo" || loginReturn?.kind === "internal") {
+    const path = nextPath || "/";
+    return resolveBrowserRedirectPathForHost(path, requestHost, {
+      userType: "internal",
+      opsOrigin: loginReturn.origin,
+    });
+  }
+
+  // Workspace-only helper still used by older clients that only send validated workspace URLs.
+  const workspaceOnly = parseValidWorkspaceReturnTo(returnToRaw);
+  if (workspaceOnly) {
+    const slug = parseClientPlatformSubdomainSafe(new URL(workspaceOnly).host);
+    let needsOnboarding = false;
+    if (slug) {
+      try {
+        needsOnboarding = await workspaceNeedsCustomerOnboarding(slug);
+      } catch {
+        needsOnboarding = false;
+      }
+    }
+    return workspacePostLoginUrl(workspaceOnly, needsOnboarding ? "onboarding" : "dashboard");
+  }
+
+  if (nextPath) {
+    return resolveBrowserRedirectPathForHost(nextPath, requestHost, {
+      userType: userType === "external" ? "external" : "internal",
+    });
+  }
+
+  return resolveBrowserRedirectPathForHost(redirectPath, requestHost, {
+    userType,
+  });
+}
+
+async function createDemoLoginResponse(
+  request: NextRequest,
+  returnToRaw: string | null,
+  nextRaw: string | null,
+) {
+  const loginReturn = parseLoginReturnTo(returnToRaw);
+  const workspaceSlug =
+    loginReturn?.kind === "workspace"
+      ? parseClientPlatformSubdomainSafe(new URL(loginReturn.origin).host)
+      : null;
   const workspace = await resolveWorkspaceBinding({
     workspaceSlug,
     fallbackInternal: !workspaceSlug,
@@ -99,16 +153,19 @@ async function createDemoLoginResponse(request: NextRequest, returnTo: string | 
       username: DEMO_LOGIN.username,
       displayName: "Client",
       userType: "internal",
-      redirectPath: DEMO_LOGIN.redirectPath,
+      redirectPath: "/",
       exp: Date.now() + PLATFORM_SESSION_MAX_AGE_SECONDS * 1000,
     },
     workspace,
   );
 
-  // Demo login stays on the internal app unless a workspace return_to is present.
-  const redirectPath = returnTo
-    ? workspacePostLoginUrl(returnTo, "dashboard")
-    : resolveBrowserRedirectPathForHost(DEMO_LOGIN.redirectPath, getRequestHost(request));
+  const redirectPath = await resolvePostLoginRedirect({
+    redirectPath: DEMO_LOGIN.redirectPath,
+    requestHost: getRequestHost(request),
+    returnToRaw,
+    nextRaw,
+    userType: "internal",
+  });
 
   const response = NextResponse.json({
     redirectPath,
@@ -130,24 +187,34 @@ export async function POST(request: NextRequest) {
       username?: string;
       password?: string;
       returnTo?: string;
+      next?: string;
     };
 
     if (!body.username?.trim() || !body.password) {
       return NextResponse.json({ error: "Username and password are required." }, { status: 400 });
     }
 
-    const returnTo =
-      parseValidWorkspaceReturnTo(body.returnTo) ?? returnToFromReferer(request);
-    const workspaceSlug = returnTo
-      ? parseClientPlatformSubdomainSafe(new URL(returnTo).host)
-      : null;
+    const returnToRaw =
+      body.returnTo?.trim() ||
+      returnToFromReferer(request);
+    const nextRaw = body.next?.trim() || nextFromReferer(request) || null;
+
+    const loginReturn = parseLoginReturnTo(returnToRaw);
+    const workspaceSlug =
+      loginReturn?.kind === "workspace"
+        ? parseClientPlatformSubdomainSafe(new URL(loginReturn.origin).host)
+        : parseClientPlatformSubdomainSafe(
+            parseValidWorkspaceReturnTo(returnToRaw)
+              ? new URL(parseValidWorkspaceReturnTo(returnToRaw)!).host
+              : null,
+          );
 
     if (
       isDemoLoginEnabled() &&
       normalizePlatformUsername(body.username) === DEMO_LOGIN.username &&
       body.password === DEMO_LOGIN.password
     ) {
-      return createDemoLoginResponse(request, returnTo);
+      return createDemoLoginResponse(request, returnToRaw, nextRaw);
     }
 
     if (!isSupabaseConfigured()) {
@@ -173,15 +240,17 @@ export async function POST(request: NextRequest) {
       // Non-blocking if last_login_at column is not yet migrated.
     }
 
-    const redirectPath = await resolveRedirectWithWorkspaceReturn(
-      result.redirectPath,
-      getRequestHost(request),
-      returnTo,
-    );
+    const redirectPath = await resolvePostLoginRedirect({
+      redirectPath: result.redirectPath,
+      requestHost: getRequestHost(request),
+      returnToRaw,
+      nextRaw,
+      userType: result.session.userType,
+    });
 
     const response = NextResponse.json({
       redirectPath,
-      appliedReturnTo: returnTo,
+      appliedReturnTo: loginReturn?.origin ?? parseValidWorkspaceReturnTo(returnToRaw),
       userType: result.session.userType,
       displayName: result.session.displayName,
       workspace: result.session.workspaceId

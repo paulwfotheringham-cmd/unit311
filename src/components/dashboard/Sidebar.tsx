@@ -6,6 +6,7 @@ import { startTransition, useCallback, useEffect, useState } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Logo from "@/components/layout/Logo";
+import { internalAppPath, internalAppUrl } from "@/lib/app-domains";
 import { NAV_ITEMS } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, FlaskConical, MessageSquare, X } from "lucide-react";
@@ -168,7 +169,7 @@ export default function Sidebar({
           </Link>
         ) : null}
         <Link
-          href="/internaldashboard?view=testing"
+          href={internalAppUrl(internalAppPath("testing"))}
           onClick={onClose}
           className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-[13px] text-white/45 transition-colors hover:bg-[#0D1B2A]/60 hover:text-white/75"
         >

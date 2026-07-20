@@ -1,8 +1,14 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 
 import InternalOperationsDashboard from "@/components/testflighthub/InternalOperationsDashboard";
+import { getRequestHost } from "@/lib/app-domains";
+import { resolveInternalOperationsBasePath } from "@/lib/internal-operations-data";
 
-export default function CapTablePage() {
+export default async function CapTablePage() {
+  const host = getRequestHost({ headers: await headers() });
+  const basePath = resolveInternalOperationsBasePath(host);
+
   return (
     <Suspense
       fallback={
@@ -11,7 +17,7 @@ export default function CapTablePage() {
         </div>
       }
     >
-      <InternalOperationsDashboard initialView="corporate-cap-table" />
+      <InternalOperationsDashboard basePath={basePath} initialView="corporate-cap-table" />
     </Suspense>
   );
 }

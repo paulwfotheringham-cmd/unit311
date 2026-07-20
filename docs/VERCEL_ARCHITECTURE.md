@@ -75,8 +75,9 @@ Implemented in `src/middleware.ts` and `src/lib/app-domains.ts`.
 | --- | --- |
 | Apex / www | Serve public marketing; redirect legacy Internal paths to `internal.*` |
 | Apex `/login` | Public login page |
-| Apex `/internaldashboard*` | Redirect → `internal.unit311central.com` |
-| `internal.*` `/` | Rewrite → `/internaldashboard` |
+| Apex `/internaldashboard*` | **308** → `internal.unit311central.com/` (canonical) |
+| `internal.*` `/` | Rewrite → `/internaldashboard` (App Router; browser URL stays `/`) |
+| `internal.*` `/internaldashboard*` | **308** → `/` (and mapped subpaths) |
 | `internal.*` marketing paths | Redirect → apex |
 | `internal.*` `/login` | Redirect → apex `/login` |
 | `demo.*` | Same rewrites as Internal; tenancy = Demo workspace |
@@ -94,7 +95,7 @@ Request flags set by middleware: `x-unit311-central`, `x-unit311-internal`, `x-u
 | --- | --- | --- |
 | Public website | `unit311central.com` | Marketing App Router pages |
 | Login | `unit311central.com/login` | Shared auth entry for all hosts |
-| Internal application | `internal.unit311central.com` | `/internaldashboard` UI (components under `src/components/testflighthub/`) |
+| Internal application | `internal.unit311central.com/` | App Router under `/internaldashboard` (rewrite); UI in `src/components/testflighthub/` |
 | Workspace routing | `{slug}.unit311central.com` → `/ws/[slug]` | Middleware rewrite + gateway page |
 | Placeholder — missing | Unknown slug | Branded “Workspace unavailable” |
 | Placeholder — existing | Known `workspaces` row | Onboarding / status placeholder (no customer product UI yet) |
@@ -121,7 +122,8 @@ Request flags set by middleware: `x-unit311-central`, `x-unit311-internal`, `x-u
 
 | From | To |
 | --- | --- |
-| `unit311central.com/internaldashboard` | `internal.unit311central.com/…` |
+| `unit311central.com/internaldashboard*` | `internal.unit311central.com/…` (**308**) |
+| `internal.unit311central.com/internaldashboard*` | `/` (mapped; **308**) |
 | `internal.unit311central.com/login` | `unit311central.com/login` |
 | `{slug}.unit311central.com/login` | `unit311central.com/login` |
 | `unit311.unit311central.com` | `internal.unit311central.com` |

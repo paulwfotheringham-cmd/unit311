@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import { useExecutiveCallWebRtc } from "@/hooks/useExecutiveCallWebRtc";
 import { useSpeechTranscription } from "@/hooks/useSpeechTranscription";
 import type { TranscriptLine } from "@/lib/executive-call-transcript-data";
+import { resolveInternalOperationsBasePath } from "@/lib/internal-operations-data";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -355,7 +356,10 @@ export default function ExecutiveCallRoom({
 
   useEffect(() => {
     if (!leftCall || !payload?.viewer.isHost) return;
-    router.replace("/internaldashboard?view=crm-meetings");
+    const base = resolveInternalOperationsBasePath(
+      typeof window !== "undefined" ? window.location.hostname : null,
+    );
+    router.replace(base === "/" ? "/?view=crm-meetings" : `${base}?view=crm-meetings`);
   }, [leftCall, payload?.viewer.isHost, router]);
 
   useEffect(() => {
@@ -396,7 +400,8 @@ export default function ExecutiveCallRoom({
       setLeftCall(true);
       stopMedia();
       if (data.viewer.isHost) {
-        router.replace("/internaldashboard?view=crm-meetings");
+        const base = resolveInternalOperationsBasePath(window.location.hostname);
+        router.replace(base === "/" ? "/?view=crm-meetings" : `${base}?view=crm-meetings`);
       }
     } catch (leaveError) {
       setError(leaveError instanceof Error ? leaveError.message : "Failed to leave call");
