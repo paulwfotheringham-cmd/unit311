@@ -6,6 +6,8 @@
 | **Domain** | DOM-10 Corporate Information |
 | **Status** | **READY** |
 | **Completion date** | 2026-07-21 |
+| **Production deployment SHA** | `aa34d06` on `main` |
+| **Production deployment** | `dpl_9DHK6wCcL9f5AT4jysVyfGncZFaP` |
 | **Benchmark** | Human Resources (MOD-200 / MOD-201) commercial quality |
 | **Purpose** | Authoritative corporate governance and legal record for the organisation |
 
