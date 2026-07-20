@@ -44,6 +44,7 @@ This folder holds **approved Platform Reference Models (PRM)** and the **module 
 | [PLATFORM_MODULE_REGISTER.md](./PLATFORM_MODULE_REGISTER.md) | Platform Module Register | **ACTIVE** | 2026-07-19 |
 | [FDR-MOD-071-EMPLOYEES.md](./FDR-MOD-071-EMPLOYEES.md) | FDR — Employees (master Employee record) | **APPROVED** · Go-Live **Ready** (demo / MOD-200) | 2026-07-19 |
 | [MOD-200-HR-DOMAIN.md](./MOD-200-HR-DOMAIN.md) | MOD-200 — Human Resources domain (demo Ready) | **READY** | 2026-07-21 |
+| [MOD-201-RECRUITMENT-ATS.md](./MOD-201-RECRUITMENT-ATS.md) | MOD-201 — Recruitment ATS redesign | **READY** | 2026-07-21 |
 | [HR-201-EMPLOYEE-360-DATA-INTEGRATION.md](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) | HR-201 — Employee 360 live data integration | **Backlog** (enhancement) | 2026-07-21 |
 | [FDR-MOD-092-LOGISTICS.md](./FDR-MOD-092-LOGISTICS.md) | FDR — Logistics (Shipping Providers) | **APPROVED** · Architecture **COMPLETE / FROZEN** · Go-Live **READY** | 2026-07-19 |
 | [MOD-092-PRE-IMPLEMENTATION-REVIEWS.md](./MOD-092-PRE-IMPLEMENTATION-REVIEWS.md) | MOD-092 Pre-Implementation Reviews | **APPROVED** — authoritative | 2026-07-19 |

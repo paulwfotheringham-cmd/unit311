@@ -34,6 +34,25 @@ import {
 
 type WizardStep = 1 | 2 | 3 | 4;
 
+type ReportActionVariant = "edit" | "duplicate" | "pdf" | "excel" | "delete";
+
+function reportActionButtonClass(variant: ReportActionVariant) {
+  const base =
+    "inline-flex h-9 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-colors";
+  switch (variant) {
+    case "edit":
+      return `${base} border-sky-400/40 bg-sky-500/15 text-sky-100 hover:border-sky-300/55 hover:bg-sky-500/25`;
+    case "duplicate":
+      return `${base} border-violet-400/40 bg-violet-500/15 text-violet-100 hover:border-violet-300/55 hover:bg-violet-500/25`;
+    case "pdf":
+      return `${base} border-amber-400/40 bg-amber-500/15 text-amber-100 hover:border-amber-300/55 hover:bg-amber-500/25`;
+    case "excel":
+      return `${base} border-emerald-400/40 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/55 hover:bg-emerald-500/25`;
+    case "delete":
+      return `${base} border-rose-400/40 bg-rose-500/15 text-rose-100 hover:border-rose-300/55 hover:bg-rose-500/25`;
+  }
+}
+
 function downloadBlob(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -157,7 +176,7 @@ export default function HrReportsWorkspace({
                       <div className="flex flex-wrap gap-1.5">
                       <button
                         type="button"
-                        className={hrSecondaryButtonClass()}
+                        className={reportActionButtonClass("edit")}
                         onClick={() => {
                           setEditingId(report.id);
                           setWizardOpen(false);
@@ -168,7 +187,7 @@ export default function HrReportsWorkspace({
                       </button>
                       <button
                         type="button"
-                        className={hrSecondaryButtonClass()}
+                        className={reportActionButtonClass("duplicate")}
                         onClick={() => duplicateHrReport(report.id)}
                       >
                         <Copy className="h-3 w-3" />
@@ -176,7 +195,7 @@ export default function HrReportsWorkspace({
                       </button>
                       <button
                         type="button"
-                        className={hrSecondaryButtonClass()}
+                        className={reportActionButtonClass("pdf")}
                         onClick={() =>
                           downloadBlob(
                             `${report.name.replace(/\s+/g, "_")}.pdf.txt`,
@@ -190,7 +209,7 @@ export default function HrReportsWorkspace({
                       </button>
                       <button
                         type="button"
-                        className={hrSecondaryButtonClass()}
+                        className={reportActionButtonClass("excel")}
                         onClick={() =>
                           downloadBlob(
                             `${report.name.replace(/\s+/g, "_")}.csv`,
@@ -204,7 +223,7 @@ export default function HrReportsWorkspace({
                       </button>
                       <button
                         type="button"
-                        className={hrSecondaryButtonClass()}
+                        className={reportActionButtonClass("delete")}
                         onClick={() => deleteHrReport(report.id)}
                       >
                         <Trash2 className="h-3 w-3" />

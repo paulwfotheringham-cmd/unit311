@@ -17,8 +17,12 @@ import {
   type HrReviewStatus,
 } from "@/lib/hr-performance-data";
 import {
+  emptyInterview,
+  emptyOfferDetails,
   nextPipelineStage,
   type HrCandidate,
+  type HrInterview,
+  type HrOfferDetails,
   type HrPipelineStage,
   type HrVacancy,
 } from "@/lib/hr-recruitment-data";
@@ -285,6 +289,7 @@ function seedState(): HrMockState {
       status: "open",
       openedAt: isoDaysFromNow(-45),
       targetStartDate: isoDaysFromNow(30),
+      closingDate: isoDaysFromNow(14),
       headcount: 1,
       salaryBand: "€55–70k",
       description:
@@ -302,6 +307,7 @@ function seedState(): HrMockState {
       status: "open",
       openedAt: isoDaysFromNow(-21),
       targetStartDate: isoDaysFromNow(21),
+      closingDate: isoDaysFromNow(21),
       headcount: 1,
       salaryBand: "€38–48k",
       description:
@@ -318,6 +324,7 @@ function seedState(): HrMockState {
       status: "open",
       openedAt: isoDaysFromNow(-60),
       targetStartDate: isoDaysFromNow(45),
+      closingDate: isoDaysFromNow(30),
       headcount: 1,
       salaryBand: "€60–75k",
       description: "Lead month-end close, management reporting, and cash forecasting for growth.",
@@ -333,6 +340,7 @@ function seedState(): HrMockState {
       status: "filled",
       openedAt: isoDaysFromNow(-90),
       targetStartDate: isoDaysFromNow(-10),
+      closingDate: isoDaysFromNow(-15),
       headcount: 1,
       salaryBand: "€28–34k",
       description: "Coordinate internal learning programmes and compliance training schedules.",
@@ -345,6 +353,7 @@ function seedState(): HrMockState {
       id: "cand-1",
       name: "Jordi Vila",
       email: "jordi.vila@example.com",
+      phone: "+34 600 111 222",
       vacancyId: "vac-1",
       role: "Senior Full-Stack Engineer",
       department: "Technical",
@@ -352,9 +361,13 @@ function seedState(): HrMockState {
       stage: "interview",
       rating: 4,
       interviewer: "Hannes Weber",
+      recruiter: "Hannes Weber",
       expectedSalary: "€62k",
+      availability: "2 weeks notice",
+      source: "Careers page",
       appliedAt: isoDaysFromNow(-18),
       notes: "Strong React / Node background",
+      cvLabel: "Jordi_Vila_CV.pdf",
       rejected: false,
       interviews: [
         {
@@ -362,8 +375,14 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(-7)}T10:00`,
           type: "video",
           interviewer: "Hannes Weber",
+          interviewers: "Hannes Weber",
           status: "completed",
+          outcome: "pass",
+          rating: 4,
+          strengths: "Clear system design thinking; strong TypeScript depth.",
+          weaknesses: "Limited exposure to our deployment stack.",
           feedback: "Solid system design; clear communicator.",
+          notes: "Recommend panel round.",
           recommendation: "yes",
         },
         {
@@ -371,19 +390,18 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(2)}T15:00`,
           type: "panel",
           interviewer: "Hannes Weber + Paul Fotheringham",
+          interviewers: "Hannes Weber, Paul Fotheringham",
           status: "scheduled",
+          outcome: "pending",
+          rating: null,
+          strengths: "",
+          weaknesses: "",
           feedback: "",
+          notes: "Panel at Barcelona office.",
           recommendation: null,
         },
       ],
-      offer: {
-        status: "none",
-        salary: "",
-        startDate: "",
-        employmentType: "Full time",
-        notes: "",
-        sentAt: null,
-      },
+      offer: emptyOfferDetails(),
       timeline: [
         { id: "tl-1a", at: isoDaysFromNow(-18), label: "Application received", detail: "Via careers page" },
         { id: "tl-1b", at: isoDaysFromNow(-14), label: "Screening complete", detail: "Moved to interview" },
@@ -395,6 +413,7 @@ function seedState(): HrMockState {
       id: "cand-2",
       name: "Nina Costa",
       email: "nina.costa@example.com",
+      phone: "+34 611 222 333",
       vacancyId: "vac-1",
       role: "Senior Full-Stack Engineer",
       department: "Technical",
@@ -402,9 +421,13 @@ function seedState(): HrMockState {
       stage: "screening",
       rating: 3,
       interviewer: "Hannes Weber",
+      recruiter: "Hannes Weber",
       expectedSalary: "€58k",
+      availability: "1 month",
+      source: "LinkedIn",
       appliedAt: isoDaysFromNow(-10),
       notes: "",
+      cvLabel: "Nina_Costa_CV.pdf",
       rejected: false,
       interviews: [
         {
@@ -412,19 +435,18 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(4)}T11:30`,
           type: "phone",
           interviewer: "Hannes Weber",
+          interviewers: "Hannes Weber",
           status: "scheduled",
+          outcome: "pending",
+          rating: null,
+          strengths: "",
+          weaknesses: "",
           feedback: "",
+          notes: "Initial phone screen.",
           recommendation: null,
         },
       ],
-      offer: {
-        status: "none",
-        salary: "",
-        startDate: "",
-        employmentType: "Full time",
-        notes: "",
-        sentAt: null,
-      },
+      offer: emptyOfferDetails(),
       timeline: [
         { id: "tl-2a", at: isoDaysFromNow(-10), label: "Application received", detail: "LinkedIn referral" },
         { id: "tl-2b", at: isoDaysFromNow(-8), label: "Screening", detail: "CV shortlisted" },
@@ -434,6 +456,7 @@ function seedState(): HrMockState {
       id: "cand-3",
       name: "Omar Haddad",
       email: "omar.haddad@example.com",
+      phone: "+34 622 333 444",
       vacancyId: "vac-2",
       role: "Customer Success Specialist",
       department: "Customer Success",
@@ -441,9 +464,13 @@ function seedState(): HrMockState {
       stage: "offer",
       rating: 5,
       interviewer: "Ashley Cole",
+      recruiter: "Ashley Cole",
       expectedSalary: "€44k",
+      availability: "Immediate",
+      source: "Referral",
       appliedAt: isoDaysFromNow(-25),
       notes: "Offer sent — awaiting response",
+      cvLabel: "Omar_Haddad_CV.pdf",
       rejected: false,
       interviews: [
         {
@@ -451,8 +478,14 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(-12)}T09:00`,
           type: "video",
           interviewer: "Ashley Cole",
+          interviewers: "Ashley Cole",
           status: "completed",
+          outcome: "pass",
+          rating: 5,
+          strengths: "Excellent customer empathy; strong SaaS onboarding experience.",
+          weaknesses: "Limited enterprise account experience.",
           feedback: "Excellent customer empathy and SaaS fluency.",
+          notes: "Strong hire recommendation.",
           recommendation: "strong_yes",
         },
       ],
@@ -474,6 +507,7 @@ function seedState(): HrMockState {
       id: "cand-4",
       name: "Sophie Laurent",
       email: "sophie.laurent@example.com",
+      phone: "+33 600 444 555",
       vacancyId: "vac-2",
       role: "Customer Success Specialist",
       department: "Customer Success",
@@ -481,19 +515,16 @@ function seedState(): HrMockState {
       stage: "applications",
       rating: 3,
       interviewer: "Ashley Cole",
+      recruiter: "Ashley Cole",
       expectedSalary: "€40k",
+      availability: "2 weeks notice",
+      source: "Careers page",
       appliedAt: isoDaysFromNow(-4),
       notes: "",
+      cvLabel: "Sophie_Laurent_CV.pdf",
       rejected: false,
       interviews: [],
-      offer: {
-        status: "none",
-        salary: "",
-        startDate: "",
-        employmentType: "Full time",
-        notes: "",
-        sentAt: null,
-      },
+      offer: emptyOfferDetails(),
       timeline: [
         { id: "tl-4a", at: isoDaysFromNow(-4), label: "Application received", detail: "Careers page" },
       ],
@@ -502,6 +533,7 @@ function seedState(): HrMockState {
       id: "cand-5",
       name: "Miguel Ortega",
       email: "miguel.ortega@example.com",
+      phone: "+34 633 555 666",
       vacancyId: "vac-3",
       role: "Finance Controller",
       department: "Finance",
@@ -509,19 +541,16 @@ function seedState(): HrMockState {
       stage: "role_approved",
       rating: 0,
       interviewer: "Stefan Braun",
+      recruiter: "Stefan Braun",
       expectedSalary: "—",
+      availability: "1 month",
+      source: "Agency",
       appliedAt: isoDaysFromNow(-2),
       notes: "Sourcing shortlist",
+      cvLabel: "Miguel_Ortega_CV.pdf",
       rejected: false,
       interviews: [],
-      offer: {
-        status: "none",
-        salary: "",
-        startDate: "",
-        employmentType: "Full time",
-        notes: "",
-        sentAt: null,
-      },
+      offer: emptyOfferDetails(),
       timeline: [
         { id: "tl-5a", at: isoDaysFromNow(-2), label: "Added to pipeline", detail: "Agency shortlist" },
       ],
@@ -530,6 +559,7 @@ function seedState(): HrMockState {
       id: "cand-6",
       name: "Priya Shah",
       email: "priya.shah@example.com",
+      phone: "+34 644 666 777",
       vacancyId: "vac-3",
       role: "Finance Controller",
       department: "Finance",
@@ -537,9 +567,13 @@ function seedState(): HrMockState {
       stage: "interview",
       rating: 4,
       interviewer: "Stefan Braun",
+      recruiter: "Stefan Braun",
       expectedSalary: "€68k",
+      availability: "2 weeks notice",
+      source: "LinkedIn",
       appliedAt: isoDaysFromNow(-30),
       notes: "Second interview booked",
+      cvLabel: "Priya_Shah_CV.pdf",
       rejected: false,
       interviews: [
         {
@@ -547,8 +581,14 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(-14)}T14:00`,
           type: "video",
           interviewer: "Stefan Braun",
+          interviewers: "Stefan Braun",
           status: "completed",
+          outcome: "hold",
+          rating: 4,
+          strengths: "Strong close process; good IFRS depth.",
+          weaknesses: "Needs more multi-entity consolidation experience.",
           feedback: "Strong close process; good IFRS depth.",
+          notes: "Proceed to on-site before final decision.",
           recommendation: "yes",
         },
         {
@@ -556,8 +596,14 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(5)}T10:00`,
           type: "onsite",
           interviewer: "Stefan Braun",
+          interviewers: "Stefan Braun",
           status: "scheduled",
+          outcome: "pending",
+          rating: null,
+          strengths: "",
+          weaknesses: "",
           feedback: "",
+          notes: "Madrid office — finance team meet.",
           recommendation: null,
         },
       ],
@@ -579,6 +625,7 @@ function seedState(): HrMockState {
       id: "cand-7",
       name: "Tomás Ribeiro",
       email: "tomas.ribeiro@example.com",
+      phone: "+351 655 777 888",
       vacancyId: "vac-1",
       role: "Senior Full-Stack Engineer",
       department: "Technical",
@@ -586,9 +633,13 @@ function seedState(): HrMockState {
       stage: "accepted",
       rating: 5,
       interviewer: "Hannes Weber",
+      recruiter: "Hannes Weber",
       expectedSalary: "€65k",
+      availability: "Immediate",
+      source: "Referral",
       appliedAt: isoDaysFromNow(-40),
       notes: "Start date agreed",
+      cvLabel: "Tomas_Ribeiro_CV.pdf",
       rejected: false,
       interviews: [
         {
@@ -596,8 +647,14 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(-28)}T16:00`,
           type: "panel",
           interviewer: "Technical panel",
+          interviewers: "Hannes Weber, Paul Fotheringham, Carlos Mendoza",
           status: "completed",
+          outcome: "pass",
+          rating: 5,
+          strengths: "Exceptional full-stack depth; collaborative panel presence.",
+          weaknesses: "Salary at top of band.",
           feedback: "Hire — top of band.",
+          notes: "Unanimous panel recommendation.",
           recommendation: "strong_yes",
         },
       ],
@@ -619,6 +676,7 @@ function seedState(): HrMockState {
       id: "cand-8",
       name: "Helen Park",
       email: "helen.park@example.com",
+      phone: "+44 666 888 999",
       vacancyId: "vac-4",
       role: "Training Coordinator",
       department: "Training",
@@ -626,9 +684,13 @@ function seedState(): HrMockState {
       stage: "onboarding",
       rating: 4,
       interviewer: "Saffin Khan",
+      recruiter: "Saffin Khan",
       expectedSalary: "€32k",
+      availability: "Immediate",
+      source: "Careers page",
       appliedAt: isoDaysFromNow(-70),
       notes: "Onboarding week 1",
+      cvLabel: "Helen_Park_CV.pdf",
       rejected: false,
       interviews: [
         {
@@ -636,8 +698,14 @@ function seedState(): HrMockState {
           scheduledAt: `${isoDaysFromNow(-50)}T13:00`,
           type: "video",
           interviewer: "Saffin Khan",
+          interviewers: "Saffin Khan",
           status: "completed",
+          outcome: "pass",
+          rating: 4,
+          strengths: "Organised and personable; LMS admin experience.",
+          weaknesses: "Limited aviation sector background.",
           feedback: "Organised and personable.",
+          notes: "Good cultural fit for training team.",
           recommendation: "yes",
         },
       ],
@@ -1077,6 +1145,266 @@ export function rejectCandidate(id: string) {
 
 export function offerCandidate(id: string) {
   moveCandidateStage(id, "offer");
+}
+
+export function upsertVacancy(input: Partial<HrVacancy> & { id?: string }) {
+  const existing = input.id ? state.vacancies.find((item) => item.id === input.id) : null;
+  const next: HrVacancy = {
+    id: existing?.id ?? uid("vac"),
+    title: input.title ?? existing?.title ?? "New vacancy",
+    department: input.department ?? existing?.department ?? "Operations",
+    location: input.location ?? existing?.location ?? "Barcelona",
+    employmentType: input.employmentType ?? existing?.employmentType ?? "Full time",
+    hiringManager: input.hiringManager ?? existing?.hiringManager ?? "HR Administrator",
+    status: input.status ?? existing?.status ?? "open",
+    openedAt: input.openedAt ?? existing?.openedAt ?? isoDaysFromNow(0),
+    targetStartDate: input.targetStartDate ?? existing?.targetStartDate ?? isoDaysFromNow(30),
+    closingDate: input.closingDate ?? existing?.closingDate ?? isoDaysFromNow(30),
+    headcount: input.headcount ?? existing?.headcount ?? 1,
+    salaryBand: input.salaryBand ?? existing?.salaryBand ?? "",
+    description: input.description ?? existing?.description ?? "",
+    requirements: input.requirements ?? existing?.requirements ?? "",
+  };
+  state = {
+    ...state,
+    vacancies: existing
+      ? state.vacancies.map((item) => (item.id === existing.id ? next : item))
+      : [next, ...state.vacancies],
+  };
+  pushActivity(
+    existing ? "Vacancy updated" : "New vacancy created",
+    `${next.title} — ${next.location}`,
+  );
+  emit();
+  return next;
+}
+
+export function duplicateVacancy(id: string) {
+  const source = state.vacancies.find((item) => item.id === id);
+  if (!source) return null;
+  const copy: HrVacancy = {
+    ...source,
+    id: uid("vac"),
+    title: `${source.title} (copy)`,
+    status: "open",
+    openedAt: isoDaysFromNow(0),
+    closingDate: isoDaysFromNow(30),
+  };
+  state = { ...state, vacancies: [copy, ...state.vacancies] };
+  pushActivity("Vacancy duplicated", `${copy.title} — ${copy.location}`);
+  emit();
+  return copy;
+}
+
+export function archiveVacancy(id: string) {
+  state = {
+    ...state,
+    vacancies: state.vacancies.map((vacancy) =>
+      vacancy.id === id ? { ...vacancy, status: "archived" } : vacancy,
+    ),
+  };
+  const vacancy = state.vacancies.find((item) => item.id === id);
+  if (vacancy) pushActivity("Vacancy archived", `${vacancy.title} — ${vacancy.department}`);
+  emit();
+}
+
+export function deleteVacancy(id: string) {
+  const vacancy = state.vacancies.find((item) => item.id === id);
+  state = {
+    ...state,
+    vacancies: state.vacancies.filter((item) => item.id !== id),
+    candidates: state.candidates.filter((candidate) => candidate.vacancyId !== id),
+  };
+  if (vacancy) pushActivity("Vacancy deleted", `${vacancy.title} — ${vacancy.location}`);
+  emit();
+}
+
+export function upsertCandidate(input: Partial<HrCandidate> & { id?: string }) {
+  const existing = input.id ? state.candidates.find((item) => item.id === input.id) : null;
+  const vacancy = state.vacancies.find(
+    (item) => item.id === (input.vacancyId ?? existing?.vacancyId),
+  );
+  const next: HrCandidate = {
+    id: existing?.id ?? uid("cand"),
+    name: input.name ?? existing?.name ?? "New candidate",
+    email: input.email ?? existing?.email ?? "",
+    phone: input.phone ?? existing?.phone ?? "",
+    vacancyId: input.vacancyId ?? existing?.vacancyId ?? vacancy?.id ?? "",
+    role: input.role ?? existing?.role ?? vacancy?.title ?? "Role",
+    department: input.department ?? existing?.department ?? vacancy?.department ?? "Operations",
+    location: input.location ?? existing?.location ?? vacancy?.location ?? "Barcelona",
+    stage: input.stage ?? existing?.stage ?? "applications",
+    rating: input.rating ?? existing?.rating ?? 0,
+    interviewer: input.interviewer ?? existing?.interviewer ?? vacancy?.hiringManager ?? "",
+    recruiter: input.recruiter ?? existing?.recruiter ?? vacancy?.hiringManager ?? "",
+    expectedSalary: input.expectedSalary ?? existing?.expectedSalary ?? "",
+    availability: input.availability ?? existing?.availability ?? "",
+    source: input.source ?? existing?.source ?? "Careers page",
+    appliedAt: input.appliedAt ?? existing?.appliedAt ?? isoDaysFromNow(0),
+    notes: input.notes ?? existing?.notes ?? "",
+    cvLabel: input.cvLabel ?? existing?.cvLabel ?? "",
+    rejected: input.rejected ?? existing?.rejected ?? false,
+    interviews: input.interviews ?? existing?.interviews ?? [],
+    offer: input.offer ?? existing?.offer ?? emptyOfferDetails(),
+    timeline:
+      input.timeline ??
+      existing?.timeline ??
+      [
+        {
+          id: uid("tl"),
+          at: isoDaysFromNow(0),
+          label: "Application received",
+          detail: input.source ?? "Careers page",
+        },
+      ],
+  };
+  state = {
+    ...state,
+    candidates: existing
+      ? state.candidates.map((item) => (item.id === existing.id ? next : item))
+      : [next, ...state.candidates],
+  };
+  pushActivity(
+    existing ? "Candidate updated" : "Candidate added",
+    `${next.name} — ${next.role}`,
+  );
+  emit();
+  return next;
+}
+
+export function duplicateCandidate(id: string) {
+  const source = state.candidates.find((item) => item.id === id);
+  if (!source) return null;
+  const copy: HrCandidate = {
+    ...source,
+    id: uid("cand"),
+    name: `${source.name} (copy)`,
+    stage: "applications",
+    rejected: false,
+    interviews: [],
+    offer: emptyOfferDetails(),
+    appliedAt: isoDaysFromNow(0),
+    timeline: [
+      {
+        id: uid("tl"),
+        at: isoDaysFromNow(0),
+        label: "Candidate duplicated",
+        detail: `Copied from ${source.name}`,
+      },
+    ],
+  };
+  state = { ...state, candidates: [copy, ...state.candidates] };
+  pushActivity("Candidate duplicated", `${copy.name} — ${copy.role}`);
+  emit();
+  return copy;
+}
+
+export function deleteCandidate(id: string) {
+  const candidate = state.candidates.find((item) => item.id === id);
+  state = { ...state, candidates: state.candidates.filter((item) => item.id !== id) };
+  if (candidate) pushActivity("Candidate removed", `${candidate.name} — ${candidate.role}`);
+  emit();
+}
+
+export function markCandidateHired(id: string) {
+  state = {
+    ...state,
+    candidates: state.candidates.map((candidate) => {
+      if (candidate.id !== id) return candidate;
+      const offer =
+        candidate.offer.status === "none" || candidate.offer.status === "draft"
+          ? { ...candidate.offer, status: "accepted" as const }
+          : candidate.offer.status === "sent"
+            ? { ...candidate.offer, status: "accepted" as const }
+            : candidate.offer;
+      return {
+        ...candidate,
+        stage: "onboarding" as const,
+        rejected: false,
+        offer,
+      };
+    }),
+  };
+  const candidate = state.candidates.find((item) => item.id === id);
+  if (candidate) pushActivity("Candidate hired", `${candidate.name} — ${candidate.role}`);
+  emit();
+}
+
+export function saveCandidateOffer(id: string, offer: HrOfferDetails) {
+  state = {
+    ...state,
+    candidates: state.candidates.map((candidate) =>
+      candidate.id === id ? { ...candidate, offer } : candidate,
+    ),
+  };
+  const candidate = state.candidates.find((item) => item.id === id);
+  if (candidate) {
+    pushActivity(
+      offer.status === "sent" ? "Offer sent" : "Offer updated",
+      `${candidate.name} — ${offer.salary || candidate.role}`,
+    );
+  }
+  emit();
+}
+
+export function addCandidateInterview(id: string, interview: HrInterview) {
+  const nextInterview = emptyInterview(interview);
+  state = {
+    ...state,
+    candidates: state.candidates.map((candidate) =>
+      candidate.id === id
+        ? { ...candidate, interviews: [...candidate.interviews, nextInterview] }
+        : candidate,
+    ),
+  };
+  const candidate = state.candidates.find((item) => item.id === id);
+  if (candidate) {
+    pushActivity(
+      "Interview scheduled",
+      `${candidate.name} — ${nextInterview.type} with ${nextInterview.interviewer}`,
+    );
+  }
+  emit();
+  return nextInterview;
+}
+
+export function updateCandidateInterview(candidateId: string, interview: HrInterview) {
+  state = {
+    ...state,
+    candidates: state.candidates.map((candidate) => {
+      if (candidate.id !== candidateId) return candidate;
+      return {
+        ...candidate,
+        interviews: candidate.interviews.map((item) =>
+          item.id === interview.id ? interview : item,
+        ),
+      };
+    }),
+  };
+  const candidate = state.candidates.find((item) => item.id === candidateId);
+  if (candidate) {
+    pushActivity(
+      interview.status === "completed" ? "Interview completed" : "Interview updated",
+      `${candidate.name} — ${interview.type}`,
+    );
+  }
+  emit();
+}
+
+export function appendCandidateTimeline(id: string, label: string, detail: string) {
+  const event = { id: uid("tl"), at: isoDaysFromNow(0), label, detail };
+  state = {
+    ...state,
+    candidates: state.candidates.map((candidate) =>
+      candidate.id === id
+        ? { ...candidate, timeline: [...candidate.timeline, event] }
+        : candidate,
+    ),
+  };
+  const candidate = state.candidates.find((item) => item.id === id);
+  if (candidate) pushActivity(label, `${candidate.name} — ${detail}`);
+  emit();
+  return event;
 }
 
 /* —— Performance —— */

@@ -1,4 +1,4 @@
-/** Recruitment pipeline — vacancy, interview, offer, and candidate timeline. */
+/** Recruitment / ATS — vacancy, candidate, interview, offer, timeline. */
 
 export const HR_PIPELINE_STAGES = [
   "role_approved",
@@ -13,8 +13,8 @@ export const HR_PIPELINE_STAGES = [
 export type HrPipelineStage = (typeof HR_PIPELINE_STAGES)[number];
 
 export const HR_PIPELINE_STAGE_LABELS: Record<HrPipelineStage, string> = {
-  role_approved: "Role Approved",
-  applications: "Applications Received",
+  role_approved: "Vacancy Approved",
+  applications: "Applications",
   screening: "Screening",
   interview: "Interview",
   offer: "Offer",
@@ -22,8 +22,27 @@ export const HR_PIPELINE_STAGE_LABELS: Record<HrPipelineStage, string> = {
   onboarding: "Onboarding",
 };
 
-export const HR_VACANCY_STATUSES = ["open", "on_hold", "filled", "cancelled"] as const;
+export const HR_VACANCY_STATUSES = ["open", "on_hold", "filled", "cancelled", "archived"] as const;
 export type HrVacancyStatus = (typeof HR_VACANCY_STATUSES)[number];
+
+export const HR_VACANCY_STATUS_LABELS: Record<HrVacancyStatus, string> = {
+  open: "Open",
+  on_hold: "On hold",
+  filled: "Filled",
+  cancelled: "Cancelled",
+  archived: "Archived",
+};
+
+export const HR_EMPLOYMENT_TYPES = ["Full time", "Part time", "Contract", "Fixed term"] as const;
+
+export const HR_CANDIDATE_SOURCES = [
+  "Careers page",
+  "LinkedIn",
+  "Referral",
+  "Agency",
+  "Job board",
+  "Direct approach",
+] as const;
 
 export type HrVacancy = {
   id: string;
@@ -35,19 +54,28 @@ export type HrVacancy = {
   status: HrVacancyStatus;
   openedAt: string;
   targetStartDate: string;
+  closingDate: string;
   headcount: number;
   salaryBand: string;
   description: string;
   requirements: string;
 };
 
+export type HrInterviewOutcome = "pass" | "hold" | "fail" | "pending";
+
 export type HrInterview = {
   id: string;
   scheduledAt: string;
   type: "phone" | "video" | "onsite" | "panel";
   interviewer: string;
+  interviewers: string;
   status: "scheduled" | "completed" | "cancelled";
+  outcome: HrInterviewOutcome;
+  rating: number | null;
+  strengths: string;
+  weaknesses: string;
   feedback: string;
+  notes: string;
   recommendation: "strong_yes" | "yes" | "neutral" | "no" | "strong_no" | null;
 };
 
@@ -71,6 +99,7 @@ export type HrCandidate = {
   id: string;
   name: string;
   email: string;
+  phone: string;
   vacancyId: string;
   role: string;
   department: string;
@@ -78,14 +107,37 @@ export type HrCandidate = {
   stage: HrPipelineStage;
   rating: number;
   interviewer: string;
+  recruiter: string;
   expectedSalary: string;
+  availability: string;
+  source: string;
   appliedAt: string;
   notes: string;
+  cvLabel: string;
   rejected: boolean;
   interviews: HrInterview[];
   offer: HrOfferDetails;
   timeline: HrCandidateTimelineEvent[];
 };
+
+export type HrCandidatePanelTab =
+  | "Overview"
+  | "CV"
+  | "Interview Notes"
+  | "Feedback"
+  | "Offer"
+  | "Timeline"
+  | "Actions";
+
+export const HR_CANDIDATE_PANEL_TABS: HrCandidatePanelTab[] = [
+  "Overview",
+  "CV",
+  "Interview Notes",
+  "Feedback",
+  "Offer",
+  "Timeline",
+  "Actions",
+];
 
 export function emptyOfferDetails(): HrOfferDetails {
   return {
@@ -95,6 +147,24 @@ export function emptyOfferDetails(): HrOfferDetails {
     employmentType: "Full time",
     notes: "",
     sentAt: null,
+  };
+}
+
+export function emptyInterview(partial?: Partial<HrInterview>): HrInterview {
+  return {
+    id: partial?.id ?? `int-${crypto.randomUUID().slice(0, 8)}`,
+    scheduledAt: partial?.scheduledAt ?? new Date().toISOString().slice(0, 16),
+    type: partial?.type ?? "video",
+    interviewer: partial?.interviewer ?? "",
+    interviewers: partial?.interviewers ?? partial?.interviewer ?? "",
+    status: partial?.status ?? "scheduled",
+    outcome: partial?.outcome ?? "pending",
+    rating: partial?.rating ?? null,
+    strengths: partial?.strengths ?? "",
+    weaknesses: partial?.weaknesses ?? "",
+    feedback: partial?.feedback ?? "",
+    notes: partial?.notes ?? "",
+    recommendation: partial?.recommendation ?? null,
   };
 }
 
@@ -148,4 +218,56 @@ export function offerStatusLabel(status: HrOfferDetails["status"]) {
     case "withdrawn":
       return "Withdrawn";
   }
+}
+
+export function interviewOutcomeLabel(outcome: HrInterviewOutcome) {
+  switch (outcome) {
+    case "pass":
+      return "Pass";
+    case "hold":
+      return "Hold";
+    case "fail":
+      return "Fail";
+    case "pending":
+      return "Pending";
+  }
+}
+
+export function recommendationLabel(
+  recommendation: HrInterview["recommendation"],
+) {
+  switch (recommendation) {
+    case "strong_yes":
+      return "Strong yes";
+    case "yes":
+      return "Yes";
+    case "neutral":
+      return "Neutral";
+    case "no":
+      return "No";
+    case "strong_no":
+      return "Strong no";
+    default:
+      return "Not set";
+  }
+}
+
+export function startOfWeekIso(from = new Date()) {
+  const date = new Date(from);
+  date.setHours(12, 0, 0, 0);
+  const day = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - day);
+  return date;
+}
+
+export function endOfWeekIso(from = new Date()) {
+  const start = startOfWeekIso(from);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return end;
+}
+
+export function isoDateOnly(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

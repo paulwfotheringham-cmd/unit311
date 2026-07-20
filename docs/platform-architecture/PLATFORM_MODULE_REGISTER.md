@@ -103,7 +103,7 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 | Leave | Human Resources → Leave | **Implemented** | — | Employees | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. Go-Live **Ready** (MOD-072). |
 | Performance | Human Resources → Performance | **Implemented** | — | Employees | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. Go-Live **Ready** (MOD-073). |
 | Reports | Human Resources → Reports | **Implemented** | — | Employees | Delivered under [MOD-200](./MOD-200-HR-DOMAIN.md) (nav `hr-reports`). |
-| Recruitment | Human Resources → Recruitment | **Implemented** | — | — | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. Go-Live **Ready** (MOD-074). |
+| Recruitment | Human Resources → Recruitment | **Implemented** | — | — | [MOD-200](./MOD-200-HR-DOMAIN.md) **READY**. [MOD-201](./MOD-201-RECRUITMENT-ATS.md) ATS redesign **READY**. Go-Live **Ready** (MOD-074). |
 
 ### Business Central — Corporate Information
 
