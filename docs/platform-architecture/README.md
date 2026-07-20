@@ -45,7 +45,7 @@ This folder holds **approved Platform Reference Models (PRM)** and the **module 
 | [FDR-MOD-071-EMPLOYEES.md](./FDR-MOD-071-EMPLOYEES.md) | FDR — Employees (master Employee record) | **APPROVED** · Go-Live **Ready** (demo / MOD-200) | 2026-07-19 |
 | [MOD-200-HR-DOMAIN.md](./MOD-200-HR-DOMAIN.md) | MOD-200 — Human Resources domain | **CLOSED · READY** · SHA `7d88199` | 2026-07-21 |
 | [MOD-201-RECRUITMENT-ATS.md](./MOD-201-RECRUITMENT-ATS.md) | MOD-201 — Recruitment ATS | **CLOSED · READY** · SHA `7d88199` | 2026-07-21 |
-| [HR-201-EMPLOYEE-360-DATA-INTEGRATION.md](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) | HR-201 — Employee 360 live data integration | **Backlog** — sole open HR item | 2026-07-21 |
+| [MOD-400-CORPORATE-INFORMATION.md](./MOD-400-CORPORATE-INFORMATION.md) | MOD-400 — Corporate Information domain | **READY** | 2026-07-21 |
 | [FDR-MOD-092-LOGISTICS.md](./FDR-MOD-092-LOGISTICS.md) | FDR — Logistics (Shipping Providers) | **APPROVED** · Architecture **COMPLETE / FROZEN** · Go-Live **READY** | 2026-07-19 |
 | [MOD-092-PRE-IMPLEMENTATION-REVIEWS.md](./MOD-092-PRE-IMPLEMENTATION-REVIEWS.md) | MOD-092 Pre-Implementation Reviews | **APPROVED** — authoritative | 2026-07-19 |
 | [MOD-092-IMPLEMENTATION-READINESS.md](./MOD-092-IMPLEMENTATION-READINESS.md) | MOD-092 Implementation Readiness | **APPROVED** | 2026-07-19 |

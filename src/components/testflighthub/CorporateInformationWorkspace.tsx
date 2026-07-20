@@ -11,30 +11,13 @@ import {
 } from "@/lib/internal-operations-data";
 import { cn } from "@/lib/utils";
 
+import BankAccountsWorkspace from "./BankAccountsWorkspace";
 import CapTableWorkspace from "./CapTableWorkspace";
 import CompanyDetailsWorkspace from "./CompanyDetailsWorkspace";
-import ModulePlaceholderWorkspace from "./ModulePlaceholderWorkspace";
+import ContractsWorkspace from "./ContractsWorkspace";
 import OfficeLocationsWorkspace from "./OfficeLocationsWorkspace";
+import ProfessionalAdvisorsWorkspace from "./ProfessionalAdvisorsWorkspace";
 import SoftwareAssetRegisterWorkspace from "./SoftwareAssetRegisterWorkspace";
-
-const TAB_PLACEHOLDERS: Partial<
-  Record<CorporateInformationTab, { title: string; description: string }>
-> = {
-  "bank-accounts": {
-    title: "Bank Accounts",
-    description:
-      "Coming Soon — Company bank accounts and payment details used for operations.",
-  },
-  "professional-advisors": {
-    title: "Professional Advisors",
-    description:
-      "Coming Soon — Lawyers, accountants, and other professional advisers on retainer.",
-  },
-  contracts: {
-    title: "Contracts",
-    description: "Coming Soon — Corporate contracts, MSAs, and key commercial agreements.",
-  },
-};
 
 function resolveTab(value: string | null): CorporateInformationTab {
   return isCorporateInformationTab(value) ? value : "company-details";
@@ -57,8 +40,6 @@ export default function CorporateInformationWorkspace() {
     url.searchParams.set("tab", next);
     window.history.replaceState({}, "", url.toString());
   }, []);
-
-  const placeholder = TAB_PLACEHOLDERS[tab];
 
   return (
     <div className="space-y-4">
@@ -108,13 +89,10 @@ export default function CorporateInformationWorkspace() {
         {tab === "company-details" ? <CompanyDetailsWorkspace /> : null}
         {tab === "cap-table" ? <CapTableWorkspace /> : null}
         {tab === "office-locations" ? <OfficeLocationsWorkspace /> : null}
+        {tab === "bank-accounts" ? <BankAccountsWorkspace /> : null}
+        {tab === "professional-advisors" ? <ProfessionalAdvisorsWorkspace /> : null}
+        {tab === "contracts" ? <ContractsWorkspace /> : null}
         {tab === "software-licences" ? <SoftwareAssetRegisterWorkspace /> : null}
-        {placeholder ? (
-          <ModulePlaceholderWorkspace
-            title={placeholder.title}
-            description={placeholder.description}
-          />
-        ) : null}
       </div>
     </div>
   );

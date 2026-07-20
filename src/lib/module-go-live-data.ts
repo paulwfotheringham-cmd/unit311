@@ -92,6 +92,15 @@ const MODULE_GO_LIVE_DEFAULT_STATUS: Readonly<Partial<Record<string, ModuleGoLiv
   "MOD-073": "Ready",
   "MOD-074": "Ready",
   "MOD-201": "Ready",
+  /** MOD-400 — Corporate Information domain Ready (2026-07-21). */
+  "MOD-080": "Ready",
+  "MOD-081": "Ready",
+  "MOD-082": "Ready",
+  "MOD-083": "Ready",
+  "MOD-084": "Ready",
+  "MOD-085": "Ready",
+  "MOD-086": "Ready",
+  "MOD-087": "Ready",
   /** Profile bound to session / whoami (Wave 0). */
   "MOD-170": "Ready",
   /** Wave 1 — Client Directory lifecycle rewrite (FDR-MOD-011-LIFECYCLE). */

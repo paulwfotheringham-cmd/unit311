@@ -48,6 +48,7 @@ import ConnectionsWorkspace from "./ConnectionsWorkspace";
 import FileRepositoryWorkspace from "./FileRepositoryWorkspace";
 import Unit311DetailsWorkspace from "./Unit311DetailsWorkspace";
 import CorporateInformationWorkspace from "./CorporateInformationWorkspace";
+import CorporateDashboardWorkspace from "./CorporateDashboardWorkspace";
 import ModuleGoLiveWorkspace from "./ModuleGoLiveWorkspace";
 import CapTableWorkspace from "./CapTableWorkspace";
 import ClientFilesExplorerWorkspace from "./ClientFilesExplorerWorkspace";
@@ -110,7 +111,7 @@ function PlaceholderForView({ view }: { view: InternalOperationsView }) {
     },
     "corporate-dashboard": {
       description:
-        "Coming Soon — Summary of company corporate records — locations, advisers, licences, and contracts.",
+        "Executive overview of company records — locations, banking, advisers, licences, and contracts.",
     },
     "external-client-access": {
       description:
@@ -615,7 +616,7 @@ export default function InternalOperationsDashboard({
 
           {activeView === "training-dashboard" && <PlaceholderForView view="training-dashboard" />}
 
-          {activeView === "corporate-dashboard" && <PlaceholderForView view="corporate-dashboard" />}
+          {activeView === "corporate-dashboard" && <CorporateDashboardWorkspace />}
 
           {activeView === "corporate-information" && <CorporateInformationWorkspace />}
           {activeView === "corporate-cap-table" && <CapTableWorkspace />}

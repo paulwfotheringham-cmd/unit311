@@ -122,17 +122,27 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 
 ### Business Central — Corporate Information
 
-| Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
-| --- | --- | --- | --- | --- | --- |
-| Corporate Dashboard | Corporate Information → Dashboard | Not Started | — | Corporate children | Coming Soon UI · top-level section |
-| Company Details | Corporate Information → Corporate Information (tab) | Not Started | PRM-002 §9 | — | Tab in consolidated Corporate Information workspace; own API/table |
-| Office Locations | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab in consolidated workspace |
-| Bank Accounts | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · Coming Soon content |
-| Professional Advisors | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · Coming Soon content |
-| Software & Licences | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · own API/table |
-| Contracts | Corporate Information → Corporate Information (tab) | Not Started | — | — | Tab · Coming Soon content |
-| Unit311 Details | Corporate Information → Unit311 Details → Overview | Not Started | PRM-002 §9 | — | Platform admin — separate from company tabs |
-| Module Go-Live | Corporate Information → Unit311 Details → Module Go-Live | Implemented | — | — | Authoritative readiness register. Persisted via Unit311 Details content store. |
+| Field | Value |
+| --- | --- |
+| **Domain** | Corporate Information (DOM-10) |
+| **Status** | **READY** |
+| **Demo status** | **READY** |
+| **Production status** | **READY** |
+| **Completion date** | 2026-07-21 |
+| **Wave** | [MOD-400](./MOD-400-CORPORATE-INFORMATION.md) **READY** |
+| **Architecture** | [FDR-DOMAIN-GO-LIVE](./FDR-DOMAIN-GO-LIVE.md) · [Internal Navigation Blueprint](./INTERNAL_NAVIGATION_BLUEPRINT.md) |
+
+| Module ID | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| MOD-080 | Corporate Dashboard | Corporate Information → Dashboard | **READY** | — | Corporate children | Closed under [MOD-400](./MOD-400-CORPORATE-INFORMATION.md) |
+| MOD-081 | Company Details | Corporate Information → Company Details | **READY** | PRM-002 §9 | — | Live API + polished layout |
+| — | Cap Table | Corporate Information → Cap Table | **READY** | — | — | Editable equity register (mock store) |
+| MOD-082 | Office Locations | Corporate Information → Office Locations | **READY** | — | — | Office register |
+| MOD-083 | Bank Accounts | Corporate Information → Bank Accounts | **READY** | — | — | Multi-currency bank register |
+| MOD-084 | Professional Advisors | Corporate Information → Professional Advisors | **READY** | — | — | Advisor categories register |
+| MOD-085 | Software & Licences | Corporate Information → Software & Licences | **READY** | — | — | Live software asset register |
+| MOD-086 | Contracts | Corporate Information → Contracts | **READY** | — | — | Contract register + renewals |
+| MOD-087 | Unit311 Details | Corporate Information → Unit311 Details | **READY** | PRM-002 §9 | — | Platform admin details + Module Go-Live |
 
 ### Assets
 
@@ -244,3 +254,4 @@ Reachable via deep link but **not** in frozen sidebar. Do not expand without arc
 | Register created | 2026-07-19 | Post navigation freeze |
 | Module statuses | — | All Not Started pending FDR cycle |
 | HR domain closeout | 2026-07-21 | MOD-200 · MOD-201 **CLOSED · READY**. Production SHA `7d88199`. Sole HR backlog: [HR-201](./HR-201-EMPLOYEE-360-DATA-INTEGRATION.md) |
+| Corporate Information Ready | 2026-07-21 | [MOD-400](./MOD-400-CORPORATE-INFORMATION.md) **READY** — DOM-10 modules MOD-080–087 |

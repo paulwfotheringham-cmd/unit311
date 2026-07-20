@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2, Loader2, Pencil, Save, X } from "lucide-react";
+import { Building2, History, Loader2, Pencil, Save, X } from "lucide-react";
 
 import {
   COMPANY_STATUSES,
@@ -130,6 +130,7 @@ export default function CompanyDetailsWorkspace() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<CompanyDetailsValidationErrors>({});
   const [hasRecord, setHasRecord] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const isDirty = useMemo(
     () => !companyDetailsFieldsEqual(draft, savedSnapshot),
@@ -358,17 +359,53 @@ export default function CompanyDetailsWorkspace() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-500/15 px-4 text-sm font-semibold text-sky-100 transition-colors hover:bg-sky-500/25"
-            >
-              <Pencil className="h-4 w-4" aria-hidden />
-              Edit
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowHistory((value) => !value)}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white/85 transition-colors hover:bg-white/[0.08]"
+              >
+                <History className="h-4 w-4" aria-hidden />
+                History
+              </button>
+              <button
+                type="button"
+                onClick={startEditing}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-500/15 px-4 text-sm font-semibold text-sky-100 transition-colors hover:bg-sky-500/25"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+                Edit
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      {showHistory ? (
+        <div className="rounded-2xl border border-white/12 bg-white/[0.03] px-4 py-4">
+          <h3 className="text-sm font-semibold text-white">Record history</h3>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.12em] text-white/45">Created</dt>
+              <dd className="mt-1 text-sm text-white/80">
+                {details?.createdAt
+                  ? new Date(details.createdAt).toLocaleString()
+                  : "Not recorded yet"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                Last updated
+              </dt>
+              <dd className="mt-1 text-sm text-white/80">
+                {details?.updatedAt
+                  ? new Date(details.updatedAt).toLocaleString()
+                  : "Not recorded yet"}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
 
       {error ? (
         <p className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
