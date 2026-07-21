@@ -29,8 +29,7 @@ function parseSelection(raw: unknown): AssistantPageSelection | undefined {
 
 /**
  * GET/POST /api/executive-assistant/proactive
- * Deterministic proactive bundle (brief, insights, health, notifications, release).
- * Does not call OpenAI — live data analysis only.
+ * Deterministic proactive bundle. Insights are analysed once and shared.
  */
 export async function GET(request: NextRequest) {
   return handle(request);
@@ -79,12 +78,18 @@ async function handle(request: NextRequest) {
     const wantNotifications = include === "all" || include.includes("notifications");
     const wantRelease = include === "all" || include.includes("release");
 
-    const [brief, insightPack, health] = await Promise.all([
-      wantBrief ? buildDailyExecutiveBrief(context) : Promise.resolve(null),
-      wantInsights || wantNotifications
-        ? analysePlatformInsights(context)
-        : Promise.resolve({ insights: [], dataGaps: [] as string[] }),
-      wantHealth ? buildBusinessHealthScore(context) : Promise.resolve(null),
+    const needInsights = wantBrief || wantInsights || wantNotifications || wantHealth;
+    const insightPack = needInsights
+      ? await analysePlatformInsights(context)
+      : { insights: [], dataGaps: [] as string[] };
+
+    const [brief, health] = await Promise.all([
+      wantBrief
+        ? buildDailyExecutiveBrief(context, insightPack)
+        : Promise.resolve(null),
+      wantHealth
+        ? buildBusinessHealthScore(context, insightPack)
+        : Promise.resolve(null),
     ]);
 
     const notifications = wantNotifications

@@ -66,9 +66,11 @@ type EventDraft = {
   clientName: string;
   location: string;
   notes: string;
+  attendeeEmails: string;
 };
 
 function eventToDraft(event: CalendarEvent): EventDraft {
+  const attendeeMatch = event.notes?.match(/Attendees:\s*(.+)$/im);
   return {
     id: event.id,
     title: event.title,
@@ -78,7 +80,8 @@ function eventToDraft(event: CalendarEvent): EventDraft {
     endTime: toTimeInputValue(event.endsAt),
     clientName: event.clientName ?? "",
     location: event.location ?? "",
-    notes: event.notes ?? "",
+    notes: (event.notes ?? "").replace(/\n?Attendees:\s*.+$/im, "").trim(),
+    attendeeEmails: attendeeMatch?.[1]?.trim() ?? "",
   };
 }
 
@@ -94,6 +97,7 @@ function blankDraft(date: Date): EventDraft {
     clientName: "",
     location: "",
     notes: "",
+    attendeeEmails: "",
   };
 }
 
@@ -442,6 +446,7 @@ export default function CalendarWorkspace({
       clientName: draft.clientName,
       location: draft.location,
       notes: draft.notes,
+      attendeeEmails: draft.attendeeEmails,
     };
 
     try {
@@ -460,12 +465,22 @@ export default function CalendarWorkspace({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await readApiJson<{ event?: CalendarEvent; error?: string }>(response);
+        const data = await readApiJson<{
+          event?: CalendarEvent;
+          error?: string;
+          invites?: { sent?: number; failed?: string[] };
+        }>(response);
         if (!response.ok || !data.event) throw new Error(data.error ?? "Failed to create event");
         setEvents((current) => [...current, data.event!].sort(
           (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
         ));
         setDraft(eventToDraft(data.event));
+        if (data.invites && (data.invites.sent ?? 0) > 0) {
+          setError(null);
+        }
+        if (data.invites?.failed && data.invites.failed.length > 0) {
+          setError(`Meeting saved. Invite failed for: ${data.invites.failed.join(", ")}`);
+        }
       }
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Failed to save event");
@@ -867,6 +882,21 @@ export default function CalendarWorkspace({
                   </select>
                 </div>
               )}
+
+              <div>
+                <FieldLabel>Invite attendees</FieldLabel>
+                <input
+                  value={draft.attendeeEmails}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, attendeeEmails: event.target.value }))
+                  }
+                  placeholder="Internal or external emails, comma-separated"
+                  className={inputClassName()}
+                />
+                <p className="mt-1 text-[10px] text-white/40">
+                  Invitation emails include title, organiser, date/time, description, and a join link.
+                </p>
+              </div>
 
               <div>
                 <FieldLabel>Location</FieldLabel>

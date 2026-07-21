@@ -24,14 +24,16 @@ export { briefDateKey } from "./date-keys";
  */
 export async function buildDailyExecutiveBrief(
   context: AssistantBusinessContext,
+  precomputed?: { insights: Awaited<ReturnType<typeof analysePlatformInsights>>["insights"]; dataGaps: string[] },
 ): Promise<DailyExecutiveBrief> {
   const persona = resolveExecutivePersona(
     context.permissions.roleView,
     context.user.displayName,
   );
   const focus = getRoleFocusProfile(persona);
-  const { insights, dataGaps: insightGaps } = await analysePlatformInsights(context);
-  const dataGaps = [...insightGaps];
+  const pack = precomputed ?? (await analysePlatformInsights(context));
+  const insights = pack.insights;
+  const dataGaps = [...pack.dataGaps];
 
   const [projects, clients, leads] = await Promise.all([
     listProjects().catch(() => []),
@@ -55,10 +57,6 @@ export async function buildDailyExecutiveBrief(
     ...criticalInsights.slice(0, 3).map((entry) => entry.title),
     ...overdueProjects.slice(0, 2).map((project) => `At risk: ${project.name}`),
   ].slice(0, 5);
-
-  if (priorities.length === 0) {
-    priorities.push("No critical risks detected — review CRM and project progress.");
-  }
 
   const sections: DailyExecutiveBrief["sections"] = [
     {
@@ -122,7 +120,7 @@ export async function buildDailyExecutiveBrief(
     sections.push({
       id: "recruitment",
       title: "Recruitment activity",
-      bullets: ["Data unavailable — careers applicant storage is not connected."],
+      bullets: ["Waiting for live business data — careers applicant storage is not connected yet."],
     });
     dataGaps.push("Careers applicant pipeline is not connected to live storage.");
 
@@ -142,7 +140,7 @@ export async function buildDailyExecutiveBrief(
       sections.push({
         id: "finance",
         title: "Financial highlights",
-        bullets: ["Data unavailable — live invoice ledger could not be loaded."],
+        bullets: ["Waiting for live business data — invoice ledger could not be loaded."],
       });
       dataGaps.push(invoiceLoad.error);
     } else {
@@ -197,22 +195,21 @@ export async function buildDailyExecutiveBrief(
     .map((workflow) => workflow.id);
 
   const firstName = context.user.displayName.trim().split(/\s+/)[0] || "there";
+  const attentionCount = priorities.length + criticalInsights.length;
 
   return {
     id: `brief_${briefDateKey()}_${context.user.id}`,
     dateKey: briefDateKey(),
-    greeting: `Good day, ${firstName}`,
-    headline: `${focus.label} brief · ${priorities.length} priorit${priorities.length === 1 ? "y" : "ies"} · ${criticalInsights.length} elevated risk${criticalInsights.length === 1 ? "" : "s"}`,
+    greeting: firstName,
+    headline:
+      attentionCount > 0
+        ? `Today’s operating picture · ${focus.label}`
+        : `All clear for now · ${focus.label}`,
     priorities,
     sections,
     insights: insights.slice(0, 12),
     recommendedWorkflows: workflows,
     followUpActions: [
-      {
-        id: "health",
-        label: "View Business Health",
-        kind: "generate",
-      },
       {
         id: "tour_home",
         label: "Show Me Around",

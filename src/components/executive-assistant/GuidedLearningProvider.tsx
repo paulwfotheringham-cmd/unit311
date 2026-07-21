@@ -14,12 +14,13 @@ import {
   buildStartTourAction,
   dispatchGuidedLearning,
   GUIDED_LEARNING_EVENT,
+  hasNeverShowTours,
   hasSeenPageTour,
   markPageTourSeen,
   resolveTargetElement,
   type GuidedLearningClientAction,
 } from "@/lib/ai-operating-assistant/guided-learning";
-import { findPageTarget, getPageGuide } from "@/lib/ai-operating-assistant/page-registry";
+import { findPageTarget } from "@/lib/ai-operating-assistant/page-registry";
 
 export type GuidedTourStep = {
   index: number;
@@ -187,7 +188,7 @@ export function GuidedLearningProvider({
         skipTour();
       }
       if (detail.type === "offer_tour") {
-        if (!hasSeenPageTour(detail.viewId, userId)) {
+        if (!hasNeverShowTours(userId) && !hasSeenPageTour(detail.viewId, userId)) {
           setFirstVisitOffer({ viewId: detail.viewId, pageName: detail.pageName });
         }
       }
@@ -199,12 +200,8 @@ export function GuidedLearningProvider({
 
   useEffect(() => {
     if (!activeView) return;
-    const page = getPageGuide(activeView);
-    if (!hasSeenPageTour(activeView, userId)) {
-      setFirstVisitOffer({ viewId: activeView, pageName: page.pageName });
-    } else {
-      setFirstVisitOffer(null);
-    }
+    // Do not auto-offer tours — users launch via the Tutorial header button.
+    setFirstVisitOffer(null);
     // Stop in-progress tour when navigating modules
     setTourActive(false);
     setHighlightRect(null);

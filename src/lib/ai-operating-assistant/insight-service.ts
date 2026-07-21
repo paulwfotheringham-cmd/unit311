@@ -367,7 +367,7 @@ export async function analysePlatformInsights(
   if (context.permissions.canAccessFinancials) {
     const invoiceLoad = await loadLiveInvoices();
     if (!invoiceLoad.ok) {
-      dataGaps.push("Live invoice ledger unavailable — financial pulse shows Data unavailable.");
+      dataGaps.push("Live invoice ledger unavailable — financial pulse is waiting for live business data.");
     } else if (invoiceLoad.overdue.length === 0) {
       // no fabricated “all clear” insight — absence is reported via brief/health gaps
     } else {
@@ -447,7 +447,7 @@ export async function analysePlatformInsights(
     }
 
     dataGaps.push(
-      "Careers / recruitment applicant pipeline is not connected to live storage — recruitment metrics show Data unavailable.",
+      "Careers / recruitment applicant pipeline is not connected to live storage — recruitment metrics show no information available yet.",
     );
 
     insights.push(

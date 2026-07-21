@@ -23,9 +23,11 @@ function nav(href: string, label: string): AssistantFollowUpAction {
  */
 export async function buildBusinessHealthScore(
   context: AssistantBusinessContext,
+  precomputed?: { insights: Awaited<ReturnType<typeof analysePlatformInsights>>["insights"]; dataGaps: string[] },
 ): Promise<BusinessHealthScore> {
-  const { insights, dataGaps: insightGaps } = await analysePlatformInsights(context);
-  const dataGaps = [...insightGaps];
+  const pack = precomputed ?? (await analysePlatformInsights(context));
+  const insights = pack.insights;
+  const dataGaps = [...pack.dataGaps];
   const [projects, leads, clients] = await Promise.all([
     listProjects().catch(() => []),
     listLeads().catch(() => []),
@@ -47,7 +49,7 @@ export async function buildBusinessHealthScore(
     const invoiceLoad = await loadLiveInvoices();
     if (!invoiceLoad.ok) {
       financeScore = 0;
-      financeRisks.push("Data unavailable — live invoice ledger could not be loaded");
+      financeRisks.push("Waiting for live business data — invoice ledger could not be loaded");
       dataGaps.push(invoiceLoad.error);
     } else {
       financeScore = clampScore(90 - invoiceLoad.overdue.length * 10);

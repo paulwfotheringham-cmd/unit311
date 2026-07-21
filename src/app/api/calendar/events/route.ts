@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import type { CalendarEventType } from "@/lib/calendar-data";
 import { createCalendarEvent, listCalendarEvents } from "@/lib/internal-calendar-service";
+import {
+  appendAttendeesToNotes,
+  normalizeAttendeeEmails,
+  sendCalendarMeetingInvites,
+} from "@/lib/calendar-invite-email";
 import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requireCurrentWorkspace } from "@/lib/workspace-context";
@@ -36,7 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await requirePlatformSession();
+    const session = await requirePlatformSession();
     const workspace = await requireCurrentWorkspace();
     const body = (await request.json()) as {
       title?: string;
@@ -46,6 +51,7 @@ export async function POST(request: NextRequest) {
       clientName?: string;
       location?: string;
       notes?: string;
+      attendeeEmails?: string | string[];
     };
 
     if (!body.title?.trim()) {
@@ -58,6 +64,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
     }
 
+    const attendeeEmails = normalizeAttendeeEmails(body.attendeeEmails);
+    const notes = appendAttendeesToNotes(body.notes, attendeeEmails);
+
     const event = await createCalendarEvent(
       {
         title: body.title,
@@ -66,12 +75,20 @@ export async function POST(request: NextRequest) {
         endsAt: body.endsAt,
         clientName: body.clientName,
         location: body.location,
-        notes: body.notes,
+        notes: notes ?? undefined,
       },
       { workspaceId: workspace.id },
     );
 
-    return NextResponse.json({ event });
+    const invites = await sendCalendarMeetingInvites({
+      event,
+      attendeeEmails,
+      organiserName: session.displayName || session.username || null,
+      organiserEmail: null,
+      workspaceId: workspace.id,
+    });
+
+    return NextResponse.json({ event, invites });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create calendar event";
     const status =

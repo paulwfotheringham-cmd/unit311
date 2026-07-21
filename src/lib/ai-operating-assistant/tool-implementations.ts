@@ -803,7 +803,7 @@ export async function generateReport(
             ]
           : [
               `${unpaidExpenses.length} unpaid expense records (live)`,
-              "Data unavailable — live invoice ledger could not be loaded.",
+              "No information available yet — live invoice ledger could not be loaded.",
             ],
         citations: invoiceLoad.ok
           ? ["financial_expenses", "invoices"]
@@ -816,7 +816,7 @@ export async function generateReport(
         title: "HR summary",
         bullets: [
           `${employees.length} employees (live)`,
-          "Data unavailable — careers openings and applicants are not connected to live storage.",
+          "No information available yet — careers openings and applicants are not connected to live storage.",
         ],
         citations: ["hr_employees"],
       });

@@ -2,6 +2,7 @@ import { buildTourSteps, findPageTarget, getPageGuide } from "./page-registry";
 
 export const GUIDED_LEARNING_EVENT = "unit311:guided-learning";
 export const GUIDED_LEARNING_STORAGE_PREFIX = "unit311-guided-tour-seen";
+export const GUIDED_LEARNING_NEVER_KEY = "unit311-guided-never-show";
 
 export type GuidedLearningClientAction =
   | {
@@ -30,9 +31,32 @@ export function tourStorageKey(viewId: string, userId?: string | null) {
   return `${GUIDED_LEARNING_STORAGE_PREFIX}:${userId ?? "anon"}:${viewId}`;
 }
 
+export function neverShowToursKey(userId?: string | null) {
+  return `${GUIDED_LEARNING_NEVER_KEY}:${userId ?? "anon"}`;
+}
+
+export function hasNeverShowTours(userId?: string | null) {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(neverShowToursKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markNeverShowTours(userId?: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(neverShowToursKey(userId), "1");
+  } catch {
+    // ignore
+  }
+}
+
 export function hasSeenPageTour(viewId: string, userId?: string | null) {
   if (typeof window === "undefined") return true;
   try {
+    if (hasNeverShowTours(userId)) return true;
     return window.localStorage.getItem(tourStorageKey(viewId, userId)) === "1";
   } catch {
     return true;

@@ -20,8 +20,16 @@ import {
 
 export const EXECUTIVE_NAVIGATE_EVENT = "unit311:executive-navigate";
 export const WORKFLOW_GUIDE_EVENT = "unit311:workflow-guide";
+export const BRIEF_READY_EVENT = "unit311:brief-ready";
 export const BRIEF_STORAGE_PREFIX = "unit311-daily-brief-seen";
 export const NOTIFICATION_DISMISS_KEY = "unit311-proactive-dismissed";
+
+export type BriefReadyDetail = {
+  available: boolean;
+  greeting?: string;
+  headline?: string;
+  priorities?: string[];
+};
 
 export function briefStorageKey(userId?: string | null) {
   return `${BRIEF_STORAGE_PREFIX}:${userId ?? "anon"}:${briefDateKey()}`;
@@ -40,9 +48,19 @@ export function markDailyBriefSeen(userId?: string | null) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(briefStorageKey(userId), "1");
+    window.dispatchEvent(
+      new CustomEvent(BRIEF_READY_EVENT, {
+        detail: { available: false } satisfies BriefReadyDetail,
+      }),
+    );
   } catch {
     // ignore
   }
+}
+
+export function dispatchBriefReady(detail: BriefReadyDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(BRIEF_READY_EVENT, { detail }));
 }
 
 export function readDismissedNotificationIds(): string[] {
