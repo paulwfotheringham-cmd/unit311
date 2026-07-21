@@ -370,6 +370,21 @@ async function deleteNamedFilesInFolder(
   }
 }
 
+async function deleteNamedFilesInFolderExcept(
+  folderId: string,
+  names: string[],
+  keepIds: ReadonlySet<string>,
+  scope?: FilesWorkspaceScope,
+) {
+  for (const name of names) {
+    const files = await findFilesInFolderByName(folderId, name, scope);
+    for (const file of files) {
+      if (keepIds.has(file.id)) continue;
+      await deleteFile(file.id, scope);
+    }
+  }
+}
+
 async function buildDetailDocxBuffer(label: string, content: string): Promise<Buffer> {
   const lines = content.split(/\r?\n/);
   const children = [
@@ -488,26 +503,12 @@ export async function saveUnit311DetailContent(
 
   const docxName = detailDocxFileName(category.label);
   const txtName = detailTxtFileName(category.label);
-
-  await deleteNamedFilesInFolder(folderId, [docxName, txtName], scope);
-
-  const docxBuffer = await buildDetailDocxBuffer(category.label, content);
   const txtBuffer = Buffer.from(content, "utf8");
 
-  const docxFile = await uploadFile(
-    {
-      file: toUploadFile(
-        docxName,
-        docxBuffer,
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ),
-      folderId,
-      categoryId: null,
-    },
-    scope,
-  );
-
-  await uploadFile(
+  // TXT is the machine-readable source of truth — write first, then retire old
+  // copies. Never delete-before-write: a failed upload would wipe the register
+  // and Module Go-Live would silently fall back to catalogue defaults.
+  const txtFile = await uploadFile(
     {
       file: toUploadFile(txtName, txtBuffer, "text/plain"),
       folderId,
@@ -516,11 +517,39 @@ export async function saveUnit311DetailContent(
     scope,
   );
 
+  const keepIds = new Set<string>([txtFile.id]);
+  let docxFileId: string | null = null;
+
+  try {
+    const docxBuffer = await buildDetailDocxBuffer(category.label, content);
+    const docxFile = await uploadFile(
+      {
+        file: toUploadFile(
+          docxName,
+          docxBuffer,
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
+        folderId,
+        categoryId: null,
+      },
+      scope,
+    );
+    docxFileId = docxFile.id;
+    keepIds.add(docxFile.id);
+  } catch (error) {
+    console.warn(
+      `[unit311-details] DOCX export failed after TXT save for ${categoryId}; TXT register is intact.`,
+      error,
+    );
+  }
+
+  await deleteNamedFilesInFolderExcept(folderId, [docxName, txtName], keepIds, scope);
+
   return {
     categoryId,
     label: category.label,
     folderId,
-    docxFileId: docxFile.id,
+    docxFileId,
     docxFileName: docxName,
   };
 }

@@ -155,14 +155,8 @@ export function mergeModuleGoLiveRegister(
   return MODULE_GO_LIVE_CATALOG.map((entry) => {
     const storedStatus = byId.get(entry.id);
     const defaultStatus = MODULE_GO_LIVE_DEFAULT_STATUS[entry.id];
-    // Preserve intentional stored statuses; seed Wave 0 defaults when unset / Not Started.
-    if (
-      defaultStatus &&
-      (!storedStatus || storedStatus === "Not Started") &&
-      defaultStatus !== "Not Started"
-    ) {
-      return { id: entry.id, module: entry.module, status: defaultStatus };
-    }
+    // Explicit stored statuses always win — including intentional "Not Started".
+    // Catalogue defaults only fill gaps for modules missing from the stored register.
     return {
       id: entry.id,
       module: entry.module,

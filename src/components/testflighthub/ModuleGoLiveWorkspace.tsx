@@ -192,6 +192,7 @@ export default function ModuleGoLiveWorkspace() {
     setError(null);
     setMessage(null);
     const previous = modules;
+    const previousDomains = domains;
     setModules((current) =>
       current.map((row) => (row.id === id ? { ...row, status } : row)),
     );
@@ -206,16 +207,38 @@ export default function ModuleGoLiveWorkspace() {
         response,
       );
       if (!response.ok) throw new Error(data.error ?? "Failed to save status");
-      setModules(data.modules ?? previous);
-      setMessage(`Updated ${id} → ${status}`);
+      if (!data.modules?.length) {
+        throw new Error("Save succeeded but the server returned no module register.");
+      }
+
+      const saved = data.modules.find((row) => row.id === id);
+      if (!saved) {
+        throw new Error(`Save succeeded but ${id} was missing from the server response.`);
+      }
+      if (saved.status !== status) {
+        throw new Error(
+          `Save rejected: tried to set ${id} to ${status}, server kept ${saved.status}.`,
+        );
+      }
+
+      setModules(data.modules);
+      setMessage(`Saved ${id} → ${saved.status}`);
 
       const domainResponse = await fetch("/api/domain-go-live", { cache: "no-store" });
-      const domainData = await readApiJson<{ domains?: DomainGoLiveEntry[] }>(
-        domainResponse,
-      );
-      if (domainResponse.ok) setDomains(domainData.domains ?? []);
+      const domainData = await readApiJson<{
+        domains?: DomainGoLiveEntry[];
+        error?: string;
+      }>(domainResponse);
+      if (!domainResponse.ok) {
+        throw new Error(
+          domainData.error ??
+            "Module status saved, but domain roll-up could not be refreshed.",
+        );
+      }
+      setDomains(domainData.domains ?? []);
     } catch (saveError) {
       setModules(previous);
+      setDomains(previousDomains);
       setError(saveError instanceof Error ? saveError.message : "Failed to save status");
     } finally {
       setSavingId(null);
