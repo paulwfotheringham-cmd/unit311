@@ -151,6 +151,14 @@ function isCapTablePath(pathname: string) {
   );
 }
 
+function isLegacyModuleHardPath(pathname: string) {
+  return (
+    isClientOnboardingPath(pathname) ||
+    isExecutiveAssistantPath(pathname) ||
+    isCapTablePath(pathname)
+  );
+}
+
 function readInitialView(
   searchParams: ReturnType<typeof useSearchParams>,
   pathname: string,
@@ -160,6 +168,7 @@ function readInitialView(
     return initialView;
   }
 
+  // Legacy hard paths still resolve during migration; URL sync rewrites to ?view=.
   if (isClientOnboardingPath(pathname)) {
     return "client-onboarding";
   }
@@ -347,47 +356,8 @@ export default function InternalOperationsDashboard({
     const publicBasePath =
       onOpsHost && basePath === INTERNAL_OPERATIONS_BASE_PATH ? "/" : basePath;
 
-    if (activeView === "client-onboarding") {
-      if (isClientOnboardingPath(url.pathname)) {
-        return;
-      }
-      url.pathname =
-        publicBasePath === "/" ? "/client-onboarding" : `${publicBasePath}/client-onboarding`;
-      url.searchParams.delete("view");
-      window.history.replaceState({}, "", url.toString());
-      return;
-    }
-
-    if (activeView === "executive-assistant") {
-      if (isExecutiveAssistantPath(url.pathname)) {
-        return;
-      }
-      url.pathname =
-        publicBasePath === "/" ? "/executive-assistant" : `${publicBasePath}/executive-assistant`;
-      url.searchParams.delete("view");
-      window.history.replaceState({}, "", url.toString());
-      return;
-    }
-
-    if (activeView === "corporate-cap-table") {
-      if (isCapTablePath(url.pathname)) {
-        return;
-      }
-      url.pathname =
-        publicBasePath === "/"
-          ? "/corporate-information/cap-table"
-          : `${publicBasePath}/corporate-information/cap-table`;
-      url.searchParams.delete("view");
-      url.searchParams.delete("tab");
-      window.history.replaceState({}, "", url.toString());
-      return;
-    }
-
-    if (
-      isClientOnboardingPath(url.pathname) ||
-      isExecutiveAssistantPath(url.pathname) ||
-      isCapTablePath(url.pathname)
-    ) {
+    // Collapse former hard-path module URLs onto the single ?view= model.
+    if (isLegacyModuleHardPath(url.pathname)) {
       url.pathname = publicBasePath === "/" ? "/" : publicBasePath;
     }
 

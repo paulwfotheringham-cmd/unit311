@@ -15,6 +15,7 @@ import {
   isPublicMarketingPath,
   isPublicSiteHost,
   legacyViewRedirects,
+  mapHardPathToViewQuery,
   mapLegacyInternalPathToInternalHostPath,
   normalizeHost,
   parseClientPlatformSubdomainSafe,
@@ -180,20 +181,9 @@ export async function middleware(request: NextRequest) {
       }
 
       let response: NextResponse;
-      if (pathname === "/dashboard/executive-assistant") {
-        response = rewriteTo(
-          request,
-          "/internaldashboard/executive-assistant",
-          headers,
-          workspaceResponseHeaders,
-        );
-      } else if (pathname === "/dashboard/client-onboarding") {
-        response = rewriteTo(
-          request,
-          "/internaldashboard/client-onboarding",
-          headers,
-          workspaceResponseHeaders,
-        );
+      const dashboardHardPath = mapHardPathToViewQuery(pathname, search);
+      if (dashboardHardPath) {
+        response = redirectPermanent(request, dashboardHardPath);
       } else {
         response = rewriteTo(request, "/internaldashboard", headers, workspaceResponseHeaders);
       }
@@ -245,35 +235,14 @@ export async function middleware(request: NextRequest) {
       return rewriteTo(request, "/internaldashboard", headers, shellHeaders);
     }
 
-    if (pathname === "/executive-assistant") {
-      return rewriteTo(request, "/internaldashboard/executive-assistant", headers, shellHeaders);
-    }
-
-    if (pathname === "/client-onboarding") {
-      return rewriteTo(request, "/internaldashboard/client-onboarding", headers, shellHeaders);
-    }
-
-    if (pathname === "/corporate-information/cap-table") {
-      return rewriteTo(
-        request,
-        "/internaldashboard/corporate-information/cap-table",
-        headers,
-        shellHeaders,
-      );
+    const hardPathRedirect = mapHardPathToViewQuery(pathname, search);
+    if (hardPathRedirect) {
+      return redirectPermanent(request, hardPathRedirect);
     }
 
     const viewMap = legacyViewRedirects();
     if (viewMap[pathname]) {
-      const dest = viewMap[pathname];
-      const destination = request.nextUrl.clone();
-      destination.pathname = "/internaldashboard";
-      destination.search = dest.includes("?") ? dest.slice(dest.indexOf("?")) : search;
-      const response = NextResponse.rewrite(destination, { request: { headers } });
-      for (const [key, value] of Object.entries(shellHeaders)) {
-        response.headers.set(key, value);
-      }
-      response.headers.set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate");
-      return response;
+      return redirectPermanent(request, viewMap[pathname]);
     }
 
     const response = NextResponse.next({ request: { headers } });
@@ -314,34 +283,14 @@ export async function middleware(request: NextRequest) {
       return rewriteTo(request, "/internaldashboard", headers, { "x-unit311-internal": "1" });
     }
 
-    if (pathname === "/executive-assistant") {
-      return rewriteTo(request, "/internaldashboard/executive-assistant", headers, {
-        "x-unit311-internal": "1",
-      });
-    }
-
-    if (pathname === "/client-onboarding") {
-      return rewriteTo(request, "/internaldashboard/client-onboarding", headers, {
-        "x-unit311-internal": "1",
-      });
-    }
-
-    if (pathname === "/corporate-information/cap-table") {
-      return rewriteTo(request, "/internaldashboard/corporate-information/cap-table", headers, {
-        "x-unit311-internal": "1",
-      });
+    const hardPathRedirect = mapHardPathToViewQuery(pathname, search);
+    if (hardPathRedirect) {
+      return redirectPermanent(request, hardPathRedirect);
     }
 
     const viewMap = legacyViewRedirects();
     if (viewMap[pathname]) {
-      const dest = viewMap[pathname];
-      const destination = request.nextUrl.clone();
-      destination.pathname = "/internaldashboard";
-      destination.search = dest.includes("?") ? dest.slice(dest.indexOf("?")) : search;
-      const response = NextResponse.rewrite(destination, { request: { headers } });
-      response.headers.set("x-unit311-internal", "1");
-      response.headers.set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate");
-      return response;
+      return redirectPermanent(request, viewMap[pathname]);
     }
 
     const response = NextResponse.next({ request: { headers } });

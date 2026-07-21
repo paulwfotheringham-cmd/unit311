@@ -4,9 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
-import ExecutiveAssistantPanel, {
-  ExecutiveAssistantTriggerButton,
-} from "@/components/executive-assistant/ExecutiveAssistantPanel";
+import { ExecutiveAssistantTriggerButton } from "@/components/executive-assistant/ExecutiveAssistantPanel";
 import {
   getInternalNavBreadcrumb,
   internalViewTitles,
@@ -14,13 +12,14 @@ import {
   type InternalOperationsView,
 } from "@/lib/internal-operations-data";
 import { isDemoDomainHost, isInternalDomainHost } from "@/lib/app-domains";
-import { EXECUTIVE_ASSISTANT_VISIBLE } from "@/lib/product-surface-flags";
+import { PLATFORM_AI_ASSISTANT_VISIBLE } from "@/lib/product-surface-flags";
 import {
   surveyViewTitles,
   type SurveyOperationsBasePath,
   type SurveyOperationsView,
 } from "@/lib/survey-operations-mock-data";
 
+import PlatformFloatingAiAssistant from "./PlatformFloatingAiAssistant";
 import SurveyOperationsSidebar from "./SurveyOperationsSidebar";
 import { WorkspaceBreadcrumb } from "./workspace-chrome";
 
@@ -63,7 +62,6 @@ export default function SurveyOperationsShell({
   useEffect(() => {
     startTransition(() => {
       setMobileNavOpen(false);
-      setAssistantOpen(false);
     });
   }, [pathname, activeView]);
 
@@ -102,10 +100,8 @@ export default function SurveyOperationsShell({
         : surveyViewTitles[activeView as SurveyOperationsView].subtitle
       : subtitle;
 
-  // Executive Assistant is hidden until production-ready (demo journey).
-  const showAssistantTrigger =
-    EXECUTIVE_ASSISTANT_VISIBLE &&
-    !(mode === "internal" && isInternalHost && activeView === "home");
+  const showPlatformAi =
+    PLATFORM_AI_ASSISTANT_VISIBLE && mode === "internal";
 
   const breadcrumbCrumbs =
     mode === "internal" &&
@@ -186,7 +182,7 @@ export default function SurveyOperationsShell({
             </div>
           </div>
 
-          {showAssistantTrigger ? (
+          {showPlatformAi ? (
             <ExecutiveAssistantTriggerButton onClick={() => setAssistantOpen(true)} />
           ) : null}
         </header>
@@ -196,11 +192,10 @@ export default function SurveyOperationsShell({
         </div>
       </div>
 
-      <ExecutiveAssistantPanel
-        variant="drawer"
+      <PlatformFloatingAiAssistant
         open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-        activeView={activeView ?? "home"}
+        onOpenChange={setAssistantOpen}
+        activeView={activeView}
         mode={mode}
       />
     </div>

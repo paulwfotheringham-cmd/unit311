@@ -18,6 +18,28 @@ const nextConfig: NextConfig = {
       { source: "/files", destination: "/internaldashboard?view=files", permanent: false },
       { source: "/users", destination: "/internaldashboard?view=users", permanent: false },
       { source: "/telemetry", destination: "/internaldashboard?view=telemetry", permanent: false },
+      { source: "/executive-assistant", destination: "/internaldashboard?view=executive-assistant", permanent: true },
+      { source: "/client-onboarding", destination: "/internaldashboard?view=client-onboarding", permanent: true },
+      {
+        source: "/corporate-information/cap-table",
+        destination: "/internaldashboard?view=corporate-cap-table",
+        permanent: true,
+      },
+      {
+        source: "/internaldashboard/executive-assistant",
+        destination: "/internaldashboard?view=executive-assistant",
+        permanent: true,
+      },
+      {
+        source: "/internaldashboard/client-onboarding",
+        destination: "/internaldashboard?view=client-onboarding",
+        permanent: true,
+      },
+      {
+        source: "/internaldashboard/corporate-information/cap-table",
+        destination: "/internaldashboard?view=corporate-cap-table",
+        permanent: true,
+      },
     ];
   },
   images: {

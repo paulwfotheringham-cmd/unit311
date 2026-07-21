@@ -1,23 +1,15 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 
-import InternalOperationsDashboard from "@/components/testflighthub/InternalOperationsDashboard";
 import { getRequestHost } from "@/lib/app-domains";
-import { resolveInternalOperationsBasePath } from "@/lib/internal-operations-data";
+import {
+  getInternalNavHref,
+  resolveInternalOperationsBasePath,
+} from "@/lib/internal-operations-data";
 
-export default async function ExecutiveAssistantPage() {
+/** Legacy hard path — permanently folded into `?view=executive-assistant`. */
+export default async function ExecutiveAssistantLegacyPage() {
   const host = getRequestHost({ headers: await headers() });
   const basePath = resolveInternalOperationsBasePath(host);
-
-  return (
-    <Suspense
-      fallback={
-        <div className="flex h-full min-h-[50vh] items-center justify-center bg-[#020617] text-sm text-white/50">
-          Loading internal operations workspace...
-        </div>
-      }
-    >
-      <InternalOperationsDashboard basePath={basePath} initialView="executive-assistant" />
-    </Suspense>
-  );
+  redirect(getInternalNavHref("executive-assistant", basePath));
 }

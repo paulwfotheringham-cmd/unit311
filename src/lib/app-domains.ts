@@ -237,7 +237,7 @@ export function parseLoginReturnTo(value: string | null | undefined): LoginRetur
 }
 
 /**
- * Safe post-login deep link (`/?view=clients`, `/executive-assistant`, legacy mapped).
+ * Safe post-login deep link (`/?view=clients`, legacy hard paths mapped to `?view=`).
  * Returns canonical path+query only (never a legacy /internaldashboard browser path).
  */
 export function parseSafePostLoginNext(value: string | null | undefined): string | null {
@@ -261,16 +261,17 @@ export function parseSafePostLoginNext(value: string | null | undefined): string
       search = url.search;
     }
 
-    const mapped = isLegacyInternalPathname(pathname)
-      ? mapLegacyInternalPathToInternalHostPath(pathname, search)
-      : `${pathname === "" ? "/" : pathname}${search}`;
+    const mapped =
+      isLegacyInternalPathname(pathname) || mapHardPathToViewQuery(pathname, search)
+        ? mapLegacyInternalPathToInternalHostPath(pathname, search)
+        : `${pathname === "" ? "/" : pathname}${search}`;
 
     const mappedUrl = new URL(mapped, "https://placeholder.local");
     if (!isInternalAppPath(mappedUrl.pathname) && mappedUrl.pathname !== "/") {
       return null;
     }
     // Never expose the App Router implementation path in the browser.
-    if (isLegacyInternalPathname(mappedUrl.pathname)) {
+    if (isLegacyInternalPathname(mappedUrl.pathname) || mapHardPathToViewQuery(mappedUrl.pathname)) {
       return mapLegacyInternalPathToInternalHostPath(mappedUrl.pathname, mappedUrl.search);
     }
     return `${mappedUrl.pathname}${mappedUrl.search}`;
@@ -324,6 +325,30 @@ export function centralDashboardPath(view?: string) {
  * Map legacy `/internaldashboard` paths onto the new internal-host URL layout.
  * Leaves unrelated paths unchanged.
  */
+/** Former hard-path modules → canonical `?view=` addresses. */
+const HARD_PATH_TO_VIEW: Record<string, string> = {
+  "/executive-assistant": "executive-assistant",
+  "/client-onboarding": "client-onboarding",
+  "/corporate-information/cap-table": "corporate-cap-table",
+  "/dashboard/executive-assistant": "executive-assistant",
+  "/dashboard/client-onboarding": "client-onboarding",
+};
+
+export function mapHardPathToViewQuery(pathname: string, search = ""): string | null {
+  const view = HARD_PATH_TO_VIEW[pathname];
+  if (!view) return null;
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search || undefined,
+  );
+  params.set("view", view);
+  const base =
+    pathname.startsWith("/dashboard")
+      ? "/dashboard"
+      : "/";
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : `${base}?view=${encodeURIComponent(view)}`;
+}
+
 export function mapLegacyInternalPathToInternalHostPath(pathname: string, search = ""): string {
   const query = search && !search.startsWith("?") ? `?${search}` : search;
 
@@ -333,8 +358,13 @@ export function mapLegacyInternalPathToInternalHostPath(pathname: string, search
 
   if (pathname.startsWith("/internaldashboard/")) {
     const rest = pathname.slice("/internaldashboard".length);
+    const hardMapped = mapHardPathToViewQuery(rest, query);
+    if (hardMapped) return hardMapped;
     return `${rest}${query}`;
   }
+
+  const hardMapped = mapHardPathToViewQuery(pathname, query);
+  if (hardMapped) return hardMapped;
 
   if (pathname === "/testflighthub" || pathname.startsWith("/testflighthub/")) {
     return `/${query}`;
@@ -577,6 +607,9 @@ export function legacyViewRedirects(): Record<string, string> {
     "/files": "/?view=files",
     "/users": "/?view=users",
     "/telemetry": "/?view=telemetry",
+    "/executive-assistant": "/?view=executive-assistant",
+    "/client-onboarding": "/?view=client-onboarding",
+    "/corporate-information/cap-table": "/?view=corporate-cap-table",
   };
 }
 

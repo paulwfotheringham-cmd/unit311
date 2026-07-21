@@ -863,30 +863,11 @@ export const internalHomeTileRows = [
 
 export type InternalHomeTile = (typeof internalHomeTileRows)[number][number];
 
-function joinBasePath(basePath: SurveyOperationsBasePath, suffix: string) {
-  if (basePath === "/") {
-    return suffix.startsWith("/") ? suffix : `/${suffix}`;
-  }
-  return `${basePath}${suffix.startsWith("/") ? suffix : `/${suffix}`}`;
-}
-
 export function getInternalNavHref(
   view: InternalOperationsView | null,
   basePath: SurveyOperationsBasePath = INTERNAL_OPERATIONS_BASE_PATH,
   query?: Record<string, string>,
 ) {
-  if (view === "client-onboarding") {
-    return joinBasePath(basePath, "/client-onboarding");
-  }
-
-  if (view === "executive-assistant") {
-    return joinBasePath(basePath, "/executive-assistant");
-  }
-
-  if (view === "corporate-cap-table") {
-    return joinBasePath(basePath, "/corporate-information/cap-table");
-  }
-
   if (view === "corporate-information") {
     const params = new URLSearchParams({
       view: "corporate-information",
@@ -954,32 +935,6 @@ export function isInternalNavChildActive(
   if (item.view && item.query) {
     return item.view === activeView && internalNavQueryMatches(item.query, searchParams);
   }
-  if (item.view === "client-onboarding") {
-    const onboardingPath = joinBasePath(basePath, "/client-onboarding");
-    return (
-      activeView === "client-onboarding" ||
-      pathname === onboardingPath ||
-      pathname.startsWith(`${onboardingPath}/`)
-    );
-  }
-  if (item.view === "executive-assistant") {
-    const assistantPath = joinBasePath(basePath, "/executive-assistant");
-    return (
-      activeView === "executive-assistant" ||
-      pathname === assistantPath ||
-      pathname.startsWith(`${assistantPath}/`)
-    );
-  }
-  if (item.view === "corporate-cap-table") {
-    const capTablePath = joinBasePath(basePath, "/corporate-information/cap-table");
-    return (
-      activeView === "corporate-cap-table" ||
-      pathname === capTablePath ||
-      pathname.startsWith(`${capTablePath}/`) ||
-      (activeView === "corporate-information" &&
-        searchParams?.get("tab") === "cap-table")
-    );
-  }
   // Shared implementations (Projects / Engineering / Assets) must highlight only the
   // selected leaf. Parent expansion still works via children.some(...) above.
   return item.view === activeView;
@@ -1000,24 +955,6 @@ export function isInternalNavItemActive(
     item.children?.some((child) =>
       isInternalNavChildActive(child, activeView, pathname, basePath, searchParams),
     ) ?? false;
-
-  if (item.view === "client-onboarding") {
-    return (
-      activeView === "client-onboarding" ||
-      pathname === `${basePath}/client-onboarding` ||
-      pathname.startsWith(`${basePath}/client-onboarding/`) ||
-      childHrefActive
-    );
-  }
-
-  if (item.view === "executive-assistant") {
-    return (
-      activeView === "executive-assistant" ||
-      pathname === `${basePath}/executive-assistant` ||
-      pathname.startsWith(`${basePath}/executive-assistant/`) ||
-      childHrefActive
-    );
-  }
 
   if (pathname !== basePath) {
     return childHrefActive;
