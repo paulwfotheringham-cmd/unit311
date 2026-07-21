@@ -1,395 +1,578 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import type {
+  BusinessHealthScore,
+  DailyExecutiveBrief,
+  ExecutiveInsight,
+} from "@/lib/ai-operating-assistant/executive-types";
+import { formatConfidence } from "@/lib/ai-operating-assistant/explainability";
 import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  EyeOff,
-  LayoutGrid,
-  Loader2,
-  Maximize2,
-  Minus,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Settings2,
-  X,
+  handleExecutiveActionHref,
+  markDailyBriefSeen,
+  startWorkflowGuide,
+} from "@/lib/ai-operating-assistant/proactive-client";
+import {
+  enterpriseButtonClassName,
+  enterpriseCardClassName,
+  enterpriseTokens,
+} from "@/lib/enterprise-ui";
+import { cn } from "@/lib/utils";
+import {
+  ArrowRight,
+  Activity,
+  AlertTriangle,
+  CircleDollarSign,
+  FolderKanban,
+  Sparkles,
+  Users,
 } from "lucide-react";
 
-import {
-  CommandCentreDataProvider,
-  useCommandCentreData,
-} from "@/components/testflighthub/CommandCentreDataProvider";
-import BusinessSnapshotRibbon from "@/components/testflighthub/command-centre/BusinessSnapshotRibbon";
-import { CommandCentreTileBody } from "@/components/testflighthub/command-centre/CommandCentreTileBody";
-import {
-  COMMAND_CENTRE_TILE_CATALOG,
-  createTileInstance,
-  defaultCommandCentrePreferences,
-  getCommandCentreTileDefinition,
-  loadCommandCentrePreferences,
-  nextTileSize,
-  saveCommandCentrePreferences,
-  tileSizeClass,
-  type CommandCentrePreferences,
-  type CommandCentreTileInstance,
-  type CommandCentreTileType,
-} from "@/lib/command-centre-layout";
-import { cn } from "@/lib/utils";
+const ACCENT = enterpriseTokens.accent;
+const GAP = enterpriseTokens.space.gap;
 
-function CardShell({
-  title,
-  subtitle,
-  accent,
-  action,
-  children,
-  className,
-  bodyClassName,
-  collapsed,
-}: {
+type ProactivePayload = {
+  brief?: DailyExecutiveBrief | null;
+  health?: BusinessHealthScore | null;
+  insights?: ExecutiveInsight[];
+};
+
+type AttentionItem = {
+  id: string;
   title: string;
-  subtitle?: string;
-  accent: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  summary: string;
+  href?: string;
+};
+
+type ProjectRiskItem = {
+  id: string;
+  title: string;
+  summary: string;
+  href: string;
+};
+
+function Panel({
+  size,
+  className,
+  children,
+  span,
+}: {
+  size: "small" | "medium" | "large";
   className?: string;
-  bodyClassName?: string;
-  collapsed?: boolean;
+  children: React.ReactNode;
+  span?: string;
 }) {
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-xl border bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent backdrop-blur-xl max-md:backdrop-blur-none",
-        accent,
+        enterpriseCardClassName({
+          size: size === "small" ? "small" : size === "large" ? "large" : "medium",
+        }),
+        "flex min-h-0 flex-col overflow-hidden",
+        size === "small" && "h-[4.75rem] min-h-0 justify-center",
+        span,
         className,
       )}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-2.5 py-1.5">
-        <div className="min-w-0">
-          <h2 className="truncate text-[12px] font-semibold tracking-tight text-white">{title}</h2>
-          {subtitle ? <p className="truncate text-[10px] text-white/40">{subtitle}</p> : null}
-        </div>
-        {action}
-      </header>
-      {!collapsed ? (
-        <div className={cn("px-2.5 py-1.5", bodyClassName)}>{children}</div>
-      ) : null}
+      {children}
     </section>
   );
 }
 
-function chromeBtnClass(extra?: string) {
-  return cn(
-    "inline-flex h-7 items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.04] px-2 text-[11px] font-semibold text-white/70 transition-colors hover:bg-white/[0.08]",
-    extra,
-  );
+function PanelLabel({ children }: { children: React.ReactNode }) {
+  return <p className={enterpriseTokens.type.metadata}>{children}</p>;
 }
 
-function CommandCentreHome({ showCustomize = true }: { showCustomize?: boolean }) {
-  const {
-    username,
-    displayName,
-    whoamiReady,
-    anyRefreshing,
-    refreshAll,
-  } = useCommandCentreData();
+function PanelTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className={cn(enterpriseTokens.type.cardHeading, "mt-0.5 tracking-tight")}>{children}</h2>;
+}
 
-  const [editMode, setEditMode] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const [prefs, setPrefs] = useState<CommandCentrePreferences>(() =>
-    defaultCommandCentrePreferences(),
+function Unavailable({ children = "Data unavailable" }: { children?: string }) {
+  return <p className="text-sm text-white/45">{children}</p>;
+}
+
+/**
+ * Executive Command Centre — home dashboard only.
+ * Metrics come from `/api/executive-assistant/proactive` (live analysis).
+ * Placeholder/demo command-centre snapshots are never shown as live KPIs.
+ */
+export default function InternalDashboardHome(_props?: { showCustomize?: boolean }) {
+  const [brief, setBrief] = useState<DailyExecutiveBrief | null>(null);
+  const [health, setHealth] = useState<BusinessHealthScore | null>(null);
+  const [insights, setInsights] = useState<ExecutiveInsight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [proactiveFailed, setProactiveFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setProactiveFailed(false);
+    try {
+      const response = await fetch("/api/executive-assistant/proactive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          activeView: "home",
+          roleView: null,
+          include: "brief,health,insights",
+        }),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        setProactiveFailed(true);
+        return;
+      }
+      const data = (await response.json()) as ProactivePayload;
+      if (data.brief) {
+        setBrief(data.brief);
+        markDailyBriefSeen();
+      } else {
+        setBrief(null);
+      }
+      setHealth(data.health ?? null);
+      setInsights(Array.isArray(data.insights) ? data.insights : []);
+    } catch {
+      setProactiveFailed(true);
+      setBrief(null);
+      setHealth(null);
+      setInsights([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const attention = useMemo<AttentionItem[]>(() => {
+    return insights
+      .filter((entry) => entry.severity === "critical" || entry.severity === "high")
+      .slice(0, 4)
+      .map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        summary: entry.summary,
+        href:
+          entry.explanation?.drillDown?.href ??
+          entry.recommendedActions.find((action) => action.href)?.href,
+      }));
+  }, [insights]);
+
+  const projectRisks = useMemo<ProjectRiskItem[]>(() => {
+    return insights
+      .filter((entry) => entry.category === "projects")
+      .slice(0, 4)
+      .map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        summary: entry.summary,
+        href:
+          entry.explanation?.drillDown?.href ??
+          entry.recommendedActions.find((action) => action.href)?.href ??
+          "/internaldashboard?view=projects",
+      }));
+  }, [insights]);
+
+  const financeInsight = useMemo(
+    () => insights.find((entry) => entry.category === "finance") ?? null,
+    [insights],
   );
 
-  const userKey = username || "anonymous";
+  const liveProjectCount = useMemo(() => {
+    // Prefer explicit live-project signals from insights; do not invent a count.
+    const delivery = insights.filter((entry) => entry.category === "projects");
+    if (delivery.length === 0) return null;
+    return delivery.length;
+  }, [insights]);
 
-  useEffect(() => {
-    if (!whoamiReady) return;
-    setPrefs(loadCommandCentrePreferences(userKey));
-    setPrefsLoaded(true);
-  }, [whoamiReady, userKey]);
-
-  useEffect(() => {
-    if (!prefsLoaded || !whoamiReady) return;
-    saveCommandCentrePreferences(userKey, prefs);
-  }, [prefs, prefsLoaded, whoamiReady, userKey]);
-
-  const greetingName = displayName || username || "team";
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
-  const visibleTiles = prefs.tiles;
-
-  const availableToAdd = useMemo(() => {
-    const present = new Set(prefs.tiles.map((t) => t.type));
-    return COMMAND_CENTRE_TILE_CATALOG.filter((def) => !present.has(def.type));
-  }, [prefs.tiles]);
-
-  function updateTiles(updater: (tiles: CommandCentreTileInstance[]) => CommandCentreTileInstance[]) {
-    setPrefs((prev) => ({ ...prev, tiles: updater(prev.tiles) }));
-  }
-
-  function moveTile(instanceId: string, direction: -1 | 1) {
-    updateTiles((tiles) => {
-      const index = tiles.findIndex((t) => t.instanceId === instanceId);
-      if (index < 0) return tiles;
-      const next = index + direction;
-      if (next < 0 || next >= tiles.length) return tiles;
-      const copy = [...tiles];
-      const [item] = copy.splice(index, 1);
-      copy.splice(next, 0, item);
-      return copy;
-    });
-  }
-
-  function resizeTile(instanceId: string) {
-    updateTiles((tiles) =>
-      tiles.map((tile) =>
-        tile.instanceId === instanceId ? { ...tile, size: nextTileSize(tile.size) } : tile,
-      ),
+  const activeClientInsightCount = useMemo(() => {
+    const clients = insights.filter(
+      (entry) => entry.category === "clients" || entry.category === "contracts",
     );
-  }
+    if (clients.length === 0) return null;
+    return clients.length;
+  }, [insights]);
 
-  function hideTile(instanceId: string) {
-    setPrefs((prev) => {
-      const tile = prev.tiles.find((t) => t.instanceId === instanceId);
-      if (!tile) return prev;
-      return {
-        ...prev,
-        tiles: prev.tiles.filter((t) => t.instanceId !== instanceId),
-        hiddenTypes: prev.hiddenTypes.includes(tile.type)
-          ? prev.hiddenTypes
-          : [...prev.hiddenTypes, tile.type],
-      };
-    });
-  }
+  const kpis = [
+    {
+      id: "revenue",
+      label: "Revenue (month)",
+      value: financeInsight ? financeInsight.title : loading ? "…" : "Data unavailable",
+      hint: financeInsight
+        ? "From live finance signals"
+        : loading
+          ? "Loading"
+          : "No live finance metric",
+      icon: <CircleDollarSign className="h-3.5 w-3.5" />,
+      live: Boolean(financeInsight),
+    },
+    {
+      id: "health",
+      label: "Business health",
+      value: health ? `${health.overall}` : loading ? "…" : "Data unavailable",
+      hint: health
+        ? `${formatConfidence(health.confidence)} confidence`
+        : loading
+          ? "Loading"
+          : "No live score",
+      icon: <Activity className="h-3.5 w-3.5" />,
+      live: Boolean(health),
+    },
+    {
+      id: "projects",
+      label: "Project risks",
+      value:
+        liveProjectCount != null
+          ? String(liveProjectCount)
+          : loading
+            ? "…"
+            : "Data unavailable",
+      hint: liveProjectCount != null ? "Live insight signals" : loading ? "Loading" : "No live count",
+      icon: <FolderKanban className="h-3.5 w-3.5" />,
+      live: liveProjectCount != null,
+    },
+    {
+      id: "clients",
+      label: "Client signals",
+      value:
+        activeClientInsightCount != null
+          ? String(activeClientInsightCount)
+          : loading
+            ? "…"
+            : "Data unavailable",
+      hint:
+        activeClientInsightCount != null
+          ? "Live insight signals"
+          : loading
+            ? "Loading"
+            : "No live count",
+      icon: <Users className="h-3.5 w-3.5" />,
+      live: activeClientInsightCount != null,
+    },
+  ];
 
-  function toggleCollapse(instanceId: string) {
-    updateTiles((tiles) =>
-      tiles.map((tile) =>
-        tile.instanceId === instanceId ? { ...tile, collapsed: !tile.collapsed } : tile,
-      ),
-    );
-  }
-
-  function addTile(type: CommandCentreTileType) {
-    setPrefs((prev) => ({
-      ...prev,
-      tiles: [...prev.tiles, createTileInstance(type)],
-      hiddenTypes: prev.hiddenTypes.filter((t) => t !== type),
-    }));
-    setPickerOpen(false);
-  }
-
-  function resetLayout() {
-    setPrefs(defaultCommandCentrePreferences());
-  }
-
-  function toggleKpiRibbon() {
-    setPrefs((prev) => ({ ...prev, showKpiRibbon: !prev.showKpiRibbon }));
-  }
+  const priorities = brief?.priorities?.slice(0, 4) ?? [];
+  const healthDimensions = (health?.dimensions ?? [])
+    .filter((dimension) => dimension.score > 0)
+    .slice(0, 6);
 
   return (
-    <div id="home-tile-action-required" className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-        <p className="min-w-0 truncate text-[12px] text-white/70">
-          <span className="font-semibold text-white/90">Command centre</span>
-          <span className="text-white/35"> · </span>
-          <span>
-            {greeting}, {greetingName}
-          </span>
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {editMode ? (
-            <>
-              <button
-                type="button"
-                onClick={toggleKpiRibbon}
-                className={chromeBtnClass(
-                  prefs.showKpiRibbon
-                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
-                    : undefined,
-                )}
-                title="Toggle KPI ribbon"
-              >
-                KPI ribbon {prefs.showKpiRibbon ? "on" : "off"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(true)}
-                className={chromeBtnClass("border-cyan-400/30 bg-cyan-500/10 text-cyan-50")}
-              >
-                <Plus className="h-3 w-3" />
-                Add tile
-              </button>
-              <button type="button" onClick={resetLayout} className={chromeBtnClass()}>
-                <RotateCcw className="h-3 w-3" />
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditMode(false);
-                  setPickerOpen(false);
-                }}
-                className={chromeBtnClass(
-                  "border-emerald-400/30 bg-emerald-500/15 text-emerald-50",
-                )}
-              >
-                <Check className="h-3 w-3" />
-                Done
-              </button>
-            </>
-          ) : (
-            <>
-              {showCustomize ? (
-                <button type="button" onClick={() => setEditMode(true)} className={chromeBtnClass()}>
-                  <Settings2 className="h-3 w-3" />
-                  Customize
-                </button>
-              ) : null}
-              <button type="button" onClick={() => refreshAll()} className={chromeBtnClass()}>
-                {anyRefreshing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3" />
-                )}
-                Refresh
-              </button>
-            </>
-          )}
+    <div
+      data-ai-target="home-tiles"
+      aria-label="Executive command centre"
+      className={cn(
+        "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden",
+        GAP,
+        "px-0.5 pb-0.5 pt-0 sm:px-1",
+      )}
+    >
+      <header className="flex shrink-0 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", ACCENT.text)}>
+            Unit311 Central
+          </p>
+          <p className="mt-0.5 truncate text-sm font-medium text-white/70">
+            {brief?.headline ??
+              (loading
+                ? "Preparing today’s operating picture…"
+                : proactiveFailed
+                  ? "AI services unavailable — live metrics paused"
+                  : "How the business is performing")}
+          </p>
         </div>
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/internaldashboard?view=executive-assistant"
+            className={cn(enterpriseButtonClassName("primary"), "h-9")}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Ask AI
+          </Link>
+        </div>
+      </header>
 
-      {prefs.showKpiRibbon ? <BusinessSnapshotRibbon /> : null}
-
-      <div className="grid grid-cols-12 gap-2">
-        {visibleTiles.map((tile, index) => {
-          const def = getCommandCentreTileDefinition(tile.type);
-          return (
-            <div key={tile.instanceId} className={cn(tileSizeClass(tile.size), "min-w-0")}>
-              <CardShell
-                title={def?.title ?? tile.type}
-                subtitle={editMode ? `Size ${tile.size.toUpperCase()}` : undefined}
-                accent={def?.accent ?? "border-white/10"}
-                collapsed={tile.collapsed}
-                action={
-                  editMode ? (
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <button
-                        type="button"
-                        title="Move up"
-                        disabled={index === 0}
-                        onClick={() => moveTile(tile.instanceId, -1)}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-white/55 hover:bg-white/[0.08] disabled:opacity-30"
-                      >
-                        <ChevronUp className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Move down"
-                        disabled={index === visibleTiles.length - 1}
-                        onClick={() => moveTile(tile.instanceId, 1)}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-white/55 hover:bg-white/[0.08] disabled:opacity-30"
-                      >
-                        <ChevronDown className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Resize"
-                        onClick={() => resizeTile(tile.instanceId)}
-                        className="inline-flex h-6 items-center gap-0.5 rounded-md border border-white/10 px-1 text-[9px] font-semibold uppercase tracking-wide text-white/55 hover:bg-white/[0.08]"
-                      >
-                        <Maximize2 className="h-2.5 w-2.5" />
-                        {tile.size}
-                      </button>
-                      <button
-                        type="button"
-                        title={tile.collapsed ? "Expand" : "Collapse"}
-                        onClick={() => toggleCollapse(tile.instanceId)}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-white/55 hover:bg-white/[0.08]"
-                      >
-                        {tile.collapsed ? (
-                          <LayoutGrid className="h-3 w-3" />
-                        ) : (
-                          <Minus className="h-3 w-3" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        title="Hide"
-                        onClick={() => hideTile(tile.instanceId)}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-400/25 text-rose-200/80 hover:bg-rose-500/15"
-                      >
-                        <EyeOff className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : undefined
-                }
-              >
-                <CommandCentreTileBody type={tile.type} />
-              </CardShell>
-            </div>
-          );
-        })}
-      </div>
-
-      {editMode && pickerOpen ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-          <aside className="flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#0a1220] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300/80">
-                  Tile picker
+      <div className={cn("grid shrink-0 grid-cols-12", GAP)}>
+        {kpis.map((kpi) => (
+          <Panel key={kpi.id} size="small" span="col-span-6 sm:col-span-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
+                  {kpi.label}
                 </p>
-                <h2 className="text-base font-semibold text-white">Add dashboard tiles</h2>
+                <p
+                  className={cn(
+                    "mt-1 truncate text-xl font-semibold tracking-tight tabular-nums",
+                    kpi.live ? "text-white" : "text-white/45",
+                  )}
+                >
+                  {kpi.value}
+                  {kpi.id === "health" && health ? (
+                    <span className="ml-1 text-sm font-medium text-white/40">/100</span>
+                  ) : null}
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/[0.08]"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/50">
+                {kpi.icon}
+              </span>
             </div>
-            <div className="flex-1 space-y-2 overflow-y-auto p-4">
-              {availableToAdd.length === 0 ? (
-                <p className="text-sm text-white/45">All catalog tiles are already on the dashboard.</p>
-              ) : (
-                availableToAdd.map((def) => (
-                  <button
-                    key={def.type}
-                    type="button"
-                    onClick={() => addTile(def.type)}
-                    className={cn(
-                      "flex w-full items-start gap-3 rounded-xl border bg-white/[0.03] px-3 py-3 text-left transition-colors hover:bg-white/[0.06]",
-                      def.accent,
-                    )}
-                  >
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#0b1524]">
-                      <Plus className="h-3.5 w-3.5 text-sky-200" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-white">{def.title}</span>
-                      <span className="mt-0.5 block text-[11px] text-white/45">{def.description}</span>
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </aside>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+            <p className={cn("mt-0.5 truncate text-[11px]", kpi.live ? ACCENT.text : "text-white/35")}>
+              {kpi.hint}
+            </p>
+          </Panel>
+        ))}
+      </div>
 
-export default function InternalDashboardHome(props?: { showCustomize?: boolean }) {
-  return (
-    <CommandCentreDataProvider>
-      <CommandCentreHome showCustomize={props?.showCustomize ?? true} />
-    </CommandCentreDataProvider>
+      <div
+        className={cn(
+          "grid min-h-0 flex-1 grid-cols-12",
+          GAP,
+          "grid-rows-[minmax(0,1.4fr)_minmax(0,1fr)]",
+        )}
+      >
+        <Panel size="large" span="col-span-12 row-start-1 lg:col-span-7" className="relative">
+          <div className="flex shrink-0 items-start justify-between gap-3">
+            <div>
+              <PanelLabel>AI Executive Brief</PanelLabel>
+              <PanelTitle>{brief?.greeting ?? "Today’s briefing"}</PanelTitle>
+            </div>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold",
+                brief
+                  ? cn(ACCENT.border, ACCENT.bg, ACCENT.textSoft)
+                  : "border-white/10 bg-white/[0.03] text-white/45",
+              )}
+            >
+              <Sparkles className="h-3 w-3" />
+              {brief ? "Live" : loading ? "Loading" : "Unavailable"}
+            </span>
+          </div>
+
+          <p className="mt-3 shrink-0 text-sm leading-relaxed text-white/65">
+            {brief?.headline ??
+              (loading
+                ? "Loading live briefing…"
+                : "Data unavailable — briefing requires the proactive AI service.")}
+          </p>
+
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+              Needs your attention
+            </p>
+            {priorities.length > 0 ? (
+              <ul className="mt-2 space-y-2">
+                {priorities.map((priority) => (
+                  <li
+                    key={priority}
+                    className="flex items-start gap-2 text-sm leading-snug text-white/85"
+                  >
+                    <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", ACCENT.fill)} />
+                    <span className="line-clamp-2">{priority}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-2">
+                <Unavailable />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+            {(brief?.recommendedWorkflows ?? []).slice(0, 2).map((workflowId) => (
+              <button
+                key={workflowId}
+                type="button"
+                onClick={() => startWorkflowGuide(workflowId, 0)}
+                className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white/70 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
+              >
+                {workflowId.replace(/_/g, " ")}
+              </button>
+            ))}
+            <Link
+              href="/internaldashboard?view=executive-assistant"
+              className={cn(
+                "ml-auto inline-flex items-center gap-1 text-[11px] font-semibold",
+                ACCENT.textSoft,
+              )}
+            >
+              Discuss with AI
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </Panel>
+
+        <Panel size="large" span="col-span-12 row-start-1 lg:col-span-5">
+          <div className="flex shrink-0 items-start justify-between gap-3">
+            <div>
+              <PanelLabel>Business Health</PanelLabel>
+              <PanelTitle>Operating score</PanelTitle>
+            </div>
+            <div className="text-right">
+              <p
+                className={cn(
+                  "text-3xl font-semibold tracking-tight tabular-nums",
+                  health ? "text-white" : "text-white/45",
+                )}
+              >
+                {health?.overall ?? (loading ? "…" : "Data unavailable")}
+              </p>
+              <p className="text-[10px] text-white/40">
+                {health
+                  ? `${formatConfidence(health.confidence)} conf.`
+                  : loading
+                    ? "Loading"
+                    : "No live score"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 min-h-0 flex-1 space-y-2.5 overflow-hidden">
+            {healthDimensions.length > 0 ? (
+              healthDimensions.map((dimension) => (
+                <div key={dimension.id} className="min-w-0">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="truncate text-white/60">{dimension.label}</span>
+                    <span className="tabular-nums text-white/80">{dimension.score}</span>
+                  </div>
+                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className={cn("h-full rounded-full", ACCENT.fill)}
+                      style={{ width: `${Math.min(100, Math.max(0, dimension.score))}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <Unavailable>
+                {loading ? "Scoring live signals…" : "Data unavailable"}
+              </Unavailable>
+            )}
+          </div>
+
+          {health?.risks?.[0] ? (
+            <p className="mt-3 line-clamp-2 shrink-0 border-t border-white/10 pt-3 text-[11px] leading-relaxed text-white/55">
+              <span className="font-medium text-white/70">Top risk · </span>
+              {health.risks[0]}
+            </p>
+          ) : null}
+        </Panel>
+
+        <Panel size="medium" span="col-span-12 row-start-2 md:col-span-4">
+          <div className="flex shrink-0 items-center gap-2">
+            <AlertTriangle className={cn("h-3.5 w-3.5", ACCENT.text)} />
+            <div>
+              <PanelLabel>Priorities</PanelLabel>
+              <PanelTitle>Needs attention</PanelTitle>
+            </div>
+          </div>
+          {attention.length > 0 ? (
+            <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-hidden">
+              {attention.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => item.href && handleExecutiveActionHref(item.href)}
+                    className="w-full rounded-lg border border-transparent px-1 py-1 text-left transition-colors hover:border-white/10 hover:bg-white/[0.03]"
+                  >
+                    <p className="line-clamp-1 text-[13px] font-medium text-white/90">{item.title}</p>
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-white/45">{item.summary}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-3">
+              <Unavailable />
+            </div>
+          )}
+        </Panel>
+
+        <Panel size="medium" span="col-span-12 row-start-2 md:col-span-4">
+          <div>
+            <PanelLabel>Delivery</PanelLabel>
+            <PanelTitle>Projects at risk</PanelTitle>
+          </div>
+          {projectRisks.length > 0 ? (
+            <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-hidden">
+              {projectRisks.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleExecutiveActionHref(item.href)}
+                    className="w-full rounded-lg px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
+                  >
+                    <p className="line-clamp-1 text-[13px] font-medium text-white/90">{item.title}</p>
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-white/45">{item.summary}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-3">
+              <Unavailable />
+            </div>
+          )}
+          <Link
+            href="/internaldashboard?view=projects"
+            className={cn(
+              "mt-2 inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold",
+              ACCENT.textSoft,
+            )}
+          >
+            Open projects
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        </Panel>
+
+        <Panel size="medium" span="col-span-12 row-start-2 md:col-span-4">
+          <div>
+            <PanelLabel>Commercial</PanelLabel>
+            <PanelTitle>Financial pulse</PanelTitle>
+          </div>
+          <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-hidden">
+            {financeInsight || health?.strengths?.[0] ? (
+              <>
+                {financeInsight ? (
+                  <div>
+                    <p className="text-[11px] text-white/45">Live finance signal</p>
+                    <p className="mt-0.5 text-sm font-semibold text-white">{financeInsight.title}</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-white/50">
+                      {financeInsight.summary}
+                    </p>
+                  </div>
+                ) : null}
+                {health?.strengths?.[0] ? (
+                  <div className={cn(financeInsight && "border-t border-white/10 pt-3")}>
+                    <p className="text-[11px] text-white/45">Health strength</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-white/70">
+                      {health.strengths[0]}
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <Unavailable>
+                {loading
+                  ? "Loading commercial signals…"
+                  : "Data unavailable — no live finance metrics connected"}
+              </Unavailable>
+            )}
+          </div>
+          <Link
+            href="/internaldashboard?view=financials"
+            className={cn(
+              "mt-2 inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold",
+              ACCENT.textSoft,
+            )}
+          >
+            Open finance
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        </Panel>
+      </div>
+    </div>
   );
 }
