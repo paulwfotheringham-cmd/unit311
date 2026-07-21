@@ -6,6 +6,8 @@ export type ExternalUser = {
   /** FK → internal_clients.id (null = unlinked legacy row). */
   clientId: string | null;
   username: string;
+  /** Optional platform email (migration 046). */
+  email: string | null;
   lastLoggedIn: string | null;
   isActive: boolean;
   redirectPath: string;
@@ -20,6 +22,7 @@ type DbPlatformUser = {
   redirect_path: string;
   client_name: string | null;
   client_id?: string | null;
+  email?: string | null;
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -40,6 +43,7 @@ export function mapExternalUser(
     organisation,
     clientId,
     username: row.username,
+    email: row.email?.trim() || null,
     lastLoggedIn: row.last_login_at,
     isActive: row.is_active,
     redirectPath: row.redirect_path,
@@ -66,6 +70,20 @@ export function createBlankExternalUserInput() {
     organisation: "",
     clientId: "",
     username: "",
+    email: "",
     redirectPath: "/client/venturi",
   };
+}
+
+export function externalUserStatusClass(active: boolean) {
+  return active
+    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+    : "border-rose-400/30 bg-rose-500/10 text-rose-100";
+}
+
+export function externalUserInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }

@@ -19,7 +19,7 @@ import { requireCurrentWorkspace } from "@/lib/workspace-context";
 type DbPlatformUser = Parameters<typeof mapExternalUser>[0];
 
 const PLATFORM_USER_COLUMNS =
-  "id, username, display_name, user_type, redirect_path, client_name, client_id, is_active, last_login_at, created_at, updated_at";
+  "id, username, display_name, user_type, redirect_path, client_name, client_id, email, is_active, last_login_at, created_at, updated_at";
 
 function requirePlatformSupabase() {
   if (!isSupabaseConfigured()) {
@@ -64,11 +64,23 @@ export async function listExternalUsers(): Promise<ExternalUser[]> {
   await ensurePlatformUsersLastLoginColumn();
   return withPlatformUsersLastLoginColumn(async () => {
     const supabase = requirePlatformSupabase();
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("platform_users")
       .select(PLATFORM_USER_COLUMNS)
       .eq("user_type", "external")
       .order("display_name", { ascending: true });
+
+    if (error && error.message.includes("email")) {
+      const retry = await supabase
+        .from("platform_users")
+        .select(
+          "id, username, display_name, user_type, redirect_path, client_name, client_id, is_active, last_login_at, created_at, updated_at",
+        )
+        .eq("user_type", "external")
+        .order("display_name", { ascending: true });
+      data = retry.data as typeof data;
+      error = retry.error;
+    }
 
     if (error) {
       if (error.message.includes("client_id")) {
@@ -79,7 +91,7 @@ export async function listExternalUsers(): Promise<ExternalUser[]> {
       throw new Error(error.message);
     }
 
-    const rows = (data as DbPlatformUser[]) ?? [];
+    const rows = (data as unknown as DbPlatformUser[]) ?? [];
     const names = await companyNamesByClientId(
       rows.map((row) => row.client_id ?? "").filter(Boolean),
     );
@@ -94,6 +106,7 @@ export async function createExternalUser(input: {
   name: string;
   clientId: string;
   username: string;
+  email?: string;
   redirectPath?: string;
   password?: string;
 }): Promise<{ user: ExternalUser; temporaryPassword: string }> {
@@ -106,19 +119,23 @@ export async function createExternalUser(input: {
     const username = normalizePlatformUsername(input.username);
     const password = input.password?.trim() || generatePlatformPassword();
     const passwordHash = hashPlatformPasswordForUser(username, password);
+    const email = input.email?.trim().toLowerCase() || null;
+
+    const insertPayload: Record<string, string | boolean | null> = {
+      username,
+      display_name: input.name.trim() || "New Client User",
+      password_hash: passwordHash,
+      user_type: "external",
+      redirect_path: input.redirectPath?.trim() || blank.redirectPath,
+      client_id: client.id,
+      client_name: client.companyName,
+      is_active: true,
+    };
+    if (email) insertPayload.email = email;
 
     const { data, error } = await supabase
       .from("platform_users")
-      .insert({
-        username,
-        display_name: input.name.trim() || "New Client User",
-        password_hash: passwordHash,
-        user_type: "external",
-        redirect_path: input.redirectPath?.trim() || blank.redirectPath,
-        client_id: client.id,
-        client_name: client.companyName,
-        is_active: true,
-      })
+      .insert(insertPayload)
       .select(PLATFORM_USER_COLUMNS)
       .single();
 
@@ -127,6 +144,22 @@ export async function createExternalUser(input: {
         throw new Error(
           "External Users schema is missing client_id. Apply migration 095_platform_users_client_id.sql.",
         );
+      }
+      // Retry without email if column missing in older DBs.
+      if (email && error.message.includes("email")) {
+        delete insertPayload.email;
+        const retry = await supabase
+          .from("platform_users")
+          .insert(insertPayload)
+          .select(
+            "id, username, display_name, user_type, redirect_path, client_name, client_id, is_active, last_login_at, created_at, updated_at",
+          )
+          .single();
+        if (retry.error) throw new Error(retry.error.message);
+        return {
+          user: mapExternalUser(retry.data as DbPlatformUser, client.companyName),
+          temporaryPassword: password,
+        };
       }
       throw new Error(error.message);
     }
@@ -143,6 +176,7 @@ export async function updateExternalUser(
     name: string;
     clientId: string | null;
     username: string;
+    email: string | null;
     redirectPath: string;
     isActive: boolean;
   }>,
@@ -158,6 +192,9 @@ export async function updateExternalUser(
     if (patch.username !== undefined) {
       payload.username = normalizePlatformUsername(patch.username);
     }
+    if (patch.email !== undefined) {
+      payload.email = patch.email?.trim().toLowerCase() || null;
+    }
     if (patch.redirectPath !== undefined) payload.redirect_path = patch.redirectPath.trim();
     if (patch.isActive !== undefined) payload.is_active = patch.isActive;
 
@@ -172,13 +209,28 @@ export async function updateExternalUser(
       companyName = client.companyName;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("platform_users")
       .update(payload)
       .eq("id", id)
       .eq("user_type", "external")
       .select(PLATFORM_USER_COLUMNS)
       .single();
+
+    if (error && patch.email !== undefined && error.message.includes("email")) {
+      delete payload.email;
+      const retry = await supabase
+        .from("platform_users")
+        .update(payload)
+        .eq("id", id)
+        .eq("user_type", "external")
+        .select(
+          "id, username, display_name, user_type, redirect_path, client_name, client_id, is_active, last_login_at, created_at, updated_at",
+        )
+        .single();
+      data = retry.data as typeof data;
+      error = retry.error;
+    }
 
     if (error) {
       if (error.message.includes("client_id")) {
@@ -189,7 +241,7 @@ export async function updateExternalUser(
       throw new Error(error.message);
     }
 
-    const row = data as DbPlatformUser;
+    const row = data as unknown as DbPlatformUser;
     if (!companyName && row.client_id) {
       const names = await companyNamesByClientId([row.client_id]);
       companyName = names.get(row.client_id) ?? null;

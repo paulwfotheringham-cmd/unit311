@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       clientId?: string;
       organisation?: string;
       username?: string;
+      email?: string;
       redirectPath?: string;
       password?: string;
     };
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       name: body.name ?? "",
       clientId: body.clientId,
       username: body.username,
+      email: body.email,
       redirectPath: body.redirectPath,
       password: body.password,
     });

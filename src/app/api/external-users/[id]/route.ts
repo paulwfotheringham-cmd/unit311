@@ -27,6 +27,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       clientId?: string | null;
       organisation?: string;
       username?: string;
+      email?: string | null;
       redirectPath?: string;
       isActive?: boolean;
     };
@@ -35,6 +36,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       name: body.name,
       clientId: body.clientId,
       username: body.username,
+      email: body.email,
       redirectPath: body.redirectPath,
       isActive: body.isActive,
     });
