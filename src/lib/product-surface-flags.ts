@@ -3,5 +3,5 @@
  * Flip to true only when the surface is production-ready for customers.
  */
 
-/** Executive Assistant UI is unfinished (placeholder / coming soon). Hidden from demo journey. */
-export const EXECUTIVE_ASSISTANT_VISIBLE = false;
+/** Executive Assistant — full workspace + nav (restored after demo-journey hide). */
+export const EXECUTIVE_ASSISTANT_VISIBLE = true;

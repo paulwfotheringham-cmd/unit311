@@ -68,7 +68,6 @@ import {
   FleetWorkspace,
   GeneralLedgerWorkspace,
   GrantsWorkspace,
-  HomeExecutiveAssistantPanel,
   HrReportsWorkspace,
   HrWorkspace,
   InfoEmailWorkspace,
@@ -467,21 +466,7 @@ export default function InternalOperationsDashboard({
       >
         <div className={activeView === "home" ? "relative min-w-0" : "relative min-w-0 space-y-4 sm:space-y-6"}>
           {activeView !== "home" && <NavImplementationNotice view={activeView} />}
-          {activeView === "home" &&
-            (isInternalHost ? (
-              EXECUTIVE_ASSISTANT_VISIBLE ? (
-                <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(300px,3fr)] xl:items-start xl:gap-5">
-                  <div className="min-w-0">
-                    <InternalDashboardHome showCustomize />
-                  </div>
-                  <HomeExecutiveAssistantPanel />
-                </div>
-              ) : (
-                <InternalDashboardHome showCustomize />
-              )
-            ) : (
-              <InternalDashboardHome showCustomize />
-            ))}
+          {activeView === "home" && <InternalDashboardHome showCustomize />}
 
           {EXECUTIVE_ASSISTANT_VISIBLE && activeView === "executive-assistant" && (
             <ExecutiveAssistantWorkspace />

@@ -11,7 +11,7 @@ Navigation refactor only (2026-07-19). Existing routes preserved.
 | Inventory Management → Assets | **Assets** → Assets · Inventory Management · Logistics |
 | Business Productivity (+ Logistics, Support nest, Unit311 Details in Files) | Business Productivity (no Logistics; Support Desk flat; Files without Unit311 Details) |
 | Training / QMS | Unchanged structure; QMS label → Quality Management System |
-| **Strategy** (Board, Strategy, Competitors, Whiteboard) | Removed from sidebar (URLs still work) |
+| **Strategy** (Board, Strategy, Competitors, Whiteboard) | **Strategy** → Strategy · Competitors · Whiteboard · Board deck |
 | Engineering (single) | Engineering → Dashboard · Engineer / Resource Breakdown |
 | Tools / External Client Access / Settings | Settings Billing → **Platform Billing** |
 

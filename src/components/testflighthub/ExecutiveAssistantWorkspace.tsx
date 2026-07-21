@@ -3,17 +3,16 @@
 import ExecutiveAssistantPanel from "@/components/executive-assistant/ExecutiveAssistantPanel";
 
 /**
- * Full-page Executive Assistant view — same reusable UI shell as Home / drawer.
- * No AI wiring in this foundation pass.
+ * Full-page Executive Assistant workspace — chat, history, prompts, workspace context.
  */
 export default function ExecutiveAssistantWorkspace() {
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-10rem)] max-w-3xl flex-col">
+    <div className="mx-auto w-full max-w-4xl">
       <ExecutiveAssistantPanel
-        variant="home"
+        variant="page"
         activeView="executive-assistant"
         mode="internal"
-        className="min-h-[32rem] flex-1"
+        className="min-h-[calc(100dvh-10rem)]"
       />
     </div>
   );

@@ -3,7 +3,7 @@ import { internalViewTitles, isInternalOperationsView } from "@/lib/internal-ope
 import type { SurveyOperationsView } from "@/lib/survey-operations-mock-data";
 import { surveyViewTitles } from "@/lib/survey-operations-mock-data";
 
-export type ExecutiveAssistantVariant = "home" | "drawer";
+export type ExecutiveAssistantVariant = "home" | "drawer" | "page";
 
 export type ExecutiveAssistantPageContext = {
   /** Short module name shown as “You are viewing: …” */

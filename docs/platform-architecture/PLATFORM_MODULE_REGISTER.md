@@ -54,7 +54,7 @@ Nav leaves that share one implementation until redesigned are noted. Each row is
 | Module Name | Navigation Location | Status | Related PRMs | Dependencies | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Home Dashboard | HOME → Home Dashboard | **Ready** | — | — | Command Centre v2 · [MOD-001](./MOD-001-COMMAND-CENTRE.md) **CLOSED · READY** |
-| Executive Assistant | EXECUTIVE → Executive Assistant | Not Started | PRM-001 (context) | Clients, Financials, Projects (read) | AI ops; consume Client context per PRM-001 |
+| Executive Assistant | EXECUTIVE → Executive Assistant | Restored | PRM-001 (context) | Clients, Financials, Projects (read) | Nav + workspace restored (flag `EXECUTIVE_ASSISTANT_VISIBLE`) |
 
 ### Business Central — Clients
 
@@ -240,10 +240,11 @@ Do not start implementation of a module until its FDR is approved.
 
 Reachable via deep link but **not** in frozen sidebar. Do not expand without architecture approval:
 
-- Strategy: Board deck, Strategy, Competitors, Whiteboard  
 - Corporate Insurance  
 - WhatsApp Testing (`/whatsapp/support-flow`)  
 - Legacy survey views (Fleet, WebODM, etc.)
+
+**Restored to sidebar (2026-07-21):** Strategy → Strategy · Competitors · Whiteboard · Board deck; Executive Assistant (feature flag on).
 
 ---
 
