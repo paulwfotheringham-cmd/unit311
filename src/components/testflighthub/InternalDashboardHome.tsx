@@ -157,49 +157,115 @@ function MiniSpark({
   );
 }
 
-function ChartEmpty({ label = "No live data yet" }: { label?: string }) {
+function ProfessionalEmpty({
+  children = "Historical financial trends will appear as transactions are recorded.",
+}: {
+  children?: ReactNode;
+}) {
   return (
-    <div className="flex h-full min-h-[3.5rem] items-center justify-center rounded-xl bg-white/[0.02] ring-1 ring-white/[0.05]">
-      <p className="px-3 text-center text-[12px] text-slate-500">{label}</p>
+    <div className="flex h-full min-h-[3.5rem] items-center justify-center rounded-xl bg-white/[0.025] px-3 py-3 ring-1 ring-white/[0.05]">
+      <p className="text-center text-[12px] leading-relaxed text-slate-400">{children}</p>
     </div>
   );
 }
 
-function SegmentBars({
-  rows,
-  color,
-  emptyLabel = "No data yet",
+/** Cascading opportunity funnel — stage width encodes volume. */
+function OpportunityFunnel({
+  stages,
 }: {
-  rows: Array<{ label: string; count: number }>;
-  color: string;
-  emptyLabel?: string;
+  stages: Array<{ stage: string; count: number }>;
+}) {
+  const max = Math.max(1, ...stages.map((row) => row.count));
+  const total = stages.reduce((sum, row) => sum + row.count, 0);
+  if (total === 0) {
+    return (
+      <ProfessionalEmpty>
+        Pipeline stages will appear as opportunities are added to CRM.
+      </ProfessionalEmpty>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col justify-end gap-1">
+      {stages.map((row, index) => {
+        const widthPct = Math.max(28, (row.count / max) * 100);
+        const opacity = 0.95 - index * 0.12;
+        return (
+          <div key={row.stage} className="flex items-center gap-2">
+            <span className="w-10 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              {row.stage}
+            </span>
+            <div className="flex min-w-0 flex-1 justify-center">
+              <div
+                className="flex h-6 items-center justify-between rounded-md px-2.5"
+                style={{
+                  width: `${widthPct}%`,
+                  backgroundColor: `rgba(52, 211, 153, ${opacity})`,
+                }}
+              >
+                <span className="truncate text-[10px] font-semibold text-emerald-950/80">
+                  {row.stage}
+                </span>
+                <span className="text-[11px] font-bold tabular-nums text-emerald-950">
+                  {row.count}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Portfolio health as a single stacked bar + legend. */
+function ProjectHealthStrip({
+  rows,
+}: {
+  rows: Array<{ label: string; count: number; tone: "ok" | "warn" | "neutral" }>;
 }) {
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   if (total === 0) {
-    return <ChartEmpty label={emptyLabel} />;
+    return (
+      <ProfessionalEmpty>
+        Project health will appear once delivery programmes are underway.
+      </ProfessionalEmpty>
+    );
   }
-  const max = Math.max(1, ...rows.map((row) => row.count));
+
+  const toneClass = {
+    ok: "bg-emerald-400",
+    warn: "bg-rose-400",
+    neutral: "bg-amber-300/90",
+  } as const;
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col justify-end gap-1.5">
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center gap-2">
-          <span className="w-[4.5rem] shrink-0 truncate text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            {row.label}
-          </span>
-          <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+    <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
+      <div className="flex h-3 overflow-hidden rounded-full bg-white/[0.06] ring-1 ring-white/[0.06]">
+        {rows.map((row) =>
+          row.count > 0 ? (
             <div
-              className="h-full rounded-full"
-              style={{
-                width: `${Math.max(row.count > 0 ? 10 : 0, (row.count / max) * 100)}%`,
-                backgroundColor: color,
-              }}
+              key={row.label}
+              className={cn("h-full", toneClass[row.tone])}
+              style={{ width: `${(row.count / total) * 100}%` }}
+              title={`${row.label}: ${row.count}`}
             />
+          ) : null,
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="rounded-lg bg-white/[0.035] px-2 py-1.5 text-center ring-1 ring-white/[0.06]"
+          >
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              {row.label}
+            </p>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">{row.count}</p>
           </div>
-          <span className="w-5 shrink-0 text-right text-[11px] font-semibold tabular-nums text-white">
-            {row.count}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -539,13 +605,6 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
     });
   }, [bundle]);
 
-  const highestRiskProject = useMemo(() => {
-    if (projectsAtRisk.length === 0) {
-      return (bundle?.projects ?? []).find((project) => project.phase === "live") ?? null;
-    }
-    return [...projectsAtRisk].sort((a, b) => a.progressPct - b.progressPct)[0] ?? null;
-  }, [bundle, projectsAtRisk]);
-
   const avgProgress =
     projectsLive > 0
       ? Math.round(
@@ -560,9 +619,9 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
     const onTrack = Math.max(projectsLive - projectsAtRisk.length, 0);
     const upcoming = projects.filter((project) => project.phase === "upcoming").length;
     return [
-      { label: "On track", count: onTrack },
-      { label: "At risk", count: projectsAtRisk.length },
-      { label: "Upcoming", count: upcoming },
+      { label: "On track", count: onTrack, tone: "ok" as const },
+      { label: "At risk", count: projectsAtRisk.length, tone: "warn" as const },
+      { label: "Upcoming", count: upcoming, tone: "neutral" as const },
     ];
   }, [bundle, projectsAtRisk.length, projectsLive]);
 
@@ -658,12 +717,43 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
   const payrollSpark = liveSpark(payrollLive);
   const burnSpark = liveSpark(spendLive);
 
-  const money = (value: number | null | undefined) =>
-    value == null ? "—" : formatMoney(value);
+  const hasFinancialHistory = Boolean(
+    financial &&
+      (financial.charts.monthlyRevenue.length > 0 ||
+        financial.charts.monthlyOutgoings.length > 0 ||
+        financial.charts.cashPosition.length > 0 ||
+        financial.activity.length > 0 ||
+        financial.burnRate.lines.length > 0 ||
+        financial.monthlyRevenue !== 0 ||
+        financial.monthlyExpenses !== 0 ||
+        financial.cashPosition !== 0 ||
+        financial.accountsReceivable !== 0 ||
+        financial.accountsPayable !== 0 ||
+        financial.payroll.monthly !== 0),
+  );
+
+  const money = (value: number | null | undefined, opts?: { allowZero?: boolean }) => {
+    if (value == null) return "—";
+    if (!opts?.allowZero && !hasFinancialHistory && value === 0) return "—";
+    return formatMoney(value);
+  };
+
+  const burnMoney = (value: number | null | undefined) => {
+    if (!financial || financial.burnRate.lines.length === 0) return "—";
+    return money(value);
+  };
+
+  const runwayLabel =
+    financial && financial.burnRate.lines.length > 0 && financial.burnRate.runwayMonths != null
+      ? `${financial.burnRate.runwayMonths} mo`
+      : "—";
+
+  const burnTrendLabel =
+    financial && financial.burnRate.lines.length > 0 && financial.burnRate.trendLabel !== "—"
+      ? financial.burnRate.trendLabel
+      : "—";
 
   const purple = ACCENT.purple.spark;
-  const emerald = ACCENT.emerald.spark;
-  const amber = ACCENT.amber.spark;
   const cyan = ACCENT.cyan.spark;
 
   return (
@@ -763,7 +853,7 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                   />
                   <KpiCell
                     label="Forecast"
-                    value={money(financial?.burnRate.forecastMonthly)}
+                    value={burnMoney(financial?.burnRate.forecastMonthly)}
                     spark={burnSpark}
                     sparkColor="#c4b5fd"
                   />
@@ -776,7 +866,7 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                   />
                   <KpiCell
                     label="Burn"
-                    value={money(financial?.burnRate.monthly)}
+                    value={burnMoney(financial?.burnRate.monthly)}
                     spark={burnSpark}
                     sparkColor="#a78bfa"
                   />
@@ -806,7 +896,7 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                       spark={cashSpark}
                       sparkColor={purple}
                     />
-                    <KpiCell label="Burn / month" value={money(financial?.burnRate.monthly)} />
+                    <KpiCell label="Burn / month" value={burnMoney(financial?.burnRate.monthly)} />
                     <KpiCell label="Debtors" value={money(financial?.accountsReceivable)} />
                     <KpiCell label="Creditors" value={money(financial?.accountsPayable)} />
                   </div>
@@ -835,35 +925,30 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : (
-                      <ChartEmpty label="Cash trend unavailable" />
+                      <ProfessionalEmpty />
                     )}
                   </div>
                 </div>
               ) : null}
               {tab === 2 ? (
-                <div className="grid h-full grid-cols-2 content-start gap-2">
-                  <KpiCell label="Revenue" value={money(financial?.monthlyRevenue)} />
-                  <KpiCell
-                    label="Spend forecast"
-                    value={money(financial?.burnRate.forecastMonthly)}
-                  />
-                  <KpiCell
-                    label="Runway"
-                    value={
-                      financial?.burnRate.runwayMonths != null
-                        ? `${financial.burnRate.runwayMonths} mo`
-                        : "—"
-                    }
-                  />
-                  <KpiCell label="Burn trend" value={financial?.burnRate.trendLabel ?? "—"} />
-                  <KpiCell
-                    label="Payroll"
-                    value={money(financial?.payroll.monthly)}
-                    spark={payrollSpark}
-                    sparkColor="#c4b5fd"
-                  />
-                  <KpiCell label="Net profit" value={money(financial?.netProfit)} />
-                  <div className="col-span-2 h-[4.25rem]">
+                <div className="flex h-full flex-col gap-2">
+                  <div className="grid grid-cols-2 content-start gap-2">
+                    <KpiCell label="Revenue" value={money(financial?.monthlyRevenue)} />
+                    <KpiCell
+                      label="Spend forecast"
+                      value={burnMoney(financial?.burnRate.forecastMonthly)}
+                    />
+                    <KpiCell label="Runway" value={runwayLabel} />
+                    <KpiCell label="Burn trend" value={burnTrendLabel} />
+                    <KpiCell
+                      label="Payroll"
+                      value={money(financial?.payroll.monthly)}
+                      spark={payrollSpark}
+                      sparkColor="#c4b5fd"
+                    />
+                    <KpiCell label="Net profit" value={money(financial?.netProfit)} />
+                  </div>
+                  <div className="min-h-0 flex-1">
                     {revenueSpark ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={revenueSpark}>
@@ -876,7 +961,7 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <ChartEmpty label="Revenue history unavailable" />
+                      <ProfessionalEmpty />
                     )}
                   </div>
                 </div>
@@ -898,39 +983,18 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
               {tab === 0 ? (
                 <div className="flex h-full flex-col gap-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <KpiCell label="Active customers" value={String(commercial.activeCustomers)} />
-                    <KpiCell label="Pipeline" value={money(commercial.pipeline)} />
+                    <KpiCell label="Pipeline" value={money(commercial.pipeline, { allowZero: true })} />
+                    <KpiCell label="Closing" value={money(commercial.closingValue, { allowZero: true })} />
                     <KpiCell label="Opportunities" value={String(commercial.openCount)} />
-                    <KpiCell label="Closing" value={money(commercial.closingValue)} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
                     <KpiCell
                       label="Win rate"
                       value={commercial.winRate != null ? `${commercial.winRate}%` : "—"}
                     />
-                    <KpiCell label="Hot / Warm" value={String(commercial.closingCount)} />
                   </div>
-                  <div className="mt-auto flex min-h-0 flex-1 flex-col justify-end gap-1.5">
-                    {(() => {
-                      const max = Math.max(1, ...commercial.funnel.map((row) => row.count));
-                      return commercial.funnel.map((row) => (
-                        <div key={row.stage} className="flex items-center gap-2">
-                          <span className="w-10 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                            {row.stage}
-                          </span>
-                          <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                            <div
-                              className="h-full rounded-full bg-emerald-400/80"
-                              style={{ width: `${Math.max(8, (row.count / max) * 100)}%` }}
-                            />
-                          </div>
-                          <span className="w-5 shrink-0 text-right text-[11px] font-semibold tabular-nums text-white">
-                            {row.count}
-                          </span>
-                        </div>
-                      ));
-                    })()}
-                  </div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Opportunity funnel
+                  </p>
+                  <OpportunityFunnel stages={commercial.funnel} />
                 </div>
               ) : null}
               {tab === 1 ? (
@@ -939,29 +1003,50 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                     <KpiCell label="Active" value={String(commercial.activeCustomers)} />
                     <KpiCell label="Inactive" value={String(commercial.inactiveCustomers)} />
                     <KpiCell label="Total" value={String(commercial.customerTotal)} />
-                    <KpiCell label="Pipeline" value={money(commercial.pipeline)} />
+                    <KpiCell label="Pipeline" value={money(commercial.pipeline, { allowZero: true })} />
                   </div>
                   <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Customer segmentation
+                    Customer portfolio
                   </p>
-                  <SegmentBars
-                    rows={commercial.segments}
-                    color={emerald}
-                    emptyLabel="No customers to segment"
+                  <ProjectHealthStrip
+                    rows={[
+                      {
+                        label: "Active",
+                        count: commercial.segments.find((row) => row.label === "Active")?.count ?? 0,
+                        tone: "ok",
+                      },
+                      {
+                        label: "Onboarding",
+                        count:
+                          commercial.segments.find((row) => row.label === "Onboarding")?.count ?? 0,
+                        tone: "neutral",
+                      },
+                      {
+                        label: "Dormant",
+                        count:
+                          (commercial.segments.find((row) => row.label === "Dormant")?.count ?? 0) +
+                          (commercial.segments.find((row) => row.label === "Archived")?.count ?? 0),
+                        tone: "warn",
+                      },
+                    ]}
                   />
                 </div>
               ) : null}
               {tab === 2 ? (
-                <div className="grid h-full grid-cols-2 content-start gap-2">
-                  <KpiCell label="Closing" value={String(commercial.closingCount)} />
-                  <KpiCell label="Closing value" value={money(commercial.closingValue)} />
-                  <KpiCell
-                    label="Win rate"
-                    value={commercial.winRate != null ? `${commercial.winRate}%` : "—"}
-                  />
-                  <KpiCell label="Opportunities" value={String(commercial.openCount)} />
-                  <KpiCell label="Pipeline" value={money(commercial.pipeline)} />
-                  <KpiCell label="Active customers" value={String(commercial.activeCustomers)} />
+                <div className="flex h-full flex-col gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <KpiCell label="Closing" value={String(commercial.closingCount)} />
+                    <KpiCell label="Closing value" value={money(commercial.closingValue, { allowZero: true })} />
+                    <KpiCell
+                      label="Win rate"
+                      value={commercial.winRate != null ? `${commercial.winRate}%` : "—"}
+                    />
+                    <KpiCell label="Opportunities" value={String(commercial.openCount)} />
+                  </div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Sales funnel
+                  </p>
+                  <OpportunityFunnel stages={commercial.funnel} />
                 </div>
               ) : null}
             </>
@@ -991,40 +1076,16 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                       )}
                     />
                   </div>
-                  {highestRiskProject ? (
-                    <div className="rounded-xl bg-white/[0.035] px-2.5 py-2 ring-1 ring-white/[0.06]">
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                        Highest risk
-                      </p>
-                      <p className="mt-1 truncate text-[13px] font-semibold text-white">
-                        {highestRiskProject.name}
-                      </p>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            highestRiskProject.progressPct >= 70
-                              ? "bg-emerald-400"
-                              : highestRiskProject.progressPct >= 40
-                                ? "bg-amber-400"
-                                : "bg-rose-400",
-                          )}
-                          style={{ width: `${highestRiskProject.progressPct}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 text-[11px] tabular-nums text-slate-400">
-                        {highestRiskProject.progressPct}% complete
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="px-1.5 py-2 text-[13px] text-slate-500">No live projects</p>
-                  )}
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Portfolio health
+                  </p>
+                  <ProjectHealthStrip rows={projectHealth} />
                 </div>
               ) : null}
               {tab === 1 ? (
                 <div className="flex h-full flex-col gap-2">
                   <KpiCell label="Pending approvals" value={String(approvals)} />
-                  <div className="space-y-0.5">
+                  <div className="min-h-0 flex-1 space-y-0.5">
                     {actions
                       .filter(
                         (item) =>
@@ -1042,7 +1103,9 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                         />
                       ))}
                     {approvals === 0 ? (
-                      <p className="px-1.5 py-2 text-[13px] text-slate-500">No approvals waiting</p>
+                      <ProfessionalEmpty>
+                        No approvals are waiting for executive action.
+                      </ProfessionalEmpty>
                     ) : null}
                   </div>
                 </div>
@@ -1050,7 +1113,10 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
               {tab === 2 ? (
                 <div className="flex h-full flex-col gap-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <KpiCell label="Avg progress" value={`${avgProgress}%`} />
+                    <KpiCell
+                      label="Avg progress"
+                      value={projectsLive > 0 ? `${avgProgress}%` : "—"}
+                    />
                     <KpiCell
                       label="On track"
                       value={String(Math.max(projectsLive - projectsAtRisk.length, 0))}
@@ -1059,13 +1125,9 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                     <KpiCell label="Live" value={String(projectsLive)} />
                   </div>
                   <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Project health
+                    Delivery status
                   </p>
-                  <SegmentBars
-                    rows={projectHealth}
-                    color={amber}
-                    emptyLabel="No projects to assess"
-                  />
+                  <ProjectHealthStrip rows={projectHealth} />
                 </div>
               ) : null}
             </>

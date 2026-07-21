@@ -17,13 +17,29 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function emptyBurnRate(cashBalance = 0) {
-  return buildBurnRateSnapshot({
-    cashBalance,
-    monthlyOutgoings: [],
-    postedExpenses: [],
+function emptyBurnRate(cashBalance = 0): FinancialOverviewSnapshot["burnRate"] {
+  return {
+    source: "live",
     currency: "EUR",
-  });
+    monthly: 0,
+    quarterly: 0,
+    annual: 0,
+    previousMonthly: 0,
+    changePct: 0,
+    trend: "stable",
+    trendLabel: "—",
+    cashBalance,
+    runwayMonths: null,
+    forecastMonthly: 0,
+    lines: [],
+    series: [],
+    filterOptions: {
+      departments: [],
+      costCentres: [],
+      projects: [],
+      offices: [],
+    },
+  };
 }
 
 function emptyOverview(): FinancialOverviewSnapshot {
@@ -162,12 +178,25 @@ export async function getFinancialOverview(
         .reduce((sum, point) => sum + point.amount, 0),
     );
 
-    const burnRate = buildBurnRateSnapshot({
-      cashBalance: totals.cashPosition,
-      monthlyOutgoings: charts.monthlyOutgoings,
-      postedExpenses,
-      currency: "EUR",
-    });
+    const burnRate =
+      postedExpenses.length > 0 || charts.monthlyOutgoings.some((point) => point.amount > 0)
+        ? buildBurnRateSnapshot({
+            cashBalance: totals.cashPosition,
+            monthlyOutgoings: charts.monthlyOutgoings,
+            postedExpenses,
+            currency: "EUR",
+            allowDemo: false,
+          })
+        : emptyBurnRate(totals.cashPosition);
+
+    const payrollPoint =
+      burnRate.series.find((point) => point.month === monthPrefix) ??
+      burnRate.series[burnRate.series.length - 1];
+    const payrollMonthly = payrollPoint?.payroll ?? 0;
+    const payrollTrend = burnRate.series.slice(-6).map((point) => ({
+      month: point.month,
+      amount: point.payroll,
+    }));
 
     return {
       revenueYtd: totals.income,
@@ -213,12 +242,12 @@ export async function getFinancialOverview(
         })),
       },
       payroll: {
-        current: 0,
-        next: 0,
+        current: payrollMonthly,
+        next: payrollMonthly,
         employees: 0,
-        annual: 0,
-        monthly: 0,
-        trend: [],
+        annual: roundMoney(payrollMonthly * 12),
+        monthly: payrollMonthly,
+        trend: payrollTrend,
       },
       charts,
       activity,

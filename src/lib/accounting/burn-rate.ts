@@ -389,23 +389,49 @@ export function buildBurnRateSnapshot(input: {
   monthlyOutgoings: Array<{ month: string; amount: number }>;
   postedExpenses?: PostedExpenseLineInput[];
   currency?: string;
+  /** When false, never invent demo burn lines — return live-or-empty metrics only. */
+  allowDemo?: boolean;
 }): BurnRateSnapshot {
   const currency = input.currency ?? "EUR";
+  const allowDemo = input.allowDemo !== false;
   const livePosted = input.postedExpenses ?? [];
   let lines = mapPostedExpensesToBurnLines(livePosted);
   let source: "live" | "demo" = lines.length >= 8 ? "live" : "demo";
 
   if (source === "demo") {
-    const latestLive =
-      [...input.monthlyOutgoings].sort((a, b) => b.month.localeCompare(a.month))[0]?.amount ?? 0;
-    const avgLive =
-      input.monthlyOutgoings.length === 0
-        ? 0
-        : input.monthlyOutgoings.reduce((sum, point) => sum + point.amount, 0) /
-          input.monthlyOutgoings.length;
-    lines = buildDemoBurnLedger({
-      baseMonthly: latestLive > 0 ? latestLive : avgLive,
-    });
+    if (!allowDemo) {
+      lines = mapPostedExpensesToBurnLines(livePosted);
+      source = "live";
+      if (lines.length === 0) {
+        // Derive burn from posted GL monthly totals only — never invent magnitudes.
+        lines = input.monthlyOutgoings
+          .filter((point) => point.amount > 0)
+          .map((point, index) => ({
+            id: `gl-out-${point.month}-${index}`,
+            date: `${point.month}-15`,
+            month: point.month,
+            category: "other" as const,
+            amount: roundMoney(point.amount),
+            vendor: "General ledger",
+            department: "Operations",
+            costCentre: "CC-100 Ops",
+            project: "Platform Core",
+            office: "Remote",
+            description: "Posted monthly outgoings",
+          }));
+      }
+    } else {
+      const latestLive =
+        [...input.monthlyOutgoings].sort((a, b) => b.month.localeCompare(a.month))[0]?.amount ?? 0;
+      const avgLive =
+        input.monthlyOutgoings.length === 0
+          ? 0
+          : input.monthlyOutgoings.reduce((sum, point) => sum + point.amount, 0) /
+            input.monthlyOutgoings.length;
+      lines = buildDemoBurnLedger({
+        baseMonthly: latestLive > 0 ? latestLive : avgLive,
+      });
+    }
   }
 
   const series = aggregateBurnSeries(lines);
