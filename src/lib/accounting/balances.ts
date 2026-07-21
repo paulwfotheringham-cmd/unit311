@@ -202,3 +202,49 @@ export async function getMonthlySeriesFromPostedLines(scope?: FinancialsWorkspac
     }),
   };
 }
+
+/** Posted expense journal lines for burn-rate category attribution. */
+export async function getPostedExpenseLines(scope?: FinancialsWorkspaceScope) {
+  const workspaceId = await resolveFinancialsWorkspaceId(scope);
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from("journal_lines")
+    .select(
+      "id, debit, credit, memo, accounts!inner(code, type), journal_entries!inner(status, journal_date, memo)",
+    )
+    .eq("workspace_id", workspaceId);
+  if (error) throw new Error(error.message);
+
+  const rows: Array<{
+    id: string;
+    journalDate: string;
+    accountCode: string;
+    amount: number;
+    description: string | null;
+  }> = [];
+
+  for (const row of data ?? []) {
+    const entry = (
+      row as {
+        journal_entries?: { status?: string; journal_date?: string; memo?: string | null };
+      }
+    ).journal_entries;
+    const account = (row as { accounts?: { code?: string; type?: string } }).accounts;
+    if (entry?.status !== "posted" || !entry.journal_date) continue;
+    if (account?.type !== "expense" || !account.code) continue;
+    const debit = Number((row as { debit: number }).debit) || 0;
+    const credit = Number((row as { credit: number }).credit) || 0;
+    const amount = roundMoney(debit - credit);
+    if (amount <= 0) continue;
+    rows.push({
+      id: String((row as { id: string }).id),
+      journalDate: entry.journal_date,
+      accountCode: account.code,
+      amount,
+      description:
+        (row as { memo?: string | null }).memo ?? entry.memo ?? null,
+    });
+  }
+
+  return rows;
+}

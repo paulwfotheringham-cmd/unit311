@@ -18,6 +18,7 @@ type DashboardTopTilesBarProps = {
   title?: string;
   tiles?: DashboardTileDefinition[];
   showCustomizeHint?: boolean;
+  onTileClick?: (tileId: string) => void;
 };
 
 export default function DashboardTopTilesBar({
@@ -27,6 +28,7 @@ export default function DashboardTopTilesBar({
   title = "Key details",
   tiles,
   showCustomizeHint = true,
+  onTileClick,
 }: DashboardTopTilesBarProps) {
   const [hydrated, setHydrated] = useState(false);
   const [layout, setLayout] = useState<string[]>(defaultLayout);
@@ -124,28 +126,75 @@ export default function DashboardTopTilesBar({
       ) : null}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {visibleTiles.map((tile) => (
-          <article
-            key={tile.id}
-            className="relative rounded-xl border border-white/10 bg-white/[0.03] p-4"
-          >
-            {customizeOpen ? (
-              <button
-                type="button"
-                aria-label={`Remove ${tile.label}`}
-                onClick={() => removeTile(tile.id)}
-                className="absolute right-2 top-2 rounded-md border border-white/10 p-1 text-white/45 hover:text-white"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            ) : null}
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
-              {tile.label}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-white">{tile.value}</p>
-            {tile.hint ? <p className="mt-2 text-[11px] text-white/35">{tile.hint}</p> : null}
-          </article>
-        ))}
+        {visibleTiles.map((tile) => {
+          const accentClass =
+            tile.accent === "improving"
+              ? "border-emerald-400/35 bg-emerald-500/[0.08]"
+              : tile.accent === "increasing"
+                ? "border-rose-400/35 bg-rose-500/[0.08]"
+                : tile.accent === "stable"
+                  ? "border-amber-400/35 bg-amber-500/[0.08]"
+                  : "border-white/10 bg-white/[0.03]";
+          const trendClass =
+            tile.accent === "improving"
+              ? "text-emerald-300"
+              : tile.accent === "increasing"
+                ? "text-rose-300"
+                : tile.accent === "stable"
+                  ? "text-amber-200"
+                  : "text-white/45";
+          const interactive = Boolean(tile.interactive && onTileClick && !customizeOpen);
+
+          return (
+            <article
+              key={tile.id}
+              className={cn(
+                "relative rounded-xl border p-4",
+                accentClass,
+                interactive && "cursor-pointer transition hover:border-white/25 hover:bg-white/[0.05]",
+              )}
+              onClick={interactive ? () => onTileClick?.(tile.id) : undefined}
+              onKeyDown={
+                interactive
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onTileClick?.(tile.id);
+                      }
+                    }
+                  : undefined
+              }
+              role={interactive ? "button" : undefined}
+              tabIndex={interactive ? 0 : undefined}
+            >
+              {customizeOpen ? (
+                <button
+                  type="button"
+                  aria-label={`Remove ${tile.label}`}
+                  onClick={() => removeTile(tile.id)}
+                  className="absolute right-2 top-2 rounded-md border border-white/10 p-1 text-white/45 hover:text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              ) : null}
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">
+                {tile.label}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">{tile.value}</p>
+              {tile.meta?.length ? (
+                <ul className="mt-2 space-y-0.5 text-[11px] text-white/50">
+                  {tile.meta.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {tile.trend ? (
+                <p className={cn("mt-2 text-xs font-semibold", trendClass)}>{tile.trend}</p>
+              ) : null}
+              {tile.hint ? <p className="mt-2 text-[11px] text-white/35">{tile.hint}</p> : null}
+            </article>
+          );
+        })}
       </div>
     </section>
   );

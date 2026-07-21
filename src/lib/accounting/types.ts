@@ -92,6 +92,58 @@ export type TrialBalanceRow = {
   runningBalance: number;
 };
 
+export type FinancialOverviewBurnRate = {
+  source: "live" | "demo";
+  currency: string;
+  monthly: number;
+  quarterly: number;
+  annual: number;
+  previousMonthly: number;
+  changePct: number;
+  trend: "improving" | "stable" | "increasing";
+  trendLabel: string;
+  cashBalance: number;
+  runwayMonths: number | null;
+  forecastMonthly: number;
+  lines: Array<{
+    id: string;
+    date: string;
+    month: string;
+    category:
+      | "payroll"
+      | "contractors"
+      | "software"
+      | "office"
+      | "marketing"
+      | "travel"
+      | "other";
+    amount: number;
+    vendor: string;
+    department: string;
+    costCentre: string;
+    project: string;
+    office: string;
+    description: string;
+  }>;
+  series: Array<{
+    month: string;
+    total: number;
+    payroll: number;
+    contractors: number;
+    software: number;
+    office: number;
+    marketing: number;
+    travel: number;
+    other: number;
+  }>;
+  filterOptions: {
+    departments: string[];
+    costCentres: string[];
+    projects: string[];
+    offices: string[];
+  };
+};
+
 export type FinancialOverviewSnapshot = {
   revenueYtd: number;
   cashPosition: number;
@@ -103,6 +155,7 @@ export type FinancialOverviewSnapshot = {
   monthlyExpenses: number;
   annualRevenue: number;
   annualExpenses: number;
+  burnRate: FinancialOverviewBurnRate;
   ar: {
     outstanding: number;
     overdue: number;

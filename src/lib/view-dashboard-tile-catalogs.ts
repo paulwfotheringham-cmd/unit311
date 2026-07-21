@@ -70,6 +70,7 @@ export const PROJECTS_DASHBOARD_TILES: DashboardTileDefinition[] = [
 export const FINANCIALS_DASHBOARD_TILES: DashboardTileDefinition[] = [
   { id: "revenue-ytd", label: "Revenue YTD", value: "$0", hint: "From general ledger" },
   { id: "cash-position", label: "Cash Position", value: "$0", hint: "Wise cash accounts" },
+  { id: "burn-rate", label: "Burn Rate", value: "€0 / month", hint: "Operating spend pace" },
   { id: "accounts-receivable", label: "Accounts Receivable", value: "$0", hint: "Outstanding AR" },
   { id: "accounts-payable", label: "Accounts Payable", value: "$0", hint: "Outstanding AP" },
   { id: "net-profit", label: "Net Profit", value: "$0", hint: "Income − expenses" },
@@ -94,12 +95,28 @@ export function buildFinancialsDashboardCatalog(
     monthlyExpenses: number;
     annualRevenue: number;
     annualExpenses: number;
+    burnRate?: {
+      monthly: number;
+      quarterly: number;
+      annual: number;
+      changePct: number;
+      trend: "improving" | "stable" | "increasing";
+      trendLabel: string;
+      currency: string;
+    };
   } | null,
 ): DashboardTileDefinition[] {
   const money = (value: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const burnMoney = (value: number, currency = "EUR") =>
+    new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency,
       maximumFractionDigits: 0,
     }).format(value);
 
@@ -118,6 +135,25 @@ export function buildFinancialsDashboardCatalog(
         return { ...tile, value: money(overview.revenueYtd) };
       case "cash-position":
         return { ...tile, value: money(overview.cashPosition) };
+      case "burn-rate": {
+        const burn = overview.burnRate;
+        if (!burn) return tile;
+        const arrow = burn.trend === "improving" ? "▼" : burn.trend === "increasing" ? "▲" : "●";
+        const signed =
+          burn.changePct > 0 ? `+${burn.changePct}%` : `${burn.changePct}%`;
+        return {
+          ...tile,
+          value: `${burnMoney(burn.monthly, burn.currency)} / month`,
+          meta: [
+            `Quarterly ${burnMoney(burn.quarterly, burn.currency)}`,
+            `Annual ${burnMoney(burn.annual, burn.currency)}`,
+          ],
+          trend: `${arrow} ${signed}`,
+          hint: burn.trendLabel,
+          accent: burn.trend,
+          interactive: true,
+        };
+      }
       case "accounts-receivable":
         return { ...tile, value: money(overview.accountsReceivable) };
       case "accounts-payable":

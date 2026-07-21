@@ -1,5 +1,10 @@
 import { listFinancialActivity } from "@/lib/accounting/activity";
-import { getMonthlySeriesFromPostedLines, getTypeTotals } from "@/lib/accounting/balances";
+import {
+  getMonthlySeriesFromPostedLines,
+  getPostedExpenseLines,
+  getTypeTotals,
+} from "@/lib/accounting/balances";
+import { buildBurnRateSnapshot } from "@/lib/accounting/burn-rate";
 import { listInvoices } from "@/lib/accounting/invoices-service";
 import type { FinancialOverviewSnapshot } from "@/lib/accounting/types";
 import {
@@ -10,6 +15,15 @@ import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function emptyBurnRate(cashBalance = 0) {
+  return buildBurnRateSnapshot({
+    cashBalance,
+    monthlyOutgoings: [],
+    postedExpenses: [],
+    currency: "EUR",
+  });
 }
 
 function emptyOverview(): FinancialOverviewSnapshot {
@@ -24,6 +38,7 @@ function emptyOverview(): FinancialOverviewSnapshot {
     monthlyExpenses: 0,
     annualRevenue: 0,
     annualExpenses: 0,
+    burnRate: emptyBurnRate(0),
     ar: {
       outstanding: 0,
       overdue: 0,
@@ -72,11 +87,12 @@ export async function getFinancialOverview(
     const workspaceId = await resolveFinancialsWorkspaceId(scope);
     const workspaceScope: FinancialsWorkspaceScope = { workspaceId };
 
-    const [totals, charts, invoices, activity] = await Promise.all([
+    const [totals, charts, invoices, activity, postedExpenses] = await Promise.all([
       getTypeTotals(workspaceScope),
       getMonthlySeriesFromPostedLines(workspaceScope),
       listInvoices(workspaceScope),
       listFinancialActivity(25, workspaceScope),
+      getPostedExpenseLines(workspaceScope),
     ]);
 
     const today = new Date();
@@ -146,6 +162,13 @@ export async function getFinancialOverview(
         .reduce((sum, point) => sum + point.amount, 0),
     );
 
+    const burnRate = buildBurnRateSnapshot({
+      cashBalance: totals.cashPosition,
+      monthlyOutgoings: charts.monthlyOutgoings,
+      postedExpenses,
+      currency: "EUR",
+    });
+
     return {
       revenueYtd: totals.income,
       cashPosition: totals.cashPosition,
@@ -157,6 +180,7 @@ export async function getFinancialOverview(
       monthlyExpenses: monthlyExpensePoint?.amount ?? 0,
       annualRevenue,
       annualExpenses,
+      burnRate,
       ar: {
         outstanding: unpaid.reduce((sum, invoice) => sum + invoice.amount, 0),
         overdue: overdue.reduce((sum, invoice) => sum + invoice.amount, 0),

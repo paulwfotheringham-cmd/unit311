@@ -3,7 +3,11 @@ export type DashboardTileDefinition = {
   label: string;
   value: string;
   hint?: string;
-  accent?: string;
+  accent?: "improving" | "stable" | "increasing" | string;
+  /** Optional secondary metric lines under the primary value. */
+  meta?: string[];
+  trend?: string;
+  interactive?: boolean;
 };
 
 export function loadViewTileLayout(storageKey: string, defaults: string[]): string[] {

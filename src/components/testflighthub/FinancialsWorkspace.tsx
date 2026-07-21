@@ -17,6 +17,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { formatMoney } from "@/lib/accounting/chart-of-accounts";
 import type { FinancialOverviewSnapshot } from "@/lib/accounting/types";
 import DashboardTopTilesBar from "@/components/testflighthub/DashboardTopTilesBar";
+import BurnRateOverviewSection from "@/components/testflighthub/BurnRateOverviewSection";
 import {
   DEFAULT_FINANCIALS_TILE_LAYOUT,
   FINANCIALS_DASHBOARD_TILES,
@@ -36,6 +37,7 @@ export default function FinancialsWorkspace() {
   const [overview, setOverview] = useState<FinancialOverviewSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [burnDrillOpen, setBurnDrillOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,11 +68,14 @@ export default function FinancialsWorkspace() {
   return (
     <div className="space-y-4">
       <DashboardTopTilesBar
-        storageKey="unit311-financials-dashboard-tiles"
+        storageKey="unit311-financials-dashboard-tiles-v2"
         catalog={tiles.length ? tiles : FINANCIALS_DASHBOARD_TILES}
         defaultLayout={DEFAULT_FINANCIALS_TILE_LAYOUT}
         title="Customize tiles"
         showCustomizeHint
+        onTileClick={(tileId) => {
+          if (tileId === "burn-rate") setBurnDrillOpen(true);
+        }}
       />
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -81,7 +86,8 @@ export default function FinancialsWorkspace() {
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white">Overview</h2>
             <p className="mt-1 text-sm text-white/55">
-              Live figures from the General Ledger. Values stay at zero until journals exist.
+              Live figures from the General Ledger. Burn Rate uses posted expenses when available,
+              otherwise a GL-derived demo ledger.
             </p>
           </div>
           <button
@@ -105,6 +111,14 @@ export default function FinancialsWorkspace() {
           </div>
         ) : null}
       </section>
+
+      {overview?.burnRate ? (
+        <BurnRateOverviewSection
+          burnRate={overview.burnRate}
+          drillOpen={burnDrillOpen}
+          onDrillOpenChange={setBurnDrillOpen}
+        />
+      ) : null}
 
       {overview ? (
         <>
