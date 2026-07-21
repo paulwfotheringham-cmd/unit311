@@ -29,7 +29,6 @@ import ExplanationPanel from "@/components/executive-assistant/ExplanationPanel"
 import {
   GENERATE_ACTIONS,
   HOME_SUGGESTED_ACTIONS,
-  greetingForNow,
   resolveExecutiveAssistantContext,
   type ExecutiveAssistantVariant,
 } from "@/lib/executive-assistant-ui";
@@ -128,7 +127,6 @@ export default function ExecutiveAssistantPanel({
   onClose,
   className,
 }: ExecutiveAssistantPanelProps) {
-  const [userName, setUserName] = useState("there");
   const [message, setMessage] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -149,7 +147,6 @@ export default function ExecutiveAssistantPanel({
     () => resolveExecutiveAssistantContext(activeView, mode),
     [activeView, mode],
   );
-  const greeting = useMemo(() => greetingForNow(userName), [userName]);
   const isPage = variant === "page" || variant === "home";
   const suggested = isPage ? HOME_SUGGESTED_ACTIONS : context.suggestedPrompts;
   const selectionLabel = [
@@ -175,17 +172,6 @@ export default function ExecutiveAssistantPanel({
     } catch {
       // persistence optional until migration applied
     }
-  }, []);
-
-  useEffect(() => {
-    void fetch("/api/auth/whoami", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const data = (await response.json()) as { displayName?: string };
-        const first = data.displayName?.trim().split(/\s+/)[0];
-        if (first) setUserName(first);
-      })
-      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -437,11 +423,11 @@ export default function ExecutiveAssistantPanel({
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-5 py-4">
         <div>
           <h2 className="text-base font-semibold tracking-tight text-white">
-            Executive Assistant
+            AI Executive Assistant
           </h2>
           <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-emerald-300/90">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            AI Operating Assistant · Online
+            Online
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -520,16 +506,14 @@ export default function ExecutiveAssistantPanel({
 
         <section>
           <SectionLabel>Current context</SectionLabel>
-          <p className="mt-2 text-sm text-white/70">{greeting}</p>
-          <p className="mt-1 text-base font-semibold text-white">Viewing · {context.label}</p>
+          <p className="mt-2 text-base font-semibold text-white">Viewing · {context.label}</p>
           {selectionLabel ? (
             <p className="mt-1 text-xs text-sky-200/80">{selectionLabel}</p>
           ) : null}
         </section>
 
         <section data-ai-target="ea-conversation">
-          <SectionLabel>Conversation</SectionLabel>
-          <div className="mt-2 space-y-2 rounded-xl border border-white/10 bg-[#0b1524]/60 p-3">
+          <div className="mt-1 space-y-2 rounded-xl border border-white/10 bg-[#0b1524]/60 p-3">
             {messages.length === 0 ? (
               <div className="px-2 py-6 text-center">
                 <FileText className="mx-auto h-5 w-5 text-white/25" />

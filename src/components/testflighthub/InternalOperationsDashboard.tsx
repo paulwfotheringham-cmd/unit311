@@ -240,6 +240,8 @@ export default function InternalOperationsDashboard({
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const testingSandboxHostRef = useRef<HTMLDivElement>(null);
   const mockSeededRef = useRef(false);
+  const clientsLoadedRef = useRef(false);
+  const usersLoadedRef = useRef(false);
 
   useInfoEmailWhatsAppPoller(true);
 
@@ -265,6 +267,15 @@ export default function InternalOperationsDashboard({
   }, [activeView, assetRegistry, assets.length, representatives.length]);
 
   useEffect(() => {
+    const needsUsers =
+      activeView === "assets" ||
+      activeView === "fleet" ||
+      activeView === "calendar" ||
+      activeView === "users" ||
+      activeView === "users-external";
+    if (!needsUsers || usersLoadedRef.current) return;
+    usersLoadedRef.current = true;
+
     void fetch("/api/users", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) return;
@@ -274,9 +285,21 @@ export default function InternalOperationsDashboard({
       .catch(() => {
         // keep local fallback until Supabase migration is applied
       });
-  }, []);
+  }, [activeView]);
 
   useEffect(() => {
+    const needsClients =
+      activeView === "clients" ||
+      activeView === "clients-dashboard" ||
+      activeView === "assets" ||
+      activeView === "projects" ||
+      activeView === "projects-dashboard" ||
+      activeView === "projects-internal" ||
+      activeView === "projects-external" ||
+      activeView === "calendar";
+    if (!needsClients || clientsLoadedRef.current) return;
+    clientsLoadedRef.current = true;
+
     void fetch("/api/clients", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) {
@@ -295,7 +318,7 @@ export default function InternalOperationsDashboard({
       .catch(() => {
         setClients([]);
       });
-  }, []);
+  }, [activeView]);
 
   useEffect(() => {
     const viewParam = searchParams.get("view");

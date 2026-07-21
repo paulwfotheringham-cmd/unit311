@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, BookOpen, Menu, X } from "lucide-react";
+import { Bell, BookOpen, Menu, Sparkles, X } from "lucide-react";
 
 import GuidedLearningOverlay from "@/components/executive-assistant/GuidedLearningOverlay";
 import {
@@ -61,7 +61,8 @@ export default function SurveyOperationsShell({
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [briefReady, setBriefReady] = useState<BriefReadyDetail | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
-  const [tutorialMenuOpen, setTutorialMenuOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const isHomeView = mode === "internal" && activeView === "home";
   const pathname = usePathname() ?? "";
   const [isInternalHost] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -100,6 +101,15 @@ export default function SurveyOperationsShell({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mobileNavOpen]);
+
+  useEffect(() => {
+    if (!tutorialOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTutorialOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [tutorialOpen]);
 
   useEffect(() => {
     const onBrief = (event: Event) => {
@@ -208,51 +218,29 @@ export default function SurveyOperationsShell({
 
             <div className="relative flex shrink-0 items-center gap-2">
               {showPlatformAi ? (
-                <div className="relative">
+                <>
+                  <button
+                    type="button"
+                    data-ai-target="ai-assistant"
+                    aria-label="Open AI Executive Assistant"
+                    aria-expanded={assistantOpen}
+                    onClick={() => setAssistantOpen(true)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 px-2.5 text-[11px] font-semibold text-sky-100 transition-colors hover:border-sky-400/45 hover:bg-sky-500/20"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Assistant
+                  </button>
                   <button
                     type="button"
                     aria-label="Tutorial"
-                    aria-expanded={tutorialMenuOpen}
-                    onClick={() => setTutorialMenuOpen((value) => !value)}
+                    aria-expanded={tutorialOpen}
+                    onClick={() => setTutorialOpen(true)}
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-2.5 text-[11px] font-semibold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white"
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     Tutorial
                   </button>
-                  {tutorialMenuOpen ? (
-                    <div className="absolute right-0 top-[calc(100%+0.4rem)] z-30 w-56 rounded-xl border border-white/12 bg-[#0b1524] p-3 shadow-xl">
-                      <p className="text-xs font-semibold text-white">Page walkthrough</p>
-                      <p className="mt-1 text-[11px] leading-relaxed text-white/50">
-                        A short guided tour of this module. Optional voice is available in the tour panel.
-                      </p>
-                      <div className="mt-3 flex flex-col gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            requestShowMeAround(guidedViewId);
-                            setTutorialMenuOpen(false);
-                          }}
-                          className="rounded-lg border border-sky-400/35 bg-sky-500/15 px-2.5 py-1.5 text-left text-[11px] font-semibold text-sky-100"
-                        >
-                          Start tutorial
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            markNeverShowTours();
-                            setTutorialMenuOpen(false);
-                          }}
-                          className="rounded-lg border border-white/10 px-2.5 py-1.5 text-left text-[11px] text-white/55"
-                        >
-                          Don&apos;t show again
-                        </button>
-                      </div>
-                      {hasNeverShowTours() ? (
-                        <p className="mt-2 text-[10px] text-white/35">Tours are currently disabled.</p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
+                </>
               ) : null}
               {showPlatformAi && briefReady?.available ? (
                 <button
@@ -333,12 +321,82 @@ export default function SurveyOperationsShell({
         <div
           data-ai-target="page-main"
           className={cn(
-            "safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]",
+            "safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden px-2 py-2 sm:px-3 sm:py-3 md:px-4",
+            isHomeView
+              ? "overflow-hidden"
+              : "overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]",
           )}
         >
           {children}
         </div>
       </div>
+
+      {showPlatformAi && tutorialOpen ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-[2px]"
+          role="presentation"
+          onClick={() => setTutorialOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tutorial-modal-title"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-sky-400/35 bg-gradient-to-br from-[#122038] via-[#0e1a2e] to-[#0a1424] p-6 shadow-[0_28px_80px_-24px_rgba(14,165,233,0.55)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 via-cyan-300 to-sky-500" />
+            <button
+              type="button"
+              aria-label="Close tutorial"
+              onClick={() => setTutorialOpen(false)}
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/20 ring-1 ring-sky-400/40">
+                <BookOpen className="h-5 w-5 text-sky-200" />
+              </span>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
+                  Guided learning
+                </p>
+                <h2 id="tutorial-modal-title" className="mt-0.5 text-lg font-semibold tracking-tight text-white">
+                  Module tutorial
+                </h2>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-white/60">
+              A short walkthrough of this module. Optional voice narration is available once the tour starts.
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  requestShowMeAround(guidedViewId);
+                  setTutorialOpen(false);
+                }}
+                className="rounded-xl border border-sky-400/40 bg-sky-500/20 px-4 py-2.5 text-sm font-semibold text-sky-50 transition-colors hover:bg-sky-500/30"
+              >
+                Start tutorial
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  markNeverShowTours();
+                  setTutorialOpen(false);
+                }}
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white/80"
+              >
+                Don&apos;t show again
+              </button>
+            </div>
+            {hasNeverShowTours() ? (
+              <p className="mt-3 text-center text-[11px] text-white/35">Tours are currently disabled.</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <PlatformFloatingAiAssistant
         open={assistantOpen}

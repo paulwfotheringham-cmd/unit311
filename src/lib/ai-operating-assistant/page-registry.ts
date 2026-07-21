@@ -74,7 +74,7 @@ function baseTargets(viewId: string): AiUiTarget[] {
     },
     {
       id: "ai-assistant",
-      label: "AI Operating Assistant",
+      label: "AI Executive Assistant",
       kind: "button",
       selector: '[data-ai-target="ai-assistant"]',
       explanation:
@@ -356,7 +356,7 @@ const PAGE_GUIDES: Record<string, AiPageGuide> = {
     ],
   }),
   "executive-assistant": guide("executive-assistant", {
-    purpose: "Full-page AI Operating Assistant — conversations, tours, and live tools.",
+    purpose: "Full-page AI Executive Assistant — conversations, tours, and live tools.",
     kpis: [],
     buttons: ["New conversation", "Show Me Around", "Settings"],
     actions: ["Ask business questions", "Start a page tour", "Generate reports"],

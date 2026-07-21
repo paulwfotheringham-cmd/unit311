@@ -16,7 +16,6 @@ import {
   CircleDollarSign,
   FolderKanban,
   Gauge,
-  LayoutGrid,
   Sparkles,
 } from "lucide-react";
 
@@ -119,24 +118,9 @@ const ACCENT: Record<
   },
 };
 
-/** Deterministic illustrative series when live chart points are missing. */
-function sampleSeries(seed: number, length = 6): Array<{ amount: number }> {
-  const out: Array<{ amount: number }> = [];
-  let x = seed % 997 || 17;
-  for (let i = 0; i < length; i += 1) {
-    x = (x * 48271) % 2147483647;
-    const wave = Math.sin((i + seed) * 0.85) * 0.22 + 1;
-    out.push({ amount: Math.round(40 + (x % 60) * wave) });
-  }
-  return out;
-}
-
-function withSparkFallback(
-  live: Array<{ amount: number }>,
-  seed: number,
-): { data: Array<{ amount: number }>; isSample: boolean } {
-  if (live.length >= 2) return { data: live, isSample: false };
-  return { data: sampleSeries(seed), isSample: true };
+/** Live spark only — no fabricated series. */
+function liveSpark(points: Array<{ amount: number }>): Array<{ amount: number }> | undefined {
+  return points.length >= 2 ? points : undefined;
 }
 
 function pctChange(points: Array<{ amount: number }>) {
@@ -150,11 +134,9 @@ function pctChange(points: Array<{ amount: number }>) {
 function MiniSpark({
   data,
   color,
-  sample,
 }: {
   data: Array<{ amount: number }>;
   color: string;
-  sample?: boolean;
 }) {
   return (
     <div className="relative h-7 w-full">
@@ -171,11 +153,53 @@ function MiniSpark({
           />
         </AreaChart>
       </ResponsiveContainer>
-      {sample ? (
-        <span className="pointer-events-none absolute bottom-0 right-0 text-[8px] font-medium uppercase tracking-wider text-slate-500">
-          Sample
-        </span>
-      ) : null}
+    </div>
+  );
+}
+
+function ChartEmpty({ label = "No live data yet" }: { label?: string }) {
+  return (
+    <div className="flex h-full min-h-[3.5rem] items-center justify-center rounded-xl bg-white/[0.02] ring-1 ring-white/[0.05]">
+      <p className="px-3 text-center text-[12px] text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function SegmentBars({
+  rows,
+  color,
+  emptyLabel = "No data yet",
+}: {
+  rows: Array<{ label: string; count: number }>;
+  color: string;
+  emptyLabel?: string;
+}) {
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  if (total === 0) {
+    return <ChartEmpty label={emptyLabel} />;
+  }
+  const max = Math.max(1, ...rows.map((row) => row.count));
+  return (
+    <div className="flex min-h-0 flex-1 flex-col justify-end gap-1.5">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center gap-2">
+          <span className="w-[4.5rem] shrink-0 truncate text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            {row.label}
+          </span>
+          <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.max(row.count > 0 ? 10 : 0, (row.count / max) * 100)}%`,
+                backgroundColor: color,
+              }}
+            />
+          </div>
+          <span className="w-5 shrink-0 text-right text-[11px] font-semibold tabular-nums text-white">
+            {row.count}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -186,14 +210,12 @@ function KpiCell({
   delta,
   spark,
   sparkColor,
-  sample,
 }: {
   label: string;
   value: string;
   delta?: number | null;
   spark?: Array<{ amount: number }>;
   sparkColor?: string;
-  sample?: boolean;
 }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/[0.035] px-2.5 py-2 ring-1 ring-white/[0.06]">
@@ -218,7 +240,7 @@ function KpiCell({
       </div>
       {spark ? (
         <div className="mt-1.5">
-          <MiniSpark data={spark} color={sparkColor ?? "#38bdf8"} sample={sample} />
+          <MiniSpark data={spark} color={sparkColor ?? "#38bdf8"} />
         </div>
       ) : null}
     </div>
@@ -363,7 +385,6 @@ function Tile({
  */
 export default function InternalDashboardHome(_props?: { showCustomize?: boolean }) {
   const [bundle, setBundle] = useState<HomeBundle | null>(null);
-  const [editing, setEditing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -466,14 +487,30 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
       { stage: "Won", count: wonCount },
     ];
 
-    const acquisitionTrend = [0, 1, 2, 3, 4, 5].map((i) => {
-      const base = Math.max(1, Math.round(activeCustomers * (0.55 + i * 0.09)));
-      return {
-        label: ["J", "F", "M", "A", "M", "J"][i]!,
-        customers: base + (i === 5 ? 0 : Math.round((leads.length % 5) * 0.3)),
-        pipeline: Math.max(0, Math.round(pipeline * (0.4 + i * 0.12) / Math.max(pipeline || 1, 1) * (pipeline || 40))),
-      };
-    });
+    const clients = bundle?.clients ?? [];
+    const segments = [
+      {
+        label: "Active",
+        count: clients.filter((client) => client.accountStatus === "Active").length,
+      },
+      {
+        label: "Onboarding",
+        count: clients.filter((client) =>
+          ["Client Created", "Workspace Provisioned", "Onboarding"].includes(client.accountStatus),
+        ).length,
+      },
+      {
+        label: "Dormant",
+        count: clients.filter((client) => client.accountStatus === "Dormant").length,
+      },
+      {
+        label: "Archived",
+        count: clients.filter((client) => client.accountStatus === "Archived").length,
+      },
+    ];
+    const inactiveCustomers = segments
+      .filter((row) => row.label !== "Active")
+      .reduce((sum, row) => sum + row.count, 0);
 
     return {
       pipeline,
@@ -481,10 +518,12 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
       closingCount: closing.length,
       openCount: open.length,
       activeCustomers,
+      inactiveCustomers,
       winRate,
       funnel,
-      acquisitionTrend,
+      segments,
       leadCount: leads.length,
+      customerTotal: clients.length,
     };
   }, [bundle]);
 
@@ -516,16 +555,16 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
         )
       : 0;
 
-  const deliveryTrend = useMemo(() => {
-    const live = (bundle?.projects ?? []).filter((project) => project.phase === "live");
-    if (live.length === 0) {
-      return { data: sampleSeries(41), isSample: true };
-    }
-    return {
-      data: live.slice(0, 6).map((project) => ({ amount: project.progressPct })),
-      isSample: false,
-    };
-  }, [bundle]);
+  const projectHealth = useMemo(() => {
+    const projects = bundle?.projects ?? [];
+    const onTrack = Math.max(projectsLive - projectsAtRisk.length, 0);
+    const upcoming = projects.filter((project) => project.phase === "upcoming").length;
+    return [
+      { label: "On track", count: onTrack },
+      { label: "At risk", count: projectsAtRisk.length },
+      { label: "Upcoming", count: upcoming },
+    ];
+  }, [bundle, projectsAtRisk.length, projectsLive]);
 
   const approvals = actions.filter(
     (item) => item.primaryLabel === "Approve" || item.title.toLowerCase().includes("approv"),
@@ -613,22 +652,11 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
     amount: point.amount,
   }));
 
-  const revenueSpark = withSparkFallback(revenueLive, 11);
-  const spendSpark = withSparkFallback(spendLive, 23);
-  const cashSpark = withSparkFallback(cashLive, 37);
-  const payrollSpark = withSparkFallback(payrollLive, 53);
-  const burnSpark = withSparkFallback(
-    spendLive.length >= 2
-      ? spendLive
-      : (financial?.burnRate
-          ? [
-              { amount: financial.burnRate.monthly * 0.85 },
-              { amount: financial.burnRate.monthly * 0.92 },
-              { amount: financial.burnRate.monthly },
-            ]
-          : []),
-    71,
-  );
+  const revenueSpark = liveSpark(revenueLive);
+  const spendSpark = liveSpark(spendLive);
+  const cashSpark = liveSpark(cashLive);
+  const payrollSpark = liveSpark(payrollLive);
+  const burnSpark = liveSpark(spendLive);
 
   const money = (value: number | null | undefined) =>
     value == null ? "—" : formatMoney(value);
@@ -642,29 +670,10 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
     <div
       data-ai-target="home-tiles"
       aria-label="Executive command centre"
-      className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2 overflow-hidden px-0.5 pb-0.5 pt-0 sm:gap-2.5 sm:px-1"
+      className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden"
     >
-      <div className="flex shrink-0 items-center justify-end">
-        <button
-          type="button"
-          onClick={() => setEditing((value) => !value)}
-          className={cn(
-            "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-colors",
-            editing
-              ? "bg-sky-500/25 text-sky-100 ring-1 ring-sky-400/40"
-              : "bg-white/[0.04] text-slate-300 ring-1 ring-white/[0.08] hover:bg-white/[0.07] hover:text-white",
-          )}
-        >
-          <LayoutGrid className="h-3.5 w-3.5" />
-          {editing ? "Done" : "Edit tiles"}
-        </button>
-      </div>
-
       <div
-        className={cn(
-          "grid min-h-0 flex-1 grid-cols-1 gap-2.5 overflow-hidden sm:grid-cols-2 sm:gap-3 xl:grid-cols-3 xl:grid-rows-2",
-          editing && "rounded-xl ring-1 ring-sky-400/30 ring-offset-2 ring-offset-[#0b1220]",
-        )}
+        className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 overflow-hidden sm:gap-2.5 xl:grid-cols-3 xl:grid-rows-2"
       >
         {/* 1 — Executive Brief */}
         <Tile title="Executive Brief" icon={Sparkles} accent="sky" href={HREFS.calendar}>
@@ -748,32 +757,28 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                   <KpiCell
                     label="Revenue"
                     value={money(financial?.monthlyRevenue)}
-                    delta={revenueSpark.isSample ? null : pctChange(revenueSpark.data)}
-                    spark={revenueSpark.data}
+                    delta={revenueSpark ? pctChange(revenueSpark) : null}
+                    spark={revenueSpark}
                     sparkColor={purple}
-                    sample={revenueSpark.isSample}
                   />
                   <KpiCell
                     label="Forecast"
                     value={money(financial?.burnRate.forecastMonthly)}
-                    spark={burnSpark.data}
+                    spark={burnSpark}
                     sparkColor="#c4b5fd"
-                    sample={burnSpark.isSample}
                   />
                   <KpiCell
                     label="Spend"
                     value={money(financial?.monthlyExpenses)}
-                    delta={spendSpark.isSample ? null : pctChange(spendSpark.data)}
-                    spark={spendSpark.data}
+                    delta={spendSpark ? pctChange(spendSpark) : null}
+                    spark={spendSpark}
                     sparkColor="#8b5cf6"
-                    sample={spendSpark.isSample}
                   />
                   <KpiCell
                     label="Burn"
                     value={money(financial?.burnRate.monthly)}
-                    spark={burnSpark.data}
+                    spark={burnSpark}
                     sparkColor="#a78bfa"
-                    sample={burnSpark.isSample}
                   />
                   <KpiCell
                     label="Debtors"
@@ -786,9 +791,8 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                   <KpiCell
                     label="Cash"
                     value={money(financial?.cashPosition)}
-                    spark={cashSpark.data}
+                    spark={cashSpark}
                     sparkColor={purple}
-                    sample={cashSpark.isSample}
                   />
                   <KpiCell label="Net profit" value={money(financial?.netProfit)} />
                 </div>
@@ -799,46 +803,40 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                     <KpiCell
                       label="Cash"
                       value={money(financial?.cashPosition)}
-                      spark={cashSpark.data}
+                      spark={cashSpark}
                       sparkColor={purple}
-                      sample={cashSpark.isSample}
                     />
                     <KpiCell label="Burn / month" value={money(financial?.burnRate.monthly)} />
                     <KpiCell label="Debtors" value={money(financial?.accountsReceivable)} />
                     <KpiCell label="Creditors" value={money(financial?.accountsPayable)} />
                   </div>
                   <div className="relative min-h-0 flex-1">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={cashSpark.data}>
-                        <Tooltip
-                          contentStyle={{
-                            background: "#0f172a",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: 8,
-                            fontSize: 11,
-                          }}
-                          formatter={(value) =>
-                            cashSpark.isSample
-                              ? String(value)
-                              : formatMoney(Number(value ?? 0))
-                          }
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="amount"
-                          stroke={purple}
-                          fill={purple}
-                          fillOpacity={0.2}
-                          strokeWidth={2}
-                          isAnimationActive={false}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                    {cashSpark.isSample ? (
-                      <p className="absolute bottom-0 right-1 text-[8px] font-medium uppercase tracking-wider text-slate-500">
-                        Sample
-                      </p>
-                    ) : null}
+                    {cashSpark ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={cashSpark}>
+                          <Tooltip
+                            contentStyle={{
+                              background: "#0f172a",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              borderRadius: 8,
+                              fontSize: 11,
+                            }}
+                            formatter={(value) => formatMoney(Number(value ?? 0))}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="amount"
+                            stroke={purple}
+                            fill={purple}
+                            fillOpacity={0.2}
+                            strokeWidth={2}
+                            isAnimationActive={false}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <ChartEmpty label="Cash trend unavailable" />
+                    )}
                   </div>
                 </div>
               ) : null}
@@ -861,27 +859,25 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                   <KpiCell
                     label="Payroll"
                     value={money(financial?.payroll.monthly)}
-                    spark={payrollSpark.data}
+                    spark={payrollSpark}
                     sparkColor="#c4b5fd"
-                    sample={payrollSpark.isSample}
                   />
                   <KpiCell label="Net profit" value={money(financial?.netProfit)} />
-                  <div className="relative col-span-2 h-[4.25rem]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={revenueSpark.data}>
-                        <Bar
-                          dataKey="amount"
-                          fill={purple}
-                          radius={[4, 4, 0, 0]}
-                          isAnimationActive={false}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    {revenueSpark.isSample ? (
-                      <p className="absolute bottom-0 right-1 text-[8px] font-medium uppercase tracking-wider text-slate-500">
-                        Sample
-                      </p>
-                    ) : null}
+                  <div className="col-span-2 h-[4.25rem]">
+                    {revenueSpark ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={revenueSpark}>
+                          <Bar
+                            dataKey="amount"
+                            fill={purple}
+                            radius={[4, 4, 0, 0]}
+                            isAnimationActive={false}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <ChartEmpty label="Revenue history unavailable" />
+                    )}
                   </div>
                 </div>
               ) : null}
@@ -940,37 +936,19 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
               {tab === 1 ? (
                 <div className="flex h-full flex-col gap-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <KpiCell label="Active customers" value={String(commercial.activeCustomers)} />
-                    <KpiCell label="CRM leads" value={String(commercial.leadCount)} />
+                    <KpiCell label="Active" value={String(commercial.activeCustomers)} />
+                    <KpiCell label="Inactive" value={String(commercial.inactiveCustomers)} />
+                    <KpiCell label="Total" value={String(commercial.customerTotal)} />
                     <KpiCell label="Pipeline" value={money(commercial.pipeline)} />
-                    <KpiCell label="Opportunities" value={String(commercial.openCount)} />
                   </div>
-                  <div className="relative min-h-0 flex-1">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={commercial.acquisitionTrend}>
-                        <Tooltip
-                          contentStyle={{
-                            background: "#0f172a",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: 8,
-                            fontSize: 11,
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="customers"
-                          stroke={emerald}
-                          fill={emerald}
-                          fillOpacity={0.22}
-                          strokeWidth={2}
-                          isAnimationActive={false}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                    <p className="absolute bottom-0 right-1 text-[8px] font-medium uppercase tracking-wider text-slate-500">
-                      Trend
-                    </p>
-                  </div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Customer segmentation
+                  </p>
+                  <SegmentBars
+                    rows={commercial.segments}
+                    color={emerald}
+                    emptyLabel="No customers to segment"
+                  />
                 </div>
               ) : null}
               {tab === 2 ? (
@@ -1005,7 +983,13 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
                   <div className="grid grid-cols-3 gap-2">
                     <KpiCell label="Active" value={String(projectsLive)} />
                     <KpiCell label="At risk" value={String(projectsAtRisk.length)} />
-                    <KpiCell label="Value" value="—" />
+                    <KpiCell
+                      label="Upcoming"
+                      value={String(
+                        (bundle?.projects ?? []).filter((project) => project.phase === "upcoming")
+                          .length,
+                      )}
+                    />
                   </div>
                   {highestRiskProject ? (
                     <div className="rounded-xl bg-white/[0.035] px-2.5 py-2 ring-1 ring-white/[0.06]">
@@ -1066,29 +1050,22 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
               {tab === 2 ? (
                 <div className="flex h-full flex-col gap-2">
                   <div className="grid grid-cols-2 gap-2">
-                    <KpiCell label="Delivery" value={`${avgProgress}%`} />
-                    <KpiCell label="On track" value={String(Math.max(projectsLive - projectsAtRisk.length, 0))} />
+                    <KpiCell label="Avg progress" value={`${avgProgress}%`} />
+                    <KpiCell
+                      label="On track"
+                      value={String(Math.max(projectsLive - projectsAtRisk.length, 0))}
+                    />
+                    <KpiCell label="At risk" value={String(projectsAtRisk.length)} />
+                    <KpiCell label="Live" value={String(projectsLive)} />
                   </div>
-                  <div className="relative min-h-0 flex-1">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={deliveryTrend.data}>
-                        <Area
-                          type="monotone"
-                          dataKey="amount"
-                          stroke={amber}
-                          fill={amber}
-                          fillOpacity={0.2}
-                          strokeWidth={2}
-                          isAnimationActive={false}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                    {deliveryTrend.isSample ? (
-                      <p className="absolute bottom-0 right-1 text-[8px] font-medium uppercase tracking-wider text-slate-500">
-                        Sample
-                      </p>
-                    ) : null}
-                  </div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Project health
+                  </p>
+                  <SegmentBars
+                    rows={projectHealth}
+                    color={amber}
+                    emptyLabel="No projects to assess"
+                  />
                 </div>
               ) : null}
             </>
