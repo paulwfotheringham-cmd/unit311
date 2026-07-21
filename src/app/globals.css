@@ -11,6 +11,21 @@
   --border: rgba(148, 163, 184, 0.12);
   --border-strong: rgba(148, 163, 184, 0.2);
   --glow: rgba(37, 99, 235, 0.15);
+
+  /* Unit311 Central enterprise tokens (Executive AI / Command Centre) */
+  --u311-accent: #38bdf8;
+  --u311-surface: rgba(11, 21, 36, 0.8);
+  --u311-surface-inset: rgba(7, 17, 31, 0.9);
+  --u311-border: rgba(255, 255, 255, 0.1);
+  --u311-radius-sm: 0.5rem;
+  --u311-radius-md: 0.75rem;
+  --u311-radius-lg: 1rem;
+  --u311-pad: 1rem;
+  --u311-gap: 0.75rem;
+  --u311-status-success: #6ee7b7;
+  --u311-status-warning: #fcd34d;
+  --u311-status-critical: #fda4af;
+  --u311-status-info: #7dd3fc;
 }
 
 @theme inline {
@@ -771,4 +786,23 @@ svg {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* Guided Learning spotlight — fails soft when target missing */
+@keyframes unit311-ai-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 9999px rgba(2, 6, 23, 0.55),
+      0 0 0 0 rgba(56, 189, 248, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9999px rgba(2, 6, 23, 0.55),
+      0 0 0 6px rgba(56, 189, 248, 0.2);
+  }
+}
+
+.unit311-ai-spotlight {
+  animation: unit311-ai-pulse 1.6s ease-in-out infinite;
 }

@@ -33,6 +33,7 @@ export default function PlatformFloatingAiAssistant({
     <>
       <button
         type="button"
+        data-ai-target="ai-assistant"
         aria-label="Open AI Assistant"
         onClick={() => onOpenChange(true)}
         className={cn(

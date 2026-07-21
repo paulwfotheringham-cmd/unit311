@@ -4,7 +4,11 @@ import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
-import { ExecutiveAssistantTriggerButton } from "@/components/executive-assistant/ExecutiveAssistantPanel";
+import GuidedLearningOverlay, {
+  GuidedLearningFirstVisitOffer,
+} from "@/components/executive-assistant/GuidedLearningOverlay";
+import { GuidedLearningProvider } from "@/components/executive-assistant/GuidedLearningProvider";
+import ExecutiveProactiveLayer from "@/components/executive-assistant/ExecutiveProactiveLayer";
 import {
   getInternalNavBreadcrumb,
   internalViewTitles,
@@ -43,6 +47,7 @@ export default function SurveyOperationsShell({
   basePath = "/testflighthub",
 }: SurveyOperationsShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Mounted once in the shell — survives module navigation; do not reset on view change.
   const [assistantOpen, setAssistantOpen] = useState(false);
   const pathname = usePathname() ?? "";
   const [isInternalHost] = useState(() => {
@@ -100,8 +105,10 @@ export default function SurveyOperationsShell({
         : surveyViewTitles[activeView as SurveyOperationsView].subtitle
       : subtitle;
 
-  const showPlatformAi =
-    PLATFORM_AI_ASSISTANT_VISIBLE && mode === "internal";
+  const showPlatformAi = PLATFORM_AI_ASSISTANT_VISIBLE && mode === "internal";
+
+  const guidedViewId =
+    mode === "internal" && activeView != null ? String(activeView) : "home";
 
   const breadcrumbCrumbs =
     mode === "internal" &&
@@ -110,7 +117,7 @@ export default function SurveyOperationsShell({
       ? getInternalNavBreadcrumb(activeView)
       : null;
 
-  return (
+  const shell = (
     <div className="flex h-full min-h-0 w-full min-w-0">
       {mobileNavOpen && (
         <button
@@ -148,7 +155,10 @@ export default function SurveyOperationsShell({
           </>
         )}
 
-        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-md max-md:backdrop-blur-none sm:px-4 md:px-5 lg:h-16 lg:px-8 lg:backdrop-blur-xl">
+        <header
+          data-ai-target="page-header"
+          className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-md max-md:backdrop-blur-none sm:px-4 md:px-5 lg:h-16 lg:px-8 lg:backdrop-blur-xl"
+        >
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -181,13 +191,12 @@ export default function SurveyOperationsShell({
               </div>
             </div>
           </div>
-
-          {showPlatformAi ? (
-            <ExecutiveAssistantTriggerButton onClick={() => setAssistantOpen(true)} />
-          ) : null}
         </header>
 
-        <div className="safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]">
+        <div
+          data-ai-target="page-main"
+          className="safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]"
+        >
           {children}
         </div>
       </div>
@@ -198,6 +207,26 @@ export default function SurveyOperationsShell({
         activeView={activeView}
         mode={mode}
       />
+
+      {showPlatformAi ? (
+        <>
+          <GuidedLearningOverlay />
+          <GuidedLearningFirstVisitOffer onOpenAssistant={() => setAssistantOpen(true)} />
+          <ExecutiveProactiveLayer
+            activeView={activeView ?? "home"}
+            roleView={null}
+            onOpenAssistant={() => setAssistantOpen(true)}
+          />
+        </>
+      ) : null}
     </div>
   );
+
+  if (mode === "internal" && showPlatformAi) {
+    return (
+      <GuidedLearningProvider activeView={guidedViewId}>{shell}</GuidedLearningProvider>
+    );
+  }
+
+  return shell;
 }

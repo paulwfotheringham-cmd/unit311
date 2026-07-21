@@ -490,6 +490,7 @@ export default function SurveyOperationsSidebar({
 
   return (
     <aside
+      data-ai-target="platform-nav"
       aria-modal={mobileOpen ? true : undefined}
       role={mobileOpen ? "dialog" : undefined}
       aria-label={mobileOpen ? "Navigation menu" : undefined}
