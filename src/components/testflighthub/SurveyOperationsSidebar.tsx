@@ -119,7 +119,7 @@ const iconMap = {
 
 const childNavItemClass = (active: boolean) =>
   cn(
-    "flex w-full items-center rounded-lg py-1 pl-8 pr-2.5 text-left text-[11px] leading-tight transition-colors lg:py-[0.3rem] lg:text-[10.5px]",
+    "flex w-full min-h-11 items-center rounded-lg py-2.5 pl-8 pr-2.5 text-left text-[11px] leading-tight transition-colors touch-manipulation lg:min-h-0 lg:py-[0.3rem] lg:text-[10.5px]",
     active
       ? "bg-[#0D1B2A] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
       : "text-white/45 hover:bg-[#0D1B2A]/60 hover:text-white/75",
@@ -127,10 +127,10 @@ const childNavItemClass = (active: boolean) =>
 
 const navItemClass = (active: boolean, compact = false) =>
   cn(
-    "flex w-full items-center rounded-lg text-left leading-tight transition-colors",
+    "flex w-full items-center rounded-lg text-left leading-tight transition-colors touch-manipulation",
     compact
-      ? "gap-2 px-2.5 py-1 text-[11.5px] lg:py-[0.3rem] lg:text-[11px]"
-      : "gap-2.5 px-3 py-2 text-[13px] leading-snug sm:px-3.5 sm:py-2 sm:text-sm",
+      ? "min-h-11 gap-2 px-2.5 py-2.5 text-[11.5px] lg:min-h-0 lg:py-[0.3rem] lg:text-[11px]"
+      : "min-h-11 gap-2.5 px-3 py-2.5 text-[13px] leading-snug sm:px-3.5 sm:py-2.5 sm:text-sm lg:min-h-0",
     active
       ? "bg-[#0D1B2A] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
       : "text-white/50 hover:bg-[#0D1B2A]/60 hover:text-white/80",
@@ -494,8 +494,8 @@ export default function SurveyOperationsSidebar({
       role={mobileOpen ? "dialog" : undefined}
       aria-label={mobileOpen ? "Navigation menu" : undefined}
       className={cn(
-        "safe-area-px fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(300px,92vw)] flex-col overflow-hidden border-r border-white/[0.08] bg-[#07111F] pt-[env(safe-area-inset-top)] transition-transform duration-300 ease-out md:static md:z-auto md:w-[220px] md:shrink-0 md:translate-x-0 md:pt-0 lg:w-[240px] xl:w-[252px]",
-        mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        "safe-area-px fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(300px,92vw)] flex-col overflow-hidden border-r border-white/[0.08] bg-[#07111F] pt-[env(safe-area-inset-top)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:pt-0 xl:w-[252px]",
+        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
     >
       <div
@@ -525,7 +525,7 @@ export default function SurveyOperationsSidebar({
         )}
         <button
           type="button"
-          className="ml-2 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 md:hidden"
+          className="ml-2 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 lg:hidden"
           aria-label="Close menu"
           onClick={onClose}
         >

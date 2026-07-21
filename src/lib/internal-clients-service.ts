@@ -143,12 +143,54 @@ export async function listInternalClients(
       const supabase = requireClientsSupabase();
       const { data, error } = await supabase
         .from("internal_clients")
-        .select("*")
+        .select(
+          [
+            "id",
+            "company_name",
+            "industry",
+            "primary_contact",
+            "email",
+            "phone",
+            "region",
+            "account_status",
+            "contract_type",
+            "tax_id",
+            "billing_address",
+            "job_title",
+            "company_address",
+            "company_city",
+            "company_postcode",
+            "company_country",
+            "invoice_email",
+            "billing_same_as_company",
+            "primary_contact_first_name",
+            "primary_contact_surname",
+            "active_projects",
+            "notes",
+            "platform_url",
+            "platform_organisation_id",
+            "files_folder_id",
+            "files_folder_name",
+            "subscription_status",
+            "billing_frequency",
+            "renewal_date",
+            "payment_method",
+            "crm_lead_id",
+            "provisioning_status",
+            "onboarding_stage",
+            "activation_date",
+            "payment_matched_at",
+            "last_paid_invoice_number",
+            "last_wise_transaction_id",
+            "created_at",
+            "updated_at",
+          ].join(","),
+        )
         .eq("workspace_id", workspaceId)
         .order("company_name", { ascending: true });
 
       if (error) throw new Error(error.message);
-      return (data as DbClient[]).map(mapInternalClient);
+      return (data as unknown as DbClient[]).map(mapInternalClient);
     }),
   );
 }

@@ -119,7 +119,7 @@ export default function SurveyOperationsShell({
       {mobileNavOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 touch-manipulation bg-[#07111F]/80 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 touch-manipulation bg-[#07111F]/80 backdrop-blur-sm lg:hidden"
           aria-label="Close navigation menu"
           onClick={() => setMobileNavOpen(false)}
         />
@@ -136,21 +136,27 @@ export default function SurveyOperationsShell({
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#020617]">
         {mode === "internal" && (
-          <div
-            className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-            aria-hidden
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(7, 17, 31, 0.86), rgba(2, 6, 23, 0.93)), url(/images/BCN.jpg)",
-            }}
-          />
+          <>
+            <div
+              className="pointer-events-none absolute inset-0 z-0 bg-[#020617] md:hidden"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-0 z-0 hidden bg-cover bg-center bg-no-repeat md:block"
+              aria-hidden
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(7, 17, 31, 0.86), rgba(2, 6, 23, 0.93)), url(/images/BCN.jpg)",
+              }}
+            />
+          </>
         )}
 
-        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-xl sm:px-4 md:px-5 lg:h-16 lg:px-8">
+        <header className="safe-area-px relative z-10 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-md max-md:backdrop-blur-none sm:px-4 md:px-5 lg:h-16 lg:px-8 lg:backdrop-blur-xl">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
-              className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 md:hidden"
+              className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 lg:hidden"
               aria-label="Open navigation menu"
               onClick={() => setMobileNavOpen(true)}
             >

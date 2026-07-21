@@ -8,7 +8,6 @@ import {
   type ManagedAsset,
 } from "@/lib/asset-management-data";
 import {
-  createInitialClients,
   type ManagedClient,
 } from "@/lib/client-management-data";
 import {
@@ -34,80 +33,82 @@ import {
 } from "@/lib/potential-clients-data";
 import type { SurveyOperationsBasePath } from "@/lib/survey-operations-mock-data";
 import { InternalOperationsBasePathProvider } from "./InternalOperationsBasePathContext";
-import AssetManagementWorkspace from "./AssetManagementWorkspace";
-import InventoryManagementWorkspace from "./InventoryManagementWorkspace";
-import BoardPackCustomizerWorkspace from "./BoardPackCustomizerWorkspace";
-import ClientManagementWorkspace from "./ClientManagementWorkspace";
-import ClientsDashboardWorkspace from "./ClientsDashboardWorkspace";
-import ClientOnboardingWorkspace from "./ClientOnboardingWorkspace";
-import CalendarWorkspace from "./CalendarWorkspace";
-import CompetitorsWorkspace from "./CompetitorsWorkspace";
-import CrmWorkspace from "./CrmWorkspace";
-import CrmQuestionsTestWorkspace from "./CrmQuestionsTestWorkspace";
-import MeetingsWorkspace from "./MeetingsWorkspace";
-import ConnectionsWorkspace from "./ConnectionsWorkspace";
-import FileRepositoryWorkspace from "./FileRepositoryWorkspace";
-import Unit311DetailsWorkspace from "./Unit311DetailsWorkspace";
-import CorporateInformationWorkspace from "./CorporateInformationWorkspace";
-import CorporateDashboardWorkspace from "./CorporateDashboardWorkspace";
-import ModuleGoLiveWorkspace from "./ModuleGoLiveWorkspace";
-import CapTableWorkspace from "./CapTableWorkspace";
-import ClientFilesExplorerWorkspace from "./ClientFilesExplorerWorkspace";
-import AccountsPayableWorkspace from "./AccountsPayableWorkspace";
-import AccountsReceivableWorkspace from "./AccountsReceivableWorkspace";
-import ExpensesWorkspace from "./ExpensesWorkspace";
-import FinancialReportsWorkspace from "./FinancialReportsWorkspace";
-import FinancialsWorkspace from "./FinancialsWorkspace";
-import GeneralLedgerWorkspace from "./GeneralLedgerWorkspace";
-import GrantsWorkspace from "./GrantsWorkspace";
-import HrWorkspace from "./HrWorkspace";
-import LeaveManagementWorkspace from "./LeaveManagementWorkspace";
-import PerformanceHubWorkspace from "./PerformanceHubWorkspace";
-import RecruitmentWorkspace from "./RecruitmentWorkspace";
-import HrReportsWorkspace from "./HrReportsWorkspace";
-import FleetWorkspace from "./FleetWorkspace";
-import InfoEmailWorkspace from "./InfoEmailWorkspace";
 import InternalDashboardHome from "./InternalDashboardHome";
-import HomeExecutiveAssistantPanel from "./HomeExecutiveAssistantPanel";
-import ExecutiveAssistantWorkspace from "./ExecutiveAssistantWorkspace";
-import ProfileWorkspace from "./ProfileWorkspace";
-import QmsTrainingWorkspace from "./QmsTrainingWorkspace";
-import QualityManagementWorkspace from "./QualityManagementWorkspace";
-import DocumentControlWorkspace from "./DocumentControlWorkspace";
-import CapaWorkspace from "./CapaWorkspace";
-import InternalAuditsWorkspace from "./InternalAuditsWorkspace";
-import ManagementReviewWorkspace from "./ManagementReviewWorkspace";
-import TqmsReportsWorkspace from "./TqmsReportsWorkspace";
-import TrainingDashboardWorkspace from "./TrainingDashboardWorkspace";
-import StaffTrainingWorkspace from "./StaffTrainingWorkspace";
-import InternalDesignMockups from "./InternalDesignMockups";
-import SectorWorkspace from "./SectorWorkspace";
-import ProjectsWorkspace from "./ProjectsWorkspace";
-import LogisticsWorkspace from "./LogisticsWorkspace";
-import MediaExampleWorkspace from "./MediaExampleWorkspace";
-import MessagingWorkspace from "./MessagingWorkspace";
-import SocialWorkspace from "./SocialWorkspace";
-import SettingsWorkspace from "./SettingsWorkspace";
-import BillingWorkspace from "./BillingWorkspace";
-import PlatformBillingWorkspace from "./PlatformBillingWorkspace";
-import RecentMissionsPanel from "./RecentMissionsPanel";
-import RepresentativesWorkspace from "./RepresentativesWorkspace";
-import StrategyWorkspace from "./StrategyWorkspace";
-import PotentialClientsWorkspace from "./PotentialClientsWorkspace";
-import WiseWorkspace from "./WiseWorkspace";
-import WhiteboardWorkspace from "./WhiteboardWorkspace";
 import SurveyOperationsShell from "./SurveyOperationsShell";
-import TestingWeatherPanel from "./TestingWeatherPanel";
-import SupportWorkspace from "./SupportWorkspace";
-import ExternalUsersWorkspace from "./ExternalUsersWorkspace";
-import UserManagementWorkspace from "./UserManagementWorkspace";
-import EngineeringDashboardWorkspace from "./EngineeringDashboardWorkspace";
-import EngineeringResourcesWorkspace from "./EngineeringResourcesWorkspace";
-import EngineeringCapacityWorkspace from "./EngineeringCapacityWorkspace";
-import ExternalClientAccessWorkspace from "./ExternalClientAccessWorkspace";
-import WebsiteManagementWorkspace from "./WebsiteManagementWorkspace";
-import WebODMWorkspace from "./WebODMWorkspace";
-import TelemetryDashboard from "@/components/telemetry/TelemetryDashboard";
+import {
+  AccountsPayableWorkspace,
+  AccountsReceivableWorkspace,
+  AssetManagementWorkspace,
+  BillingWorkspace,
+  BoardPackCustomizerWorkspace,
+  CalendarWorkspace,
+  CapaWorkspace,
+  CapTableWorkspace,
+  ClientFilesExplorerWorkspace,
+  ClientManagementWorkspace,
+  ClientOnboardingWorkspace,
+  ClientsDashboardWorkspace,
+  CompetitorsWorkspace,
+  ConnectionsWorkspace,
+  CorporateDashboardWorkspace,
+  CorporateInformationWorkspace,
+  CrmQuestionsTestWorkspace,
+  CrmWorkspace,
+  DocumentControlWorkspace,
+  EngineeringCapacityWorkspace,
+  EngineeringDashboardWorkspace,
+  EngineeringResourcesWorkspace,
+  ExecutiveAssistantWorkspace,
+  ExpensesWorkspace,
+  ExternalClientAccessWorkspace,
+  ExternalUsersWorkspace,
+  FileRepositoryWorkspace,
+  FinancialReportsWorkspace,
+  FinancialsWorkspace,
+  FleetWorkspace,
+  GeneralLedgerWorkspace,
+  GrantsWorkspace,
+  HomeExecutiveAssistantPanel,
+  HrReportsWorkspace,
+  HrWorkspace,
+  InfoEmailWorkspace,
+  InternalAuditsWorkspace,
+  InternalDesignMockups,
+  InventoryManagementWorkspace,
+  LeaveManagementWorkspace,
+  LogisticsWorkspace,
+  ManagementReviewWorkspace,
+  MediaExampleWorkspace,
+  MeetingsWorkspace,
+  MessagingWorkspace,
+  ModuleGoLiveWorkspace,
+  PerformanceHubWorkspace,
+  PlatformBillingWorkspace,
+  PotentialClientsWorkspace,
+  ProfileWorkspace,
+  ProjectsWorkspace,
+  QmsTrainingWorkspace,
+  QualityManagementWorkspace,
+  RecentMissionsPanel,
+  RecruitmentWorkspace,
+  RepresentativesWorkspace,
+  SectorWorkspace,
+  SettingsWorkspace,
+  SocialWorkspace,
+  StaffTrainingWorkspace,
+  StrategyWorkspace,
+  SupportWorkspace,
+  TelemetryDashboard,
+  TestingWeatherPanel,
+  TrainingDashboardWorkspace,
+  TqmsReportsWorkspace,
+  Unit311DetailsWorkspace,
+  UserManagementWorkspace,
+  WebODMWorkspace,
+  WebsiteManagementWorkspace,
+  WhiteboardWorkspace,
+  WiseWorkspace,
+} from "./lazy-workspaces";
 import { type ManagedUser } from "@/lib/user-management-data";
 import { useInfoEmailWhatsAppPoller } from "@/hooks/useInfoEmailWhatsAppPoller";
 import { useSurveyOperationsSimulator } from "./SurveyOperationsSimulatorProvider";
@@ -221,19 +222,39 @@ export default function InternalOperationsDashboard({
   const { liveTelemetry, isRunning, setSandboxMountTarget, setExcludedProfileIds } =
     useSurveyOperationsSimulator();
   const [assetRegistry] = useState(() => createInitialAssetRegistry());
-  const [assets, setAssets] = useState<ManagedAsset[]>(() => assetRegistry.assets);
-  const [assetCategories, setAssetCategories] = useState<string[]>(() => assetRegistry.categories);
-  const [assetLocations, setAssetLocations] = useState<string[]>(() => assetRegistry.locations);
-  const [clients, setClients] = useState<ManagedClient[]>(() => createInitialClients());
-  const [representatives, setRepresentatives] = useState<Representative[]>(() =>
-    createInitialRepresentatives(),
-  );
+  const [assets, setAssets] = useState<ManagedAsset[]>([]);
+  const [assetCategories, setAssetCategories] = useState<string[]>([]);
+  const [assetLocations, setAssetLocations] = useState<string[]>([]);
+  const [clients, setClients] = useState<ManagedClient[]>([]);
+  const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [selectedRepresentativeId, setSelectedRepresentativeId] = useState("rep-1");
   const [selectedAssetId, setSelectedAssetId] = useState("asset-1");
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const testingSandboxHostRef = useRef<HTMLDivElement>(null);
+  const mockSeededRef = useRef(false);
 
   useInfoEmailWhatsAppPoller(true);
+
+  // Seed mock registries only when a module that needs them is first opened.
+  useEffect(() => {
+    const needsAssets =
+      activeView === "assets" ||
+      activeView === "inventory-management" ||
+      activeView === "fleet";
+    const needsReps = activeView === "representatives";
+    if (!needsAssets && !needsReps) return;
+    if (mockSeededRef.current && assets.length > 0 && representatives.length > 0) return;
+
+    if (needsAssets && assets.length === 0) {
+      setAssets(assetRegistry.assets);
+      setAssetCategories(assetRegistry.categories);
+      setAssetLocations(assetRegistry.locations);
+      mockSeededRef.current = true;
+    }
+    if (needsReps && representatives.length === 0) {
+      setRepresentatives(createInitialRepresentatives());
+    }
+  }, [activeView, assetRegistry, assets.length, representatives.length]);
 
   useEffect(() => {
     void fetch("/api/users", { cache: "no-store" })

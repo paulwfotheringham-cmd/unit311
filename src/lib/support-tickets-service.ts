@@ -70,7 +70,9 @@ export async function listSupportTickets(
   const supabase = requireSupportSupabase();
   let query = supabase
     .from("support_tickets")
-    .select("*")
+    .select(
+      "id,name,organisation,priority,description,user_assigned,client_phone,client_priority_label,archived,closed,created_at,updated_at",
+    )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false });
 

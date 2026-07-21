@@ -20,13 +20,22 @@ export type ExecutiveActionItem = {
   description: string;
   owner: string;
   due: string;
+  module: string;
   primaryLabel: "Approve" | "Review" | "Open";
   href: string;
 };
 
 export type ScheduleEntry = {
   id: string;
-  kind: "Meeting" | "Deadline" | "Milestone" | "Leave" | "Birthday" | "Training";
+  kind:
+    | "Meeting"
+    | "Deadline"
+    | "Milestone"
+    | "Leave"
+    | "Birthday"
+    | "Anniversary"
+    | "Training"
+    | "Task";
   title: string;
   when: string;
   href: string;
@@ -34,7 +43,19 @@ export type ScheduleEntry = {
 
 export type ActivityEntry = {
   id: string;
-  kind: "Client" | "Project" | "Contract" | "Support" | "Document" | "Employee";
+  kind:
+    | "Client"
+    | "Project"
+    | "Contract"
+    | "Support"
+    | "Document"
+    | "Employee"
+    | "CRM"
+    | "Finance"
+    | "Engineering"
+    | "Training"
+    | "Inventory"
+    | "HR";
   title: string;
   detail: string;
   when: string;
@@ -164,6 +185,7 @@ export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveAc
       description: `${ticket.name} · ${ticket.organisation}`,
       owner: ticket.userAssigned || "Unassigned",
       due: formatDay(ticket.updatedAt),
+      module: "Support",
       primaryLabel: "Review",
       href: input.hrefs.support,
     });
@@ -181,6 +203,7 @@ export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveAc
       description: `${project.name} · ${project.clientName}`,
       owner: project.operator || "Delivery",
       due: project.endDate ? formatDay(project.endDate) : "Review",
+      module: "Projects",
       primaryLabel: "Review",
       href: input.hrefs.projects,
     });
@@ -197,6 +220,7 @@ export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveAc
       description: `${contract.name} · ${contract.supplier}`,
       owner: contract.owner,
       due: formatDay(contract.expiryDate),
+      module: "Contracts",
       primaryLabel: "Review",
       href: input.hrefs.corporateContracts,
     });
@@ -211,6 +235,7 @@ export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveAc
       description: client.companyName,
       owner: "Operations",
       due: "Today",
+      module: "Clients",
       primaryLabel: "Approve",
       href: input.hrefs.clients,
     });
@@ -223,7 +248,8 @@ export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveAc
     description: "Workspace action item",
     owner: item.assignedTo || "Unassigned",
     due: item.due,
-    primaryLabel: item.task.toLowerCase().includes("approv") ? "Approve" : "Review",
+    module: "Workspace",
+    primaryLabel: item.task.toLowerCase().includes("approv") ? "Approve" : "Open",
     href: item.href || input.hrefs.clients,
   }));
 
@@ -244,11 +270,13 @@ type BuildScheduleInput = {
   events: CalendarEvent[];
   projects: InternalProject[];
   leave: HrLeaveRequest[];
+  employees?: Array<{ id: string; fullName?: string; name?: string; dateJoined?: string }>;
   hrefs: {
     calendar: string;
     projects: string;
     hrLeave: string;
     training: string;
+    hr?: string;
   };
 };
 
@@ -256,6 +284,7 @@ export function buildTodaySchedule(input: BuildScheduleInput): ScheduleEntry[] {
   const start = startOfToday();
   const end = endOfToday();
   const entries: ScheduleEntry[] = [];
+  const todayMd = `${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
 
   for (const event of input.events) {
     const at = new Date(event.startsAt);
@@ -308,7 +337,21 @@ export function buildTodaySchedule(input: BuildScheduleInput): ScheduleEntry[] {
     });
   }
 
-  return entries.slice(0, 8);
+  for (const employee of input.employees ?? []) {
+    const joined = employee.dateJoined?.slice(5, 10);
+    if (!joined || joined !== todayMd) continue;
+    entries.push({
+      id: `anniv-${employee.id}`,
+      kind: "Anniversary",
+      title: `${employee.fullName || employee.name || "Team member"} work anniversary`,
+      when: "Today",
+      href: input.hrefs.hr ?? input.hrefs.hrLeave,
+    });
+  }
+
+  return entries
+    .sort((a, b) => a.when.localeCompare(b.when))
+    .slice(0, 12);
 }
 
 type BuildActivityInput = {

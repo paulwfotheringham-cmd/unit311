@@ -36,11 +36,13 @@ export async function resolveProjectsWorkspaceId(
 export async function listProjects(scope?: ProjectsWorkspaceScope): Promise<InternalProject[]> {
   const workspaceId = await resolveProjectsWorkspaceId(scope);
   const supabase = requireProjectsSupabase();
-  const { data, error } = await supabase
-    .from("internal_projects")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .order("updated_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("internal_projects")
+        .select(
+          "id,name,client_id,client_name,site,region,operator,phase,start_date,end_date,progress_pct,notes,created_at,updated_at",
+        )
+        .eq("workspace_id", workspaceId)
+        .order("updated_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return (data as DbProject[]).map(mapInternalProject);

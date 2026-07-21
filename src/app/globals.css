@@ -757,3 +757,18 @@ svg {
 .crm-discovery-editor li {
   margin-bottom: 0.35rem;
 }
+
+/* MOD-900 — responsive UX guardrails (no visual redesign) */
+@media (max-width: 767px) {
+  [role="dialog"],
+  [role="alertdialog"],
+  [data-radix-dialog-content] {
+    max-width: 95vw !important;
+    max-height: min(92dvh, 95vh) !important;
+  }
+
+  .u311-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
