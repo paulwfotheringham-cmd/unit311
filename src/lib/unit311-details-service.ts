@@ -64,11 +64,11 @@ export type Unit311DetailsBootstrap = {
   categories: Unit311DetailCategory[];
 };
 
-async function findFolderByName(
+async function findAllFoldersByName(
   name: string,
   parentId: string | null,
   scope?: FilesWorkspaceScope,
-): Promise<FileFolder | null> {
+): Promise<FileFolder[]> {
   const workspaceId = await resolveFilesWorkspaceId(scope);
   const supabase = requireFilesSupabase();
   let query = supabase
@@ -76,7 +76,7 @@ async function findFolderByName(
     .select("*")
     .eq("name", name)
     .eq("workspace_id", workspaceId)
-    .limit(1);
+    .order("created_at", { ascending: true });
 
   if (parentId === null) {
     query = query.is("parent_id", null);
@@ -84,18 +84,119 @@ async function findFolderByName(
     query = query.eq("parent_id", parentId);
   }
 
-  const { data, error } = await query.maybeSingle();
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data
-    ? {
-        id: data.id as string,
-        name: data.name as string,
-        parentId: data.parent_id as string | null,
-        categoryId: data.category_id as string | null,
-        createdAt: data.created_at as string,
-        updatedAt: data.updated_at as string,
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    parentId: row.parent_id as string | null,
+    categoryId: row.category_id as string | null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+}
+
+async function findFolderByName(
+  name: string,
+  parentId: string | null,
+  scope?: FilesWorkspaceScope,
+): Promise<FileFolder | null> {
+  const folders = await findAllFoldersByName(name, parentId, scope);
+  return folders[0] ?? null;
+}
+
+/**
+ * Merge sibling folders that share the same name into the oldest keeper.
+ * Moves child folders + files, then deletes losers. Prevents Module Go-Live
+ * from reading an empty duplicate while content lives in another folder.
+ */
+async function consolidateDuplicateFoldersByName(
+  name: string,
+  parentId: string | null,
+  scope?: FilesWorkspaceScope,
+): Promise<FileFolder | null> {
+  const folders = await findAllFoldersByName(name, parentId, scope);
+  if (folders.length === 0) return null;
+  if (folders.length === 1) return folders[0];
+
+  const keeper = folders[0];
+  const losers = folders.slice(1);
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+  const supabase = requireFilesSupabase();
+
+  console.warn(
+    `[unit311-details] Consolidating ${folders.length} duplicate folders name=${name} workspace=${workspaceId}; keeping ${keeper.id}`,
+  );
+
+  for (const loser of losers) {
+    const { error: childMoveError } = await supabase
+      .from("file_folders")
+      .update({ parent_id: keeper.id, updated_at: new Date().toISOString() })
+      .eq("parent_id", loser.id)
+      .eq("workspace_id", workspaceId);
+    if (childMoveError) throw new Error(childMoveError.message);
+
+    const { data: loserFiles, error: listFilesError } = await supabase
+      .from("file_objects")
+      .select("id, name")
+      .eq("folder_id", loser.id)
+      .eq("workspace_id", workspaceId);
+    if (listFilesError) throw new Error(listFilesError.message);
+
+    for (const file of loserFiles ?? []) {
+      const existingInKeeper = await findFilesInFolderByName(
+        keeper.id,
+        file.name as string,
+        scope,
+      );
+      if (existingInKeeper.length > 0) {
+        // Prefer the newest content when both folders have the same filename.
+        const { data: loserMeta, error: loserMetaError } = await supabase
+          .from("file_objects")
+          .select("id, created_at")
+          .eq("id", file.id as string)
+          .eq("workspace_id", workspaceId)
+          .limit(1);
+        if (loserMetaError) throw new Error(loserMetaError.message);
+        const loserCreated = String(loserMeta?.[0]?.created_at ?? "");
+        const keeperFile = existingInKeeper[0];
+        const { data: keeperMeta } = await supabase
+          .from("file_objects")
+          .select("created_at")
+          .eq("id", keeperFile.id)
+          .eq("workspace_id", workspaceId)
+          .limit(1);
+        const keeperCreated = String(keeperMeta?.[0]?.created_at ?? "");
+        if (loserCreated > keeperCreated) {
+          await deleteFile(keeperFile.id, scope);
+          const { error: moveFileError } = await supabase
+            .from("file_objects")
+            .update({ folder_id: keeper.id, updated_at: new Date().toISOString() })
+            .eq("id", file.id as string)
+            .eq("workspace_id", workspaceId);
+          if (moveFileError) throw new Error(moveFileError.message);
+        } else {
+          await deleteFile(file.id as string, scope);
+        }
+      } else {
+        const { error: moveFileError } = await supabase
+          .from("file_objects")
+          .update({ folder_id: keeper.id, updated_at: new Date().toISOString() })
+          .eq("id", file.id as string)
+          .eq("workspace_id", workspaceId);
+        if (moveFileError) throw new Error(moveFileError.message);
       }
-    : null;
+    }
+
+    const { error: deleteFolderError } = await supabase
+      .from("file_folders")
+      .delete()
+      .eq("id", loser.id)
+      .eq("workspace_id", workspaceId);
+    if (deleteFolderError) throw new Error(deleteFolderError.message);
+  }
+
+  return keeper;
 }
 
 async function ensureFolder(
@@ -103,18 +204,33 @@ async function ensureFolder(
   parentId: string | null,
   scope?: FilesWorkspaceScope,
 ): Promise<FileFolder> {
-  const existing = await findFolderByName(name, parentId, scope);
-  if (existing) return existing;
-  return createFolder(name, parentId, null, scope);
+  const consolidated = await consolidateDuplicateFoldersByName(name, parentId, scope);
+  if (consolidated) return consolidated;
+  try {
+    return await createFolder(name, parentId, null, scope);
+  } catch (error) {
+    // Concurrent bootstrap can race; re-read / consolidate after insert conflicts.
+    const raced = await consolidateDuplicateFoldersByName(name, parentId, scope);
+    if (raced) return raced;
+    throw error;
+  }
 }
 
 async function listChildFolderMap(parentId: string, scope?: FilesWorkspaceScope) {
   const { entries } = await browseFolder({ folderId: parentId }, scope);
-  return new Map(
-    entries
-      .filter((entry) => entry.kind === "folder")
-      .map((entry) => [entry.item.name.toLowerCase(), entry.item.id]),
-  );
+  // Prefer the oldest folder when duplicate names exist so lookups stay stable
+  // with findFolderByName (created_at ascending).
+  const map = new Map<string, { id: string; createdAt: string }>();
+  for (const entry of entries) {
+    if (entry.kind !== "folder") continue;
+    const key = entry.item.name.toLowerCase();
+    const createdAt = entry.item.createdAt;
+    const existing = map.get(key);
+    if (!existing || createdAt < existing.createdAt) {
+      map.set(key, { id: entry.item.id, createdAt });
+    }
+  }
+  return new Map([...map.entries()].map(([key, value]) => [key, value.id]));
 }
 
 async function listDetailCategories(
@@ -188,23 +304,57 @@ async function readStorageText(storagePath: string): Promise<string> {
   return data.text();
 }
 
+async function findFilesInFolderByName(
+  folderId: string,
+  name: string,
+  scope?: FilesWorkspaceScope,
+): Promise<DbFile[]> {
+  const workspaceId = await resolveFilesWorkspaceId(scope);
+  const supabase = requireFilesSupabase();
+  // Prefer newest when duplicates exist — never .maybeSingle() (PGRST116 on >1 row).
+  const { data, error } = await supabase
+    .from("file_objects")
+    .select("id, name, storage_path, created_at")
+    .eq("folder_id", folderId)
+    .eq("name", name)
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  const rows = data ?? [];
+  if (rows.length > 1) {
+    console.warn(
+      `[unit311-details] Duplicate file_objects for workspace=${workspaceId} folder=${folderId} name=${name} count=${rows.length}; using newest.`,
+    );
+  }
+  return rows.map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    storage_path: row.storage_path as string,
+  }));
+}
+
 async function findFileInFolder(
   folderId: string,
   name: string,
   scope?: FilesWorkspaceScope,
 ): Promise<DbFile | null> {
-  const workspaceId = await resolveFilesWorkspaceId(scope);
-  const supabase = requireFilesSupabase();
-  const { data, error } = await supabase
-    .from("file_objects")
-    .select("id, name, storage_path")
-    .eq("folder_id", folderId)
-    .eq("name", name)
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
+  const files = await findFilesInFolderByName(folderId, name, scope);
+  if (files.length <= 1) return files[0] ?? null;
 
-  if (error) throw new Error(error.message);
-  return data ? (data as DbFile) : null;
+  // Repair: keep newest, delete older duplicates so future .single()-style
+  // lookups and unique indexes stay healthy.
+  for (const extra of files.slice(1)) {
+    try {
+      await deleteFile(extra.id, scope);
+    } catch (error) {
+      console.warn(
+        `[unit311-details] Failed deleting duplicate file ${extra.id} (${name}):`,
+        error,
+      );
+    }
+  }
+  return files[0] ?? null;
 }
 
 async function deleteNamedFilesInFolder(
@@ -213,8 +363,8 @@ async function deleteNamedFilesInFolder(
   scope?: FilesWorkspaceScope,
 ) {
   for (const name of names) {
-    const file = await findFileInFolder(folderId, name, scope);
-    if (file) {
+    const files = await findFilesInFolderByName(folderId, name, scope);
+    for (const file of files) {
       await deleteFile(file.id, scope);
     }
   }

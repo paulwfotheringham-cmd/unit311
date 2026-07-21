@@ -60,6 +60,7 @@ const MIGRATIONS = [
   "supabase/migrations/095_platform_users_client_id.sql",
   "supabase/migrations/096_client_files_root_integrity.sql",
   "supabase/migrations/097_demo_workspace.sql",
+  "supabase/migrations/098_unit311_details_go_live_dedupe.sql",
 ];
 
 function isAuthorized(request: NextRequest) {
