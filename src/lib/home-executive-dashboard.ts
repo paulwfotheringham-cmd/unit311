@@ -172,8 +172,11 @@ type BuildActionsInput = {
   };
 };
 
-/** Merge live action-items with derived operational priorities; cap at five. */
-export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveActionItem[] {
+/** Merge live action-items with derived operational priorities. */
+export function buildExecutiveActionItems(
+  input: BuildActionsInput,
+  limit = 5,
+): ExecutiveActionItem[] {
   const derived: ExecutiveActionItem[] = [];
 
   for (const ticket of input.tickets.filter((t) => !t.closed && !t.archived)) {
@@ -254,16 +257,14 @@ export function buildExecutiveActionItems(input: BuildActionsInput): ExecutiveAc
   }));
 
   const seen = new Set<string>();
-  const merged = [...fromApi, ...derived]
+  return [...fromApi, ...derived]
     .sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority))
     .filter((item) => {
       if (seen.has(item.id)) return false;
       seen.add(item.id);
       return true;
     })
-    .slice(0, 5);
-
-  return merged;
+    .slice(0, Math.max(1, limit));
 }
 
 type BuildScheduleInput = {
@@ -508,4 +509,115 @@ export function countOpenTickets(tickets: SupportTicket[]) {
 
 export function countLiveProjects(projects: InternalProject[]) {
   return projects.filter((project) => project.phase === "live").length;
+}
+
+export type BusinessHealthIssue = {
+  id: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  detail: string;
+  href: string;
+};
+
+/** Surface the most important operational issues for the Business Health card. */
+export function buildBusinessHealthIssues(input: {
+  actionItems: ExecutiveActionItem[];
+  tickets: SupportTicket[];
+  projects: InternalProject[];
+  contracts: CorporateContract[];
+  burnMonthly: number | null;
+  cashPosition: number | null;
+  hrefs: {
+    support: string;
+    projects: string;
+    corporateContracts: string;
+    financials: string;
+  };
+}): BusinessHealthIssue[] {
+  const issues: BusinessHealthIssue[] = [];
+
+  const criticalActions = input.actionItems.filter((item) => item.priority === "critical");
+  if (criticalActions.length > 0) {
+    issues.push({
+      id: "health-critical-actions",
+      severity: "critical",
+      title: `${criticalActions.length} critical action${criticalActions.length === 1 ? "" : "s"}`,
+      detail: criticalActions[0]?.title ?? "Immediate attention required",
+      href: criticalActions[0]?.href ?? input.hrefs.support,
+    });
+  }
+
+  const overdueTickets = input.tickets.filter(
+    (ticket) => !ticket.closed && !ticket.archived && ticket.priority === "urgent",
+  );
+  if (overdueTickets.length > 0) {
+    issues.push({
+      id: "health-urgent-tickets",
+      severity: "critical",
+      title: `${overdueTickets.length} urgent support ticket${overdueTickets.length === 1 ? "" : "s"}`,
+      detail: overdueTickets[0]?.name ?? "Support queue",
+      href: input.hrefs.support,
+    });
+  }
+
+  const atRiskProjects = input.projects.filter((project) => {
+    if (project.phase !== "live") return false;
+    if (project.notes?.toLowerCase().includes("risk")) return true;
+    return Boolean(
+      project.endDate && daysUntil(project.endDate) <= 14 && project.progressPct < 70,
+    );
+  });
+  if (atRiskProjects.length > 0) {
+    issues.push({
+      id: "health-projects-risk",
+      severity: "warning",
+      title: `${atRiskProjects.length} project${atRiskProjects.length === 1 ? "" : "s"} at risk`,
+      detail: atRiskProjects[0]?.name ?? "Delivery risk",
+      href: input.hrefs.projects,
+    });
+  }
+
+  const renewals = input.contracts.filter((contract) => {
+    if (contract.status !== "expiring" && contract.status !== "active") return false;
+    const until = daysUntil(contract.expiryDate);
+    return until <= 30 && until >= -7;
+  });
+  if (renewals.length > 0) {
+    issues.push({
+      id: "health-renewals",
+      severity: "warning",
+      title: `${renewals.length} contract renewal${renewals.length === 1 ? "" : "s"} due`,
+      detail: renewals[0]?.name ?? "Contracts",
+      href: input.hrefs.corporateContracts,
+    });
+  }
+
+  if (
+    input.burnMonthly != null &&
+    input.cashPosition != null &&
+    input.burnMonthly > 0 &&
+    input.cashPosition / input.burnMonthly < 6
+  ) {
+    const months = Math.round((input.cashPosition / input.burnMonthly) * 10) / 10;
+    issues.push({
+      id: "health-runway",
+      severity: months < 3 ? "critical" : "warning",
+      title: `Cash runway ${months} months`,
+      detail: "Based on current burn rate",
+      href: input.hrefs.financials,
+    });
+  }
+
+  const openTickets = countOpenTickets(input.tickets);
+  if (openTickets >= 8) {
+    issues.push({
+      id: "health-ticket-volume",
+      severity: "info",
+      title: `${openTickets} open support tickets`,
+      detail: "Elevated support volume",
+      href: input.hrefs.support,
+    });
+  }
+
+  return issues.slice(0, 6);
 }

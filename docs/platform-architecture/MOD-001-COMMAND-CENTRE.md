@@ -16,21 +16,15 @@
 
 ## Delivered
 
-- Responsive dashboard grid (4 / 3 / 2 / 1 columns)
-- Per-user customisable layout: add, remove, hide, reorder, resize, collapse, reset
-- **Customize Dashboard** edit mode + tile picker
-- Full catalog of operational tiles (Action Required, Schedule, Snapshot, Activity, My Work, Quick Actions, finance/HR/CRM/files/system tiles, etc.)
-- Independent async data loading via `CommandCentreDataProvider` (shell paints immediately; tiles hydrate as slices arrive)
-- Live data where APIs exist; honest empty states otherwise (no fake charts / lorem)
-
-## Key files
-
-- `src/components/testflighthub/InternalDashboardHome.tsx`
-- `src/components/testflighthub/CommandCentreDataProvider.tsx`
-- `src/components/testflighthub/command-centre/CommandCentreTileBody.tsx`
-- `src/lib/command-centre-layout.ts`
-- `src/lib/home-executive-dashboard.ts`
+- Dense 1440p-first executive layout (v3) with little/no scrolling
+- **Business Snapshot KPI ribbon** across the top (Clients, Revenue, Burn Rate, Cash, Projects, Employees, Support, Contracts, Pipeline)
+- Compact **Action Required** (max 5 + View All slide-over)
+- **Business Health** operational issues card
+- Compact agenda, Recent Activity, My Work, Quick Actions
+- Per-user customisable layout: add, remove, hide, reorder, resize, collapse, reset, KPI ribbon toggle
+- Content-height cards on a 12-column grid; independent async data loading
+- Live data where APIs exist; honest empty states otherwise
 
 ## Persistence
 
-`localStorage` key `unit311-command-centre-v2:{username}` — layout, sizes, collapsed state, hidden types.
+`localStorage` key `unit311-command-centre-v3:{username}` — layout, sizes, collapsed state, hidden types, `showKpiRibbon`.

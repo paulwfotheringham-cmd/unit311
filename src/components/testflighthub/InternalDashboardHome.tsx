@@ -21,6 +21,7 @@ import {
   CommandCentreDataProvider,
   useCommandCentreData,
 } from "@/components/testflighthub/CommandCentreDataProvider";
+import BusinessSnapshotRibbon from "@/components/testflighthub/command-centre/BusinessSnapshotRibbon";
 import { CommandCentreTileBody } from "@/components/testflighthub/command-centre/CommandCentreTileBody";
 import {
   COMMAND_CENTRE_TILE_CATALOG,
@@ -59,22 +60,29 @@ function CardShell({
   return (
     <section
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent shadow-[0_20px_56px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl max-md:backdrop-blur-none",
+        "overflow-hidden rounded-xl border bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent backdrop-blur-xl max-md:backdrop-blur-none",
         accent,
         className,
       )}
     >
-      <header className="flex shrink-0 items-start justify-between gap-2 border-b border-white/[0.06] px-3 py-2.5 sm:px-4">
+      <header className="flex items-center justify-between gap-2 border-b border-white/[0.06] px-2.5 py-1.5">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-tight text-white">{title}</h2>
-          {subtitle ? <p className="mt-0.5 text-[11px] text-white/45">{subtitle}</p> : null}
+          <h2 className="truncate text-[12px] font-semibold tracking-tight text-white">{title}</h2>
+          {subtitle ? <p className="truncate text-[10px] text-white/40">{subtitle}</p> : null}
         </div>
         {action}
       </header>
       {!collapsed ? (
-        <div className={cn("min-h-0 flex-1 px-3 py-2.5 sm:px-4", bodyClassName)}>{children}</div>
+        <div className={cn("px-2.5 py-1.5", bodyClassName)}>{children}</div>
       ) : null}
     </section>
+  );
+}
+
+function chromeBtnClass(extra?: string) {
+  return cn(
+    "inline-flex h-7 items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.04] px-2 text-[11px] font-semibold text-white/70 transition-colors hover:bg-white/[0.08]",
+    extra,
   );
 }
 
@@ -179,38 +187,46 @@ function CommandCentreHome({ showCustomize = true }: { showCustomize?: boolean }
     setPrefs(defaultCommandCentrePreferences());
   }
 
+  function toggleKpiRibbon() {
+    setPrefs((prev) => ({ ...prev, showKpiRibbon: !prev.showKpiRibbon }));
+  }
+
   return (
-    <div id="home-tile-action-required" className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3 px-0.5">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sky-300/80">
-            Command centre
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-[1.7rem]">
+    <div id="home-tile-action-required" className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <p className="min-w-0 truncate text-[12px] text-white/70">
+          <span className="font-semibold text-white/90">Command centre</span>
+          <span className="text-white/35"> · </span>
+          <span>
             {greeting}, {greetingName}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-white/50">
-            Configurable executive workspace — live data, honest empty states.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+          </span>
+        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
           {editMode ? (
             <>
               <button
                 type="button"
-                onClick={() => setPickerOpen(true)}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-50 transition-colors hover:bg-cyan-500/20"
+                onClick={toggleKpiRibbon}
+                className={chromeBtnClass(
+                  prefs.showKpiRibbon
+                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+                    : undefined,
+                )}
+                title="Toggle KPI ribbon"
               >
-                <Plus className="h-3.5 w-3.5" />
-                Add tile
+                KPI ribbon {prefs.showKpiRibbon ? "on" : "off"}
               </button>
               <button
                 type="button"
-                onClick={resetLayout}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.08]"
+                onClick={() => setPickerOpen(true)}
+                className={chromeBtnClass("border-cyan-400/30 bg-cyan-500/10 text-cyan-50")}
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Reset to default
+                <Plus className="h-3 w-3" />
+                Add tile
+              </button>
+              <button type="button" onClick={resetLayout} className={chromeBtnClass()}>
+                <RotateCcw className="h-3 w-3" />
+                Reset
               </button>
               <button
                 type="button"
@@ -218,33 +234,27 @@ function CommandCentreHome({ showCustomize = true }: { showCustomize?: boolean }
                   setEditMode(false);
                   setPickerOpen(false);
                 }}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 text-xs font-semibold text-emerald-50 transition-colors hover:bg-emerald-500/25"
+                className={chromeBtnClass(
+                  "border-emerald-400/30 bg-emerald-500/15 text-emerald-50",
+                )}
               >
-                <Check className="h-3.5 w-3.5" />
-                Done Editing
+                <Check className="h-3 w-3" />
+                Done
               </button>
             </>
           ) : (
             <>
               {showCustomize ? (
-                <button
-                  type="button"
-                  onClick={() => setEditMode(true)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.08]"
-                >
-                  <Settings2 className="h-3.5 w-3.5" />
-                  Customize Dashboard
+                <button type="button" onClick={() => setEditMode(true)} className={chromeBtnClass()}>
+                  <Settings2 className="h-3 w-3" />
+                  Customize
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => refreshAll()}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.08]"
-              >
+              <button type="button" onClick={() => refreshAll()} className={chromeBtnClass()}>
                 {anyRefreshing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className="h-3 w-3" />
                 )}
                 Refresh
               </button>
@@ -253,65 +263,67 @@ function CommandCentreHome({ showCustomize = true }: { showCustomize?: boolean }
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {prefs.showKpiRibbon ? <BusinessSnapshotRibbon /> : null}
+
+      <div className="grid grid-cols-12 gap-2">
         {visibleTiles.map((tile, index) => {
           const def = getCommandCentreTileDefinition(tile.type);
           return (
             <div key={tile.instanceId} className={cn(tileSizeClass(tile.size), "min-w-0")}>
               <CardShell
                 title={def?.title ?? tile.type}
-                subtitle={editMode ? `Size ${tile.size.toUpperCase()}` : def?.description}
+                subtitle={editMode ? `Size ${tile.size.toUpperCase()}` : undefined}
                 accent={def?.accent ?? "border-white/10"}
                 collapsed={tile.collapsed}
                 action={
                   editMode ? (
-                    <div className="flex flex-wrap items-center justify-end gap-1">
+                    <div className="flex shrink-0 items-center gap-0.5">
                       <button
                         type="button"
                         title="Move up"
                         disabled={index === 0}
                         onClick={() => moveTile(tile.instanceId, -1)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/[0.08] disabled:opacity-30"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-white/55 hover:bg-white/[0.08] disabled:opacity-30"
                       >
-                        <ChevronUp className="h-3.5 w-3.5" />
+                        <ChevronUp className="h-3 w-3" />
                       </button>
                       <button
                         type="button"
                         title="Move down"
                         disabled={index === visibleTiles.length - 1}
                         onClick={() => moveTile(tile.instanceId, 1)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/[0.08] disabled:opacity-30"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-white/55 hover:bg-white/[0.08] disabled:opacity-30"
                       >
-                        <ChevronDown className="h-3.5 w-3.5" />
+                        <ChevronDown className="h-3 w-3" />
                       </button>
                       <button
                         type="button"
                         title="Resize"
                         onClick={() => resizeTile(tile.instanceId)}
-                        className="inline-flex h-7 items-center gap-1 rounded-lg border border-white/10 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/60 hover:bg-white/[0.08]"
+                        className="inline-flex h-6 items-center gap-0.5 rounded-md border border-white/10 px-1 text-[9px] font-semibold uppercase tracking-wide text-white/55 hover:bg-white/[0.08]"
                       >
-                        <Maximize2 className="h-3 w-3" />
+                        <Maximize2 className="h-2.5 w-2.5" />
                         {tile.size}
                       </button>
                       <button
                         type="button"
                         title={tile.collapsed ? "Expand" : "Collapse"}
                         onClick={() => toggleCollapse(tile.instanceId)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/[0.08]"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 text-white/55 hover:bg-white/[0.08]"
                       >
                         {tile.collapsed ? (
-                          <LayoutGrid className="h-3.5 w-3.5" />
+                          <LayoutGrid className="h-3 w-3" />
                         ) : (
-                          <Minus className="h-3.5 w-3.5" />
+                          <Minus className="h-3 w-3" />
                         )}
                       </button>
                       <button
                         type="button"
                         title="Hide"
                         onClick={() => hideTile(tile.instanceId)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-400/25 text-rose-200/80 hover:bg-rose-500/15"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-400/25 text-rose-200/80 hover:bg-rose-500/15"
                       >
-                        <EyeOff className="h-3.5 w-3.5" />
+                        <EyeOff className="h-3 w-3" />
                       </button>
                     </div>
                   ) : undefined

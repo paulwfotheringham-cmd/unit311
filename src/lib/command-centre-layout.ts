@@ -38,6 +38,7 @@ export type CommandCentreTileType =
   | "recent-logins"
   | "workspace-activity"
   | "business-snapshot"
+  | "business-health"
   | "my-work"
   | "quick-actions";
 
@@ -52,10 +53,13 @@ export type CommandCentreTileInstance = {
 };
 
 export type CommandCentrePreferences = {
-  version: 2;
+  /** v3 = dense 1440p executive layout with KPI ribbon chrome. */
+  version: 3;
   tiles: CommandCentreTileInstance[];
   /** Types hidden from the default catalog until re-added. */
   hiddenTypes: CommandCentreTileType[];
+  /** When true, the top Business Snapshot KPI ribbon is shown. */
+  showKpiRibbon: boolean;
 };
 
 export type CommandCentreTileDefinition = {
@@ -70,14 +74,14 @@ export const COMMAND_CENTRE_TILE_CATALOG: CommandCentreTileDefinition[] = [
   {
     type: "action-required",
     title: "Action Required",
-    description: "Highest-priority items needing attention.",
+    description: "Top five priorities with View All.",
     defaultSize: "md",
     accent: "border-rose-400/25",
   },
   {
     type: "todays-schedule",
     title: "Today's Schedule",
-    description: "Meetings, leave, training, tasks and deadlines.",
+    description: "Compact agenda for today.",
     defaultSize: "md",
     accent: "border-violet-400/25",
   },
@@ -91,9 +95,16 @@ export const COMMAND_CENTRE_TILE_CATALOG: CommandCentreTileDefinition[] = [
   {
     type: "business-snapshot",
     title: "Business Snapshot",
-    description: "Compact executive KPIs.",
-    defaultSize: "lg",
+    description: "KPI strip (also available as the top ribbon).",
+    defaultSize: "xl",
     accent: "border-emerald-400/25",
+  },
+  {
+    type: "business-health",
+    title: "Business Health",
+    description: "Key operational issues across the workspace.",
+    defaultSize: "md",
+    accent: "border-amber-400/30",
   },
   {
     type: "recent-activity",
@@ -112,8 +123,8 @@ export const COMMAND_CENTRE_TILE_CATALOG: CommandCentreTileDefinition[] = [
   {
     type: "quick-actions",
     title: "Quick Actions",
-    description: "Large shortcuts for common work.",
-    defaultSize: "lg",
+    description: "Shortcuts for common work.",
+    defaultSize: "md",
     accent: "border-cyan-400/25",
   },
   {
@@ -323,18 +334,14 @@ export const COMMAND_CENTRE_TILE_CATALOG: CommandCentreTileDefinition[] = [
 
 export const DEFAULT_COMMAND_CENTRE_LAYOUT: CommandCentreTileInstance[] = [
   { instanceId: "cc-action-required", type: "action-required", size: "md" },
+  { instanceId: "cc-business-health", type: "business-health", size: "md" },
   { instanceId: "cc-todays-schedule", type: "todays-schedule", size: "md" },
-  { instanceId: "cc-business-snapshot", type: "business-snapshot", size: "lg" },
   { instanceId: "cc-recent-activity", type: "recent-activity", size: "md" },
   { instanceId: "cc-my-work", type: "my-work", size: "md" },
-  { instanceId: "cc-quick-actions", type: "quick-actions", size: "lg" },
-  { instanceId: "cc-burn-rate", type: "burn-rate", size: "sm" },
-  { instanceId: "cc-support-tickets", type: "support-tickets", size: "sm" },
-  { instanceId: "cc-messages", type: "messages", size: "sm" },
-  { instanceId: "cc-clients", type: "clients", size: "sm" },
+  { instanceId: "cc-quick-actions", type: "quick-actions", size: "md" },
 ];
 
-const STORAGE_PREFIX = "unit311-command-centre-v2";
+const STORAGE_PREFIX = "unit311-command-centre-v3";
 
 function storageKey(userKey: string) {
   const key = userKey.trim() || "anonymous";
@@ -345,16 +352,17 @@ export function getCommandCentreTileDefinition(type: CommandCentreTileType) {
   return COMMAND_CENTRE_TILE_CATALOG.find((tile) => tile.type === type);
 }
 
+/** 12-column executive grid — content-height cards, independent resize. */
 export function tileSizeClass(size: CommandCentreTileSize) {
   switch (size) {
     case "sm":
-      return "col-span-1";
+      return "col-span-12 sm:col-span-6 xl:col-span-3";
     case "md":
-      return "col-span-1 md:col-span-2";
+      return "col-span-12 sm:col-span-6 xl:col-span-4";
     case "lg":
-      return "col-span-1 md:col-span-2 lg:col-span-3";
+      return "col-span-12 sm:col-span-6 xl:col-span-6";
     case "xl":
-      return "col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4";
+      return "col-span-12";
   }
 }
 
@@ -379,9 +387,10 @@ export function createTileInstance(
 
 export function defaultCommandCentrePreferences(): CommandCentrePreferences {
   return {
-    version: 2,
+    version: 3,
     tiles: DEFAULT_COMMAND_CENTRE_LAYOUT.map((tile) => ({ ...tile })),
     hiddenTypes: [],
+    showKpiRibbon: true,
   };
 }
 
@@ -391,7 +400,7 @@ export function loadCommandCentrePreferences(userKey: string): CommandCentrePref
     const raw = window.localStorage.getItem(storageKey(userKey));
     if (!raw) return defaultCommandCentrePreferences();
     const parsed = JSON.parse(raw) as Partial<CommandCentrePreferences>;
-    if (!parsed || parsed.version !== 2 || !Array.isArray(parsed.tiles)) {
+    if (!parsed || parsed.version !== 3 || !Array.isArray(parsed.tiles)) {
       return defaultCommandCentrePreferences();
     }
     const catalogTypes = new Set(COMMAND_CENTRE_TILE_CATALOG.map((t) => t.type));
@@ -404,13 +413,14 @@ export function loadCommandCentrePreferences(userKey: string): CommandCentrePref
     );
     if (tiles.length === 0) return defaultCommandCentrePreferences();
     return {
-      version: 2,
+      version: 3,
       tiles,
       hiddenTypes: Array.isArray(parsed.hiddenTypes)
         ? parsed.hiddenTypes.filter((type): type is CommandCentreTileType =>
             catalogTypes.has(type),
           )
         : [],
+      showKpiRibbon: parsed.showKpiRibbon !== false,
     };
   } catch {
     return defaultCommandCentrePreferences();

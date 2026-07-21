@@ -10,9 +10,9 @@ import {
   FolderKanban,
   FolderOpen,
   MessageSquare,
-  Plus,
   Receipt,
   Users,
+  X,
 } from "lucide-react";
 
 import { useCommandCentreData } from "@/components/testflighthub/CommandCentreDataProvider";
@@ -21,14 +21,15 @@ import { useHrMockStore } from "@/components/testflighthub/useHrMockStore";
 import { formatMoney } from "@/lib/accounting/chart-of-accounts";
 import type { CommandCentreTileType } from "@/lib/command-centre-layout";
 import type { CrmLead } from "@/lib/crm-data";
+import type { ActionPriority } from "@/lib/internal-operations-command-data";
 import {
+  buildBusinessHealthIssues,
   buildExecutiveActionItems,
   buildMyWork,
   buildRecentActivity,
   buildTodaySchedule,
   countLiveProjects,
   countOpenTickets,
-  priorityBarClass,
   priorityPillClass,
   type ActivityEntry,
   type ExecutiveActionItem,
@@ -43,7 +44,31 @@ import { useInternalOperationsBasePath } from "@/components/testflighthub/Intern
 const PINNED_FILES_KEY = "unit311-command-centre-pinned-files";
 
 function EmptyLine({ message }: { message: string }) {
-  return <p className="py-3 text-center text-xs text-white/40">{message}</p>;
+  return <p className="py-2 text-center text-[11px] text-white/40">{message}</p>;
+}
+
+function priorityLetter(priority: ActionPriority) {
+  switch (priority) {
+    case "critical":
+      return "C";
+    case "high":
+      return "H";
+    case "medium":
+      return "M";
+    case "low":
+      return "L";
+  }
+}
+
+function healthSeverityClass(severity: "critical" | "warning" | "info") {
+  switch (severity) {
+    case "critical":
+      return "border-rose-400/30 bg-rose-500/10 text-rose-100";
+    case "warning":
+      return "border-amber-400/30 bg-amber-500/10 text-amber-100";
+    case "info":
+      return "border-sky-400/30 bg-sky-500/10 text-sky-100";
+  }
 }
 
 function KpiChip({
@@ -58,10 +83,10 @@ function KpiChip({
   return (
     <Link
       href={href}
-      className="rounded-lg border border-white/10 bg-[#0b1524]/75 px-2.5 py-2 transition-colors hover:border-sky-400/30 hover:bg-sky-500/10"
+      className="rounded-md border border-white/10 bg-[#0b1524]/75 px-1.5 py-1 transition-colors hover:border-sky-400/30 hover:bg-sky-500/10"
     >
-      <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/40">{label}</p>
-      <p className="mt-0.5 text-base font-semibold tabular-nums text-white sm:text-lg">{value}</p>
+      <p className="truncate text-[8px] font-medium uppercase tracking-[0.1em] text-white/40">{label}</p>
+      <p className="mt-px truncate text-[12px] font-semibold tabular-nums text-white">{value}</p>
     </Link>
   );
 }
@@ -213,56 +238,47 @@ function useCommandCentreHrefs() {
 function ActionRequiredRow({
   item,
   onComplete,
+  dense = true,
 }: {
   item: ExecutiveActionItem;
   onComplete: (id: string) => void;
+  dense?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0b1524]/70 p-2.5">
-      <div className="flex items-start gap-2">
-        <span
-          className={cn("mt-1 h-7 w-1 shrink-0 rounded-full", priorityBarClass(item.priority))}
-          aria-hidden
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className={cn(
-                "rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]",
-                priorityPillClass(item.priority),
-              )}
-            >
-              {item.priority}
-            </span>
-            <span className="text-[10px] text-white/40">{item.module}</span>
-            <span className="text-[10px] text-white/35">Due {item.due}</span>
-          </div>
-          <p className="mt-0.5 text-sm font-semibold text-white">{item.title}</p>
-          <p className="mt-0.5 text-[11px] text-white/50">{item.description}</p>
-          <p className="mt-0.5 text-[10px] text-white/40">Owner · {item.owner}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <Link
-              href={item.href}
-              className="inline-flex h-7 items-center rounded-lg border border-sky-500/40 bg-sky-500/15 px-2 text-[10px] font-semibold text-sky-100 hover:bg-sky-500/25"
-            >
-              Open
-            </Link>
-            <button
-              type="button"
-              onClick={() => onComplete(item.id)}
-              className="inline-flex h-7 items-center rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/20"
-            >
-              Complete
-            </button>
-            <Link
-              href={item.href}
-              className="inline-flex h-7 items-center rounded-lg border border-white/15 bg-white/[0.04] px-2 text-[10px] font-semibold text-white/75 hover:bg-white/[0.08]"
-            >
-              Assign
-            </Link>
-          </div>
-        </div>
+    <div
+      className={cn(
+        "flex items-center gap-1.5 border-b border-white/[0.05] last:border-b-0",
+        dense ? "py-1" : "py-1.5",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[9px] font-bold",
+          priorityPillClass(item.priority),
+        )}
+        title={item.priority}
+      >
+        {priorityLetter(item.priority)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12px] font-medium text-white">{item.title}</p>
+        <p className="truncate text-[10px] text-white/40">
+          {item.module} · {item.owner} · {item.due}
+        </p>
       </div>
+      <Link
+        href={item.href}
+        className="inline-flex h-6 shrink-0 items-center rounded-md border border-sky-500/35 bg-sky-500/10 px-1.5 text-[10px] font-semibold text-sky-100 hover:bg-sky-500/20"
+      >
+        Open
+      </Link>
+      <button
+        type="button"
+        onClick={() => onComplete(item.id)}
+        className="inline-flex h-6 shrink-0 items-center rounded-md border border-emerald-400/30 bg-emerald-500/10 px-1.5 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/20"
+      >
+        Done
+      </button>
     </div>
   );
 }
@@ -273,25 +289,29 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
   const hrMock = useHrMockStore();
   const hrefs = useCommandCentreHrefs();
   const [pinnedIds] = useState(() => loadPinnedFileIds());
+  const [actionDrawerOpen, setActionDrawerOpen] = useState(false);
 
   const inventory = useMemo(() => getInventoryMockSnapshot(), []);
 
   const actionItems = useMemo(
     () =>
-      buildExecutiveActionItems({
-        apiItems: data.apiActionItems,
-        projects: data.projects,
-        tickets: data.tickets,
-        contracts: corporate.contracts,
-        clients: data.clients,
-        hrefs: {
-          support: hrefs.support,
-          projects: hrefs.projects,
-          clients: hrefs.clients,
-          corporateContracts: hrefs.corporateContracts,
-          hr: hrefs.hr,
+      buildExecutiveActionItems(
+        {
+          apiItems: data.apiActionItems,
+          projects: data.projects,
+          tickets: data.tickets,
+          contracts: corporate.contracts,
+          clients: data.clients,
+          hrefs: {
+            support: hrefs.support,
+            projects: hrefs.projects,
+            clients: hrefs.clients,
+            corporateContracts: hrefs.corporateContracts,
+            hr: hrefs.hr,
+          },
         },
-      }).filter((item) => !data.completedActionIds.includes(item.id)),
+        25,
+      ).filter((item) => !data.completedActionIds.includes(item.id)),
     [
       data.apiActionItems,
       data.projects,
@@ -302,6 +322,8 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
       hrefs,
     ],
   );
+
+  const cardActionItems = actionItems.slice(0, 5);
 
   const schedule = useMemo(
     () =>
@@ -345,7 +367,7 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
       when: formatLeadWhen(lead),
       href: hrefs.crm,
     }));
-    return [...crmRows, ...base].slice(0, 10);
+    return [...crmRows, ...base].slice(0, 6);
   }, [
     data.clients,
     data.projects,
@@ -428,14 +450,47 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
     );
   }, [data.files, pinnedIds]);
 
-  const burnMonthly = data.financialOverview?.burnRate?.monthly;
+  const burnMonthly = data.financialOverview?.burnRate?.monthly ?? null;
   const revenueYtd = data.financialOverview?.revenueYtd;
-  const cashPosition = data.financialOverview?.cashPosition;
+  const cashPosition = data.financialOverview?.cashPosition ?? null;
   const openTicketCount = countOpenTickets(data.tickets);
   const liveProjects = countLiveProjects(data.projects);
   const pipelineCount = data.crmLeads.filter(
     (lead) => lead.status !== "Lost" && lead.status !== "Won" && lead.status !== "Active Customer",
   ).length;
+
+  const healthIssues = useMemo(
+    () =>
+      buildBusinessHealthIssues({
+        actionItems,
+        tickets: data.tickets,
+        projects: data.projects,
+        contracts: corporate.contracts,
+        burnMonthly,
+        cashPosition,
+        hrefs: {
+          support: hrefs.support,
+          projects: hrefs.projects,
+          corporateContracts: hrefs.corporateContracts,
+          financials: hrefs.financials,
+        },
+      }),
+    [
+      actionItems,
+      data.tickets,
+      data.projects,
+      corporate.contracts,
+      burnMonthly,
+      cashPosition,
+      hrefs,
+    ],
+  );
+
+  const moneyOrDash = (value: number | null | undefined, loading: boolean) => {
+    if (loading) return "…";
+    if (value == null || value === 0) return "—";
+    return formatMoney(value).replace(/\.00$/, "");
+  };
 
   const upcomingEvents = useMemo(() => {
     const now = Date.now();
@@ -459,48 +514,129 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
 
   switch (type) {
     case "action-required":
-      return actionItems.length === 0 ? (
-        <EmptyLine
-          message={
-            data.loading.actionItems || data.loading.tickets || data.loading.projects
-              ? "Loading priorities…"
-              : "Nothing urgent right now."
-          }
-        />
-      ) : (
-        <div className="flex flex-col gap-2">
-          {actionItems.map((item) => (
-            <ActionRequiredRow
-              key={item.id}
-              item={item}
-              onComplete={data.completeAction}
+      return (
+        <>
+          {cardActionItems.length === 0 ? (
+            <EmptyLine
+              message={
+                data.loading.actionItems || data.loading.tickets || data.loading.projects
+                  ? "Loading priorities…"
+                  : "Nothing urgent right now."
+              }
             />
-          ))}
-        </div>
+          ) : (
+            <div>
+              {cardActionItems.map((item) => (
+                <ActionRequiredRow
+                  key={item.id}
+                  item={item}
+                  onComplete={data.completeAction}
+                />
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setActionDrawerOpen(true)}
+            className="mt-1.5 w-full rounded-md border border-white/10 bg-white/[0.03] py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white/80"
+          >
+            View All{actionItems.length > 0 ? ` · ${actionItems.length}` : ""}
+          </button>
+          {actionDrawerOpen ? (
+            <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
+              <aside className="flex h-full w-full max-w-lg flex-col border-l border-white/10 bg-[#0a1220] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300/80">
+                      Action Required
+                    </p>
+                    <h2 className="text-sm font-semibold text-white">
+                      All priorities · {actionItems.length}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActionDrawerOpen(false)}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/[0.08]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-3 py-2">
+                  {actionItems.length === 0 ? (
+                    <EmptyLine message="Nothing urgent right now." />
+                  ) : (
+                    actionItems.map((item) => (
+                      <ActionRequiredRow
+                        key={item.id}
+                        item={item}
+                        onComplete={data.completeAction}
+                        dense={false}
+                      />
+                    ))
+                  )}
+                </div>
+              </aside>
+            </div>
+          ) : null}
+        </>
       );
 
     case "todays-schedule":
       return schedule.length === 0 ? (
         <EmptyLine message="No schedule items for today." />
       ) : (
-        <ul className="space-y-1.5">
-          {schedule.map((entry) => (
+        <ul className="divide-y divide-white/[0.05]">
+          {schedule.slice(0, 6).map((entry) => (
             <li key={entry.id}>
               <Link
                 href={entry.href}
-                className="flex items-start gap-2 rounded-lg border border-white/10 bg-[#0b1524]/55 px-2.5 py-2 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10"
+                className="flex items-center gap-1.5 py-1 transition-colors hover:bg-white/[0.03]"
               >
+                <span className="w-14 shrink-0 truncate text-[10px] tabular-nums text-white/45">
+                  {entry.when}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-white">
+                  {entry.title}
+                </span>
                 <span
                   className={cn(
-                    "mt-0.5 shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em]",
+                    "shrink-0 rounded border px-1 py-px text-[8px] font-semibold uppercase tracking-[0.06em]",
                     scheduleKindClass(entry.kind),
                   )}
                 >
                   {entry.kind}
                 </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      );
+
+    case "business-health":
+      return healthIssues.length === 0 ? (
+        <EmptyLine message="No operational issues flagged." />
+      ) : (
+        <ul className="divide-y divide-white/[0.05]">
+          {healthIssues.map((issue) => (
+            <li key={issue.id}>
+              <Link
+                href={issue.href}
+                className="flex items-start gap-1.5 py-1 transition-colors hover:bg-white/[0.03]"
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 shrink-0 rounded border px-1 py-px text-[8px] font-bold uppercase tracking-[0.06em]",
+                    healthSeverityClass(issue.severity),
+                  )}
+                >
+                  {issue.severity === "critical" ? "Crit" : issue.severity === "warning" ? "Warn" : "Info"}
+                </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-white">{entry.title}</span>
-                  <span className="mt-0.5 block text-[11px] text-white/45">{entry.when}</span>
+                  <span className="block truncate text-[12px] font-medium text-white">
+                    {issue.title}
+                  </span>
+                  <span className="block truncate text-[10px] text-white/40">{issue.detail}</span>
                 </span>
               </Link>
             </li>
@@ -510,33 +646,24 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
 
     case "business-snapshot":
       return (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 xl:grid-cols-9">
           <KpiChip label="Clients" value={data.clients.length} href={hrefs.clients} />
-          <KpiChip label="Projects" value={liveProjects} href={hrefs.projects} />
           <KpiChip
             label="Revenue"
-            value={
-              data.loading.financials
-                ? "…"
-                : revenueYtd != null && revenueYtd > 0
-                  ? formatMoney(revenueYtd)
-                  : "—"
-            }
+            value={moneyOrDash(revenueYtd, data.loading.financials)}
             href={hrefs.financials}
           />
-          <KpiChip label="MRR" value="—" href={hrefs.financials} />
-          <KpiChip label="ARR" value="—" href={hrefs.financials} />
           <KpiChip
             label="Burn Rate"
-            value={
-              data.loading.financials
-                ? "…"
-                : burnMonthly != null
-                  ? formatMoney(burnMonthly)
-                  : "—"
-            }
+            value={moneyOrDash(burnMonthly, data.loading.financials)}
             href={hrefs.financials}
           />
+          <KpiChip
+            label="Cash"
+            value={moneyOrDash(cashPosition, data.loading.financials)}
+            href={hrefs.financials}
+          />
+          <KpiChip label="Projects" value={liveProjects} href={hrefs.projects} />
           <KpiChip label="Employees" value={data.employees.length} href={hrefs.hr} />
           <KpiChip label="Support" value={openTicketCount} href={hrefs.support} />
           <KpiChip label="Contracts" value={openContracts.length} href={hrefs.corporateContracts} />
@@ -548,28 +675,23 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
       return activity.length === 0 ? (
         <EmptyLine message="No recent activity yet." />
       ) : (
-        <ul className="divide-y divide-white/[0.06]">
+        <ul className="divide-y divide-white/[0.05]">
           {activity.map((entry) => (
             <li key={entry.id}>
               <Link
                 href={entry.href}
-                className="flex items-start justify-between gap-3 py-2 transition-colors hover:bg-white/[0.03]"
+                className="flex items-center justify-between gap-2 py-1 transition-colors hover:bg-white/[0.03]"
               >
-                <span className="min-w-0">
+                <span className="min-w-0 flex items-center gap-1.5">
                   <span
                     className={cn(
-                      "text-[10px] font-semibold uppercase tracking-[0.12em]",
+                      "shrink-0 text-[9px] font-semibold uppercase tracking-[0.1em]",
                       activityKindClass(entry.kind),
                     )}
                   >
                     {entry.kind}
                   </span>
-                  <span className="mt-0.5 block truncate text-sm font-medium text-white">
-                    {entry.title}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-white/40">
-                    {entry.detail}
-                  </span>
+                  <span className="truncate text-[12px] font-medium text-white">{entry.title}</span>
                 </span>
                 <span className="shrink-0 text-[10px] tabular-nums text-white/35">{entry.when}</span>
               </Link>
@@ -582,17 +704,17 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
       return myWork.length === 0 ? (
         <EmptyLine message="Your queue is clear." />
       ) : (
-        <ul className="space-y-1.5">
-          {myWork.map((entry) => (
+        <ul className="divide-y divide-white/[0.05]">
+          {myWork.slice(0, 5).map((entry) => (
             <li key={entry.id}>
               <Link
                 href={entry.href}
-                className="block rounded-lg border border-white/10 bg-[#0b1524]/55 px-2.5 py-2 transition-colors hover:border-amber-400/30 hover:bg-amber-500/10"
+                className="flex items-center gap-1.5 py-1 transition-colors hover:bg-white/[0.03]"
               >
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-200/80">
+                <span className="w-16 shrink-0 truncate text-[9px] font-semibold uppercase tracking-[0.1em] text-amber-200/70">
                   {entry.label}
                 </span>
-                <span className="mt-0.5 block text-sm text-white">{entry.detail}</span>
+                <span className="min-w-0 flex-1 truncate text-[12px] text-white">{entry.detail}</span>
               </Link>
             </li>
           ))}
@@ -601,32 +723,29 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
 
     case "quick-actions": {
       const actions: Array<{ label: string; href: string; icon: React.ReactNode }> = [
-        { label: "New Client", href: hrefs.clients, icon: <Building2 className="h-4 w-4" /> },
-        { label: "New Project", href: hrefs.projects, icon: <FolderKanban className="h-4 w-4" /> },
-        { label: "New Employee", href: hrefs.hr, icon: <Users className="h-4 w-4" /> },
+        { label: "New Client", href: hrefs.clients, icon: <Building2 className="h-3.5 w-3.5" /> },
+        { label: "New Project", href: hrefs.projects, icon: <FolderKanban className="h-3.5 w-3.5" /> },
+        { label: "New Employee", href: hrefs.hr, icon: <Users className="h-3.5 w-3.5" /> },
         {
           label: "Generate Report",
           href: hrefs.financialReports,
-          icon: <ClipboardList className="h-4 w-4" />,
+          icon: <ClipboardList className="h-3.5 w-3.5" />,
         },
-        { label: "Create Invoice", href: hrefs.expenses, icon: <Receipt className="h-4 w-4" /> },
-        { label: "Upload File", href: hrefs.files, icon: <FolderOpen className="h-4 w-4" /> },
-        { label: "Send Message", href: hrefs.messaging, icon: <MessageSquare className="h-4 w-4" /> },
-        { label: "Book Meeting", href: hrefs.calendar, icon: <CalendarDays className="h-4 w-4" /> },
+        { label: "Create Invoice", href: hrefs.expenses, icon: <Receipt className="h-3.5 w-3.5" /> },
+        { label: "Upload File", href: hrefs.files, icon: <FolderOpen className="h-3.5 w-3.5" /> },
+        { label: "Send Message", href: hrefs.messaging, icon: <MessageSquare className="h-3.5 w-3.5" /> },
+        { label: "Book Meeting", href: hrefs.calendar, icon: <CalendarDays className="h-3.5 w-3.5" /> },
       ];
       return (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
           {actions.map((action) => (
             <Link
               key={action.label}
               href={action.href}
-              className="inline-flex min-h-[2.5rem] items-center gap-2.5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.08] px-3 py-2.5 text-sm font-semibold text-cyan-50 transition-colors hover:border-cyan-300/40 hover:bg-cyan-500/15"
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-cyan-400/15 bg-cyan-500/[0.06] px-1.5 py-1 text-[11px] font-semibold text-cyan-50 transition-colors hover:border-cyan-300/35 hover:bg-cyan-500/12"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#0b1524]/80 text-cyan-200">
-                {action.icon}
-              </span>
-              <span className="leading-tight">{action.label}</span>
-              <Plus className="ml-auto h-3.5 w-3.5 text-cyan-200/50" />
+              <span className="shrink-0 text-cyan-200/80">{action.icon}</span>
+              <span className="truncate leading-tight">{action.label}</span>
             </Link>
           ))}
         </div>
