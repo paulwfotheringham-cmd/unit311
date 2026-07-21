@@ -12,7 +12,9 @@ import {
   type HrPublicHoliday,
 } from "@/lib/hr-leave-data";
 import {
+  blankCompetencyScores,
   blankQuestionResponses,
+  type HrPerformanceObjective,
   type HrPerformanceReview,
   type HrReviewStatus,
 } from "@/lib/hr-performance-data";
@@ -45,6 +47,7 @@ type HrMockState = {
   vacancies: HrVacancy[];
   candidates: HrCandidate[];
   reviews: HrPerformanceReview[];
+  goals: HrPerformanceObjective[];
   reports: HrSavedReport[];
   activity: Array<{ id: string; at: string; label: string; detail: string }>;
 };
@@ -742,7 +745,8 @@ function seedState(): HrMockState {
       promotionRecommendation: "later",
       salaryReviewRecommendation: "increase",
       managerRecommendation: "develop",
-      employeeGoals: "Lead two cross-functional delivery programmes and mentor coordinators to independent ownership.",
+      employeeGoals:
+        "Lead two cross-functional delivery programmes and mentor coordinators to independent ownership.",
       nextReviewDate: isoDaysFromNow(120),
       summary: "Strong half — exceeded delivery targets.",
       responses: blankQuestionResponses().map((item, index) => ({
@@ -760,6 +764,12 @@ function seedState(): HrMockState {
           progressPercent: 92,
           dueDate: isoDaysFromNow(20),
           status: "on_track",
+          weight: 40,
+          owner: "María García",
+          scope: "employee",
+          employeeId: "emp-demo-1",
+          employeeName: "María García",
+          department: "Operations",
         },
         {
           id: "obj-2",
@@ -768,21 +778,42 @@ function seedState(): HrMockState {
           progressPercent: 70,
           dueDate: isoDaysFromNow(45),
           status: "on_track",
+          weight: 30,
+          owner: "María García",
+          scope: "employee",
+          employeeId: "emp-demo-1",
+          employeeName: "María García",
+          department: "Operations",
         },
       ],
-      competencies: [
-        { id: "comp-1", name: "Leadership", score: 4, notes: "Trusted by peers" },
-        { id: "comp-2", name: "Communication", score: 4, notes: "" },
-        { id: "comp-3", name: "Delivery", score: 5, notes: "Consistently ahead" },
-      ],
+      competencies: blankCompetencyScores().map((item, index) => ({
+        ...item,
+        id: `comp-1-${index}`,
+        score: ([4, 4, 4, 5, 4, 4, 3, 4, 4, 4][index] ?? 4) as 1 | 2 | 3 | 4 | 5,
+        notes: index === 0 ? "Trusted by peers" : "",
+      })),
       developmentPlan: [
         {
           id: "dev-1",
-          focus: "Delegation",
+          focus: "Delegation & leadership",
           action: "Shadow Paul on weekly priority triage",
           owner: "María García",
           targetDate: isoDaysFromNow(60),
           status: "in_progress",
+          kind: "coaching",
+          budget: "£1,200",
+          nextReviewDate: isoDaysFromNow(30),
+        },
+        {
+          id: "dev-1b",
+          focus: "People leadership",
+          action: "Complete advanced people leadership workshop",
+          owner: "HR L&D",
+          targetDate: isoDaysFromNow(90),
+          status: "planned",
+          kind: "training",
+          budget: "£850",
+          nextReviewDate: isoDaysFromNow(45),
         },
       ],
       createdAt: isoDaysFromNow(-40),
@@ -790,6 +821,20 @@ function seedState(): HrMockState {
       submittedAt: isoDaysFromNow(-3),
       approvedAt: null,
       completedAt: null,
+      reviewType: "quarterly",
+      priority: "high",
+      dueDate: isoDaysFromNow(5),
+      challenges: "Capacity pressure during peak dispatch weeks.",
+      achievements: "Recovered SLA from 91% to 98% in eight weeks.",
+      employeeSelfAssessment:
+        "Proud of the SLA recovery. Need more structured delegation.",
+      careerPotential: "high",
+      promotionReady: "12_months",
+      successionCandidate: true,
+      careerAspirations: "Head of Operations within 18–24 months.",
+      managerCareerComments: "Strong succession candidate for Ops leadership.",
+      signedOffManager: false,
+      signedOffEmployee: true,
     },
     {
       id: "rev-2",
@@ -803,10 +848,10 @@ function seedState(): HrMockState {
       overallRating: null,
       strengths: "",
       areasForImprovement: "",
-      trainingRecommendations: "",
+      trainingRecommendations: "TypeScript advanced patterns; system design clinic",
       promotionRecommendation: null,
       salaryReviewRecommendation: null,
-      managerRecommendation: null,
+      managerRecommendation: "develop",
       employeeGoals: "",
       nextReviewDate: isoDaysFromNow(14),
       summary: "",
@@ -819,18 +864,50 @@ function seedState(): HrMockState {
           progressPercent: 55,
           dueDate: isoDaysFromNow(10),
           status: "at_risk",
+          weight: 50,
+          owner: "Carlos Mendoza",
+          scope: "employee",
+          employeeId: "emp-demo-2",
+          employeeName: "Carlos Mendoza",
+          department: "Technical",
         },
       ],
-      competencies: [
-        { id: "comp-4", name: "Technical ability", score: 3, notes: "Growing quickly" },
-        { id: "comp-5", name: "Collaboration", score: 4, notes: "" },
+      competencies: blankCompetencyScores().map((item, index) => ({
+        ...item,
+        id: `comp-2-${index}`,
+        score: ([3, 3, 4, 3, 4, 3, 3, 3, 3, 2][index] ?? 3) as 1 | 2 | 3 | 4 | 5,
+      })),
+      developmentPlan: [
+        {
+          id: "dev-2",
+          focus: "System design",
+          action: "Pair with senior engineer on isolation architecture reviews",
+          owner: "Hannes Weber",
+          targetDate: isoDaysFromNow(45),
+          status: "in_progress",
+          kind: "mentoring",
+          budget: "£0",
+          nextReviewDate: isoDaysFromNow(14),
+        },
       ],
-      developmentPlan: [],
       createdAt: isoDaysFromNow(-7),
       updatedAt: isoDaysFromNow(-1),
       submittedAt: null,
       approvedAt: null,
       completedAt: null,
+      reviewType: "probation",
+      priority: "high",
+      dueDate: isoDaysFromNow(7),
+      challenges: "Behind on Phase-2 tenancy coverage.",
+      achievements: "",
+      employeeSelfAssessment: "",
+      careerPotential: "medium",
+      promotionReady: "24_months",
+      successionCandidate: false,
+      careerAspirations: "Senior engineer track.",
+      managerCareerComments: "Needs coaching through probation milestones.",
+      signedOffManager: false,
+      signedOffEmployee: false,
     },
     {
       id: "rev-3",
@@ -848,7 +925,8 @@ function seedState(): HrMockState {
       promotionRecommendation: "yes",
       salaryReviewRecommendation: "increase",
       managerRecommendation: "retain",
-      employeeGoals: "Scale the CS team playbook and protect net revenue retention above 110%.",
+      employeeGoals:
+        "Scale the CS team playbook and protect net revenue retention above 110%.",
       nextReviewDate: isoDaysFromNow(180),
       summary: "Outstanding year — promoted to CS Manager track.",
       responses: blankQuestionResponses().map((item) => ({
@@ -857,14 +935,124 @@ function seedState(): HrMockState {
         managerComments: "",
         employeeComments: "",
       })),
-      objectives: [],
-      competencies: [],
-      developmentPlan: [],
+      objectives: [
+        {
+          id: "obj-4",
+          title: "Protect NRR above 110%",
+          description: "Hold net revenue retention through expansion plays.",
+          progressPercent: 100,
+          dueDate: isoDaysFromNow(-30),
+          status: "completed",
+          weight: 40,
+          owner: "Pablo Serrano",
+          scope: "employee",
+          employeeId: "emp-demo-5",
+          employeeName: "Pablo Serrano",
+          department: "Customer Success",
+        },
+      ],
+      competencies: blankCompetencyScores().map((item, index) => ({
+        ...item,
+        id: `comp-3-${index}`,
+        score: ([5, 5, 4, 5, 5, 5, 4, 4, 4, 5][index] ?? 5) as 1 | 2 | 3 | 4 | 5,
+      })),
+      developmentPlan: [
+        {
+          id: "dev-3",
+          focus: "Forecasting",
+          action: "Complete CS leadership forecasting certification",
+          owner: "Pablo Serrano",
+          targetDate: isoDaysFromNow(60),
+          status: "planned",
+          kind: "certification",
+          budget: "£1,500",
+          nextReviewDate: isoDaysFromNow(90),
+        },
+        {
+          id: "dev-3b",
+          focus: "Leadership stretch",
+          action: "Lead Q3 expansion playbook rollout",
+          owner: "Ashley Cole",
+          targetDate: isoDaysFromNow(75),
+          status: "in_progress",
+          kind: "stretch",
+          budget: "£400",
+          nextReviewDate: isoDaysFromNow(30),
+        },
+      ],
       createdAt: isoDaysFromNow(-200),
       updatedAt: isoDaysFromNow(-150),
       submittedAt: isoDaysFromNow(-160),
       approvedAt: isoDaysFromNow(-155),
       completedAt: isoDaysFromNow(-150),
+      reviewType: "annual",
+      priority: "medium",
+      dueDate: isoDaysFromNow(-150),
+      challenges: "Hiring lag during peak expansion.",
+      achievements: "NRR 118%; zero critical churn accounts.",
+      employeeSelfAssessment: "Ready for broader regional CS ownership.",
+      careerPotential: "high",
+      promotionReady: "now",
+      successionCandidate: true,
+      careerAspirations: "Director of Customer Success.",
+      managerCareerComments: "Promotion-ready; recommend calibration this cycle.",
+      signedOffManager: true,
+      signedOffEmployee: true,
+    },
+  ];
+
+  const goals: HrPerformanceObjective[] = [
+    {
+      id: "goal-org-1",
+      title: "Platform NPS ≥ 55",
+      description: "Lift organisation NPS through reliability and support quality.",
+      progressPercent: 78,
+      dueDate: isoDaysFromNow(90),
+      status: "on_track",
+      weight: 25,
+      owner: "Executive team",
+      scope: "organisation",
+      department: "Organisation",
+      employeeId: null,
+    },
+    {
+      id: "goal-org-2",
+      title: "Gross margin improvement",
+      description: "Improve contribution margin by 3pts vs prior year.",
+      progressPercent: 42,
+      dueDate: isoDaysFromNow(120),
+      status: "at_risk",
+      weight: 25,
+      owner: "Finance",
+      scope: "organisation",
+      department: "Organisation",
+      employeeId: null,
+    },
+    {
+      id: "goal-dept-1",
+      title: "Operations readiness ≥ 98%",
+      description: "Department SLA for mission readiness.",
+      progressPercent: 96,
+      dueDate: isoDaysFromNow(30),
+      status: "on_track",
+      weight: 30,
+      owner: "Paul Fotheringham",
+      scope: "department",
+      department: "Operations",
+      employeeId: null,
+    },
+    {
+      id: "goal-dept-2",
+      title: "Technical defect escape rate < 2%",
+      description: "Reduce escaped defects in production releases.",
+      progressPercent: 61,
+      dueDate: isoDaysFromNow(45),
+      status: "at_risk",
+      weight: 30,
+      owner: "Hannes Weber",
+      scope: "department",
+      department: "Technical",
+      employeeId: null,
     },
   ];
 
@@ -994,6 +1182,7 @@ function seedState(): HrMockState {
     vacancies,
     candidates,
     reviews,
+    goals,
     reports,
     activity,
   };
@@ -1468,6 +1657,7 @@ export function createDraftReviewForEmployee(input: {
   department: string;
   role: string;
   managerName: string;
+  reviewType?: HrPerformanceReview["reviewType"];
 }) {
   const review: HrPerformanceReview = {
     id: uid("rev"),
@@ -1490,15 +1680,124 @@ export function createDraftReviewForEmployee(input: {
     summary: "",
     responses: blankQuestionResponses(),
     objectives: [],
-    competencies: [],
+    competencies: blankCompetencyScores(),
     developmentPlan: [],
     createdAt: isoDaysFromNow(0),
     updatedAt: isoDaysFromNow(0),
     submittedAt: null,
     approvedAt: null,
     completedAt: null,
+    reviewType: input.reviewType ?? "annual",
+    priority: "medium",
+    dueDate: isoDaysFromNow(30),
+    challenges: "",
+    achievements: "",
+    employeeSelfAssessment: "",
+    careerPotential: null,
+    promotionReady: null,
+    successionCandidate: false,
+    careerAspirations: "",
+    managerCareerComments: "",
+    signedOffManager: false,
+    signedOffEmployee: false,
   };
   return savePerformanceReview(review);
+}
+
+export function listPerformanceGoals() {
+  return state.goals;
+}
+
+export function savePerformanceGoal(goal: HrPerformanceObjective) {
+  const exists = state.goals.some((item) => item.id === goal.id);
+  state = {
+    ...state,
+    goals: exists
+      ? state.goals.map((item) => (item.id === goal.id ? goal : item))
+      : [goal, ...state.goals],
+  };
+  pushActivity("Performance goal saved", goal.title);
+  emit();
+  return goal;
+}
+
+export function archivePerformanceGoal(id: string) {
+  const inStandalone = state.goals.some((goal) => goal.id === id);
+  if (inStandalone) {
+    state = {
+      ...state,
+      goals: state.goals.map((goal) =>
+        goal.id === id ? { ...goal, archived: true, status: "deferred" as const } : goal,
+      ),
+    };
+  } else {
+    state = {
+      ...state,
+      reviews: state.reviews.map((review) => ({
+        ...review,
+        objectives: review.objectives.map((objective) =>
+          objective.id === id
+            ? { ...objective, archived: true, status: "deferred" as const }
+            : objective,
+        ),
+        updatedAt: isoDaysFromNow(0),
+      })),
+    };
+  }
+  pushActivity("Performance goal archived", id);
+  emit();
+}
+
+export function markPerformanceGoalComplete(id: string) {
+  const inStandalone = state.goals.some((goal) => goal.id === id);
+  if (inStandalone) {
+    state = {
+      ...state,
+      goals: state.goals.map((goal) =>
+        goal.id === id
+          ? { ...goal, status: "completed" as const, progressPercent: 100 }
+          : goal,
+      ),
+    };
+  } else {
+    state = {
+      ...state,
+      reviews: state.reviews.map((review) => ({
+        ...review,
+        objectives: review.objectives.map((objective) =>
+          objective.id === id
+            ? { ...objective, status: "completed" as const, progressPercent: 100 }
+            : objective,
+        ),
+        updatedAt: isoDaysFromNow(0),
+      })),
+    };
+  }
+  pushActivity("Performance goal completed", id);
+  emit();
+}
+
+export function upsertReviewObjective(
+  reviewId: string,
+  objective: HrPerformanceObjective,
+) {
+  state = {
+    ...state,
+    reviews: state.reviews.map((review) => {
+      if (review.id !== reviewId) return review;
+      const exists = review.objectives.some((item) => item.id === objective.id);
+      return {
+        ...review,
+        objectives: exists
+          ? review.objectives.map((item) =>
+              item.id === objective.id ? objective : item,
+            )
+          : [...review.objectives, objective],
+        updatedAt: isoDaysFromNow(0),
+      };
+    }),
+  };
+  emit();
 }
 
 /* —— Reports —— */
