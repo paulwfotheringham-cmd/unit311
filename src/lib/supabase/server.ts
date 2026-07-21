@@ -37,5 +37,13 @@ export function isSupabaseConfigured() {
 }
 
 export function isSupabaseServiceRoleConfigured() {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const url = process.env.SUPABASE_URL?.trim() ?? "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  // Reject empty / linked-placeholder values like "env_OoBr…" that are not JWTs.
+  return Boolean(
+    url.startsWith("https://") &&
+      key.length > 40 &&
+      !key.startsWith("env_") &&
+      key !== "[SENSITIVE]",
+  );
 }

@@ -1,7 +1,7 @@
 import type { AssistantChatMessage } from "./types";
 
 export type DirectAssistantIntent = {
-  tool: "generateEmployeeListPdf" | "emailAssistantArtifact";
+  tool: "generateEmployeeListPdf" | "emailAssistantArtifact" | "searchEmployees";
   args: Record<string, unknown>;
   reason: string;
 };
@@ -32,11 +32,25 @@ export function resolveDirectIntent(
   const discussedEmployees = historyMentionsEmployees(history);
   const hasPdf = historyHasPdfArtifact(history);
 
+  // List employees only (no PDF) — return the list, do not invent a file.
+  if (
+    /^(list|show|get|give me|display)\s+(all\s+)?(employees|staff|people|headcount)\b/i.test(
+      text,
+    ) &&
+    !/pdf|export|download|email|board pack/i.test(lower)
+  ) {
+    return {
+      tool: "searchEmployees",
+      args: { pageSize: 100 },
+      reason: "list_employees_only",
+    };
+  }
+
   // Explicit employee PDF requests
   if (
     /pdf/.test(lower) &&
     /employee|staff|headcount|directory|people/.test(lower) &&
-    /(generate|create|make|export|list|produce|build)/.test(lower)
+    /(generate|create|make|export|list|produce|build|want)/.test(lower)
   ) {
     return {
       tool: "generateEmployeeListPdf",

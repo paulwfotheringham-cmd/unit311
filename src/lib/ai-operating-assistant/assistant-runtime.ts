@@ -106,8 +106,38 @@ async function resolveHistory(
   };
 }
 
+function formatSearchEmployeesReply(result: unknown): string | null {
+  if (!result || typeof result !== "object") return null;
+  const status = String((result as { status?: string }).status ?? "");
+  if (status === "error" || status === "forbidden") {
+    return (
+      (typeof (result as { error?: string }).error === "string" &&
+        (result as { error: string }).error) ||
+      "I could not load employees."
+    );
+  }
+  const items = (result as { items?: Array<Record<string, unknown>> }).items;
+  if (!Array.isArray(items)) return null;
+  const summary = (result as { summary?: Record<string, unknown> }).summary;
+  const headcount =
+    typeof summary?.headcount === "number" ? summary.headcount : items.length;
+  if (items.length === 0) {
+    return `No employees matched. Headcount on file: ${headcount}.`;
+  }
+  const lines = items.slice(0, 40).map((item, index) => {
+    const name = String(item.fullName ?? "—");
+    const department = String(item.department ?? "—");
+    const role = String(item.role ?? "—");
+    return `${index + 1}. ${name} — ${department} — ${role}`;
+  });
+  const more =
+    items.length > 40 ? `\n…and ${items.length - 40} more.` : "";
+  return `Here are the employees on file (${items.length} shown, headcount ${headcount}):\n\n${lines.join("\n")}${more}`;
+}
+
 function extractArtifactsFromToolResult(
   result: unknown,
+  toolName?: string,
 ): {
   followUps: NonNullable<AssistantChatMessage["followUpActions"]>;
   artifacts: NonNullable<AssistantChatMessage["artifacts"]>;
@@ -139,6 +169,27 @@ function extractArtifactsFromToolResult(
           (result as { error: string }).error) ||
         (typeof summary?.message === "string" && summary.message) ||
         "That action could not be completed.",
+    };
+  }
+
+  if (toolName === "searchEmployees") {
+    return {
+      followUps,
+      artifacts: [],
+      successText: formatSearchEmployeesReply(result),
+      errorText: null,
+    };
+  }
+
+  if (toolName === "emailAssistantArtifact") {
+    return {
+      followUps,
+      artifacts: [],
+      successText:
+        typeof summary?.message === "string"
+          ? summary.message
+          : "Email sent.",
+      errorText: null,
     };
   }
 
@@ -329,7 +380,7 @@ export async function* runAssistantTurn(input: {
         context,
       );
       yield { type: "tool_result", name: directIntent.tool, result };
-      const extracted = extractArtifactsFromToolResult(result);
+      const extracted = extractArtifactsFromToolResult(result, directIntent.tool);
       turnFollowUps = extracted.followUps;
       turnArtifacts = extracted.artifacts;
       assistantText =
@@ -477,7 +528,7 @@ export async function* runAssistantTurn(input: {
           });
         }
         yield { type: "tool_result", name: call.name, result };
-        const extracted = extractArtifactsFromToolResult(result);
+        const extracted = extractArtifactsFromToolResult(result, call.name);
         if (extracted.followUps.length > 0) turnFollowUps = extracted.followUps;
         if (extracted.artifacts.length > 0) turnArtifacts = extracted.artifacts;
         toolOutputs.push({

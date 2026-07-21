@@ -160,9 +160,13 @@ try {
     listDone.message,
   ];
   const listed =
-    /employee|people|staff|headcount|directory/i.test(listDone.message.content) ||
-    (listDone.message.followUpActions || []).some((a) => /pdf/i.test(a.label));
-  check("list employees", listed, listDone.message.content.slice(0, 120));
+    /employee|people|staff|headcount|directory/i.test(listDone.message.content) &&
+    !(listDone.message.artifacts?.length > 0);
+  check(
+    "list employees",
+    listed && !/pdf is ready/i.test(listDone.message.content),
+    listDone.message.content.slice(0, 160),
+  );
 
   const pdfDone = await chat(cookie, "Generate PDF", {
     conversationId,
@@ -267,8 +271,8 @@ try {
   });
   check(
     "email it resolves PDF context",
-    !/what|which pdf|no pdf/i.test(emailDone.message.content) ||
-      /emailed|sent|board/i.test(emailDone.message.content),
+    /emailed|sent/i.test(emailDone.message.content) &&
+      !/pdf is ready/i.test(emailDone.message.content),
     emailDone.message.content.slice(0, 200),
   );
 } catch (error) {

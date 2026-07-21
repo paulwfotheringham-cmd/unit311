@@ -179,7 +179,7 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
   {
     name: "generateEmployeeListPdf",
     description:
-      "Immediately generate a PDF of all employees (name, department, job title, status only — never salary). Use when the user asks to create/export/download an employee PDF or directory. Do not ask for confirmation.",
+      "Generate a real employee directory PDF (name, department, job title, status only — never salary). Call ONLY when the user explicitly asks for a PDF/export/download of employees. Do NOT call this for a plain list/show employees request — use searchEmployees instead.",
     parameters: {
       type: "object",
       properties: {},
@@ -189,14 +189,13 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
   {
     name: "emailAssistantArtifact",
     description:
-      "Email a previously generated assistant PDF/artifact (resolve pronouns like it/that PDF/the report to the latest artifactId). Use immediately when the user asks to email it. Default recipient is the Board distribution.",
+      "Email a previously generated assistant PDF/artifact (resolve pronouns like it/that PDF/the report to the latest artifactId). Use immediately when the user asks to email it. Default recipient is the Board distribution. artifactId is optional when a PDF already exists in conversation context.",
     parameters: {
       type: "object",
       properties: {
         artifactId: { type: "string" },
         to: { type: "string", description: "Optional recipient override" },
       },
-      required: ["artifactId"],
       additionalProperties: false,
     },
   },
