@@ -196,11 +196,13 @@ export default function ExecutiveAssistantPanel({
     }
   }, []);
 
-  useEffect(() => {
-    void refreshConversations();
-  }, [refreshConversations]);
+  const assistantActive = variant !== "drawer" || open;
+  const bootstrappedRef = useRef(false);
 
   useEffect(() => {
+    if (!assistantActive || bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
+    void refreshConversations();
     void (async () => {
       try {
         const response = await fetch("/api/auth/whoami", { cache: "no-store" });
@@ -211,7 +213,7 @@ export default function ExecutiveAssistantPanel({
         // voice prefs fall back to anon
       }
     })();
-  }, []);
+  }, [assistantActive, refreshConversations]);
 
   useEffect(() => {
     if (variant !== "drawer" || !open) return;

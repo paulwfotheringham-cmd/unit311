@@ -10,8 +10,8 @@ import { marketingFadeIn, MARKETING_CONTENT_CLASS } from "@/lib/marketing-ui";
 import { SITE_NAME } from "@/lib/site";
 
 /** Match Workspace Login visuals. */
-const LOGIN_BACKGROUND = "/images/login-workspace-bg.jpg";
-const LOGIN_LOGO = "/images/unit311central-login.png";
+const LOGIN_BACKGROUND = "/images/login-workspace-bg.webp";
+const LOGIN_LOGO = "/images/unit311central-login.webp";
 const LOGIN_LOGO_WIDTH = 1462;
 const LOGIN_LOGO_HEIGHT = 334;
 

@@ -52,7 +52,9 @@ export async function listInternalOperators(): Promise<ManagedUser[]> {
     const supabase = requireOperatorsSupabase();
     const { data, error } = await supabase
       .from("internal_operators")
-      .select("*")
+      .select(
+        "id, operator_label, full_name, username, email, phone, role, status, region, license_id, notes, created_at, updated_at",
+      )
       .order("full_name", { ascending: true });
 
     if (error) throw new Error(error.message);

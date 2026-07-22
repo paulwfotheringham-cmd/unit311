@@ -32,15 +32,22 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({
-    displayName: session.displayName,
-    username: session.username,
-    email,
-    role,
-    userType: session.userType,
-    userId: session.sub,
-    workspaceId: workspace?.id ?? null,
-    workspaceSlug: workspace?.slug ?? null,
-    workspaceName: workspace?.name ?? null,
-  });
+  return NextResponse.json(
+    {
+      displayName: session.displayName,
+      username: session.username,
+      email,
+      role,
+      userType: session.userType,
+      userId: session.sub,
+      workspaceId: workspace?.id ?? null,
+      workspaceSlug: workspace?.slug ?? null,
+      workspaceName: workspace?.name ?? null,
+    },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+      },
+    },
+  );
 }

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-export const LOGO_SRC = "/images/unit311central.png";
-export const LOGO_HERO_SRC = "/images/unit311central-hero.png";
+export const LOGO_SRC = "/images/unit311central.webp";
+export const LOGO_HERO_SRC = "/images/unit311central.webp";
 export const LOGO_ASPECT = 198 / 90;
 export const LOGO_STANDARD_HEIGHT = 72;
 export const LOGO_HOME_HERO_HEIGHT = 151;

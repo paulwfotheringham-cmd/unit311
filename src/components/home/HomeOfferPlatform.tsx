@@ -3,7 +3,7 @@ import HomeSectionTitle from "./HomeSectionTitle";
 import HomePlatformModules from "./HomePlatformModules";
 import WorkspaceDemoLoopVideo from "./WorkspaceDemoLoopVideo";
 
-const CONSTRUCTION_BG = "/images/construction-bg.jpg";
+const CONSTRUCTION_BG = "/images/construction-bg.webp";
 
 export default function HomeOfferPlatform() {
   return (

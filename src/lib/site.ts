@@ -13,7 +13,7 @@ export const SITE_URL =
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Unit311";
 export const SITE_EMAIL_DOMAIN = "unit311central.com";
-export const SITE_LOGO_PATH = process.env.NEXT_PUBLIC_SITE_LOGO_PATH ?? "/images/unit311central.png";
+export const SITE_LOGO_PATH = process.env.NEXT_PUBLIC_SITE_LOGO_PATH ?? "/images/unit311central.webp";
 export const SITE_LOGO_URL = `${SITE_URL}${SITE_LOGO_PATH}`;
 export const SITE_TAGLINE = "The centralised platform to accelerate and run your business.";
 export const SITE_DESCRIPTION =

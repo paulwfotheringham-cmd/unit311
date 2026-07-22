@@ -48,8 +48,18 @@ export default function SurveyOperationsDashboard({
   const [activeView, setActiveView] = useState<SurveyOperationsView>(() =>
     readInitialView(searchParams),
   );
-  const { sandboxRef, liveTelemetry, isRunning, setSandboxMountTarget } =
-    useSurveyOperationsSimulator();
+  const {
+    sandboxRef,
+    liveTelemetry,
+    isRunning,
+    setSandboxMountTarget,
+    setSimulatorEnabled,
+  } = useSurveyOperationsSimulator();
+
+  useEffect(() => {
+    setSimulatorEnabled(true);
+    return () => setSimulatorEnabled(false);
+  }, [setSimulatorEnabled]);
   const [missions, setMissions] = useState<ManagedMission[]>(() => createInitialMissions());
   const [assetRegistry] = useState(() => createInitialAssetRegistry());
   const [assets, setAssets] = useState<ManagedAsset[]>(() => assetRegistry.assets);

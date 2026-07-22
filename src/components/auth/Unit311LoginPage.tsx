@@ -16,9 +16,9 @@ import { navigateRedirectPath } from "@/lib/navigate-redirect";
 import { SITE_NAME } from "@/lib/site";
 
 /** Dark engineering/infrastructure background (4K). */
-const LOGIN_BACKGROUND = "/images/login-workspace-bg.jpg";
+const LOGIN_BACKGROUND = "/images/login-workspace-bg.webp";
 /** High-resolution Unit311 Central mark (transparent, Retina-ready). */
-const LOGIN_LOGO = "/images/unit311central-login.png";
+const LOGIN_LOGO = "/images/unit311central-login.webp";
 const LOGIN_LOGO_WIDTH = 1462;
 const LOGIN_LOGO_HEIGHT = 334;
 

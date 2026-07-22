@@ -398,6 +398,27 @@ function readMigrationSql(relativePath: string) {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 
+/** Process-local memo so hot API routes do not re-check/reload schema every request. */
+const ensuredOk = new Map<string, true>();
+const ensuring = new Map<string, Promise<boolean>>();
+
+async function onceEnsured(key: string, run: () => Promise<boolean>): Promise<boolean> {
+  if (ensuredOk.has(key)) return true;
+  const pending = ensuring.get(key);
+  if (pending) return pending;
+
+  const promise = (async () => {
+    const ok = await run();
+    if (ok) ensuredOk.set(key, true);
+    return ok;
+  })().finally(() => {
+    ensuring.delete(key);
+  });
+
+  ensuring.set(key, promise);
+  return promise;
+}
+
 function isDirectDbConnectionError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return (
@@ -938,37 +959,37 @@ export async function withHrEmployeesTable<T>(operation: () => Promise<T>): Prom
 }
 
 export async function ensureInternalOperatorsTable(): Promise<boolean> {
-  const exists = await tableExistsViaManagementApi("internal_operators");
-  if (exists === true) {
-    await reloadPostgrestSchema();
-    return true;
-  }
+  return onceEnsured("table:internal_operators", async () => {
+    const exists = await tableExistsViaManagementApi("internal_operators");
+    if (exists === true) {
+      return true;
+    }
 
-  const dbUrl = getDatabaseUrl();
-  if (dbUrl) {
-    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    const dbUrl = getDatabaseUrl();
+    if (dbUrl) {
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
-    try {
-      await client.connect();
-      if (await tableExists(client, "internal_operators")) {
+      try {
+        await client.connect();
+        if (await tableExists(client, "internal_operators")) {
+          return true;
+        }
+        await applyMigration(client, INTERNAL_OPERATORS_MIGRATION_PATH);
         await reloadPostgrestSchema();
         return true;
+      } finally {
+        await client.end().catch(() => undefined);
       }
-      await applyMigration(client, INTERNAL_OPERATORS_MIGRATION_PATH);
-      await reloadPostgrestSchema();
-      return true;
-    } finally {
-      await client.end().catch(() => undefined);
     }
-  }
 
-  if (exists === false) {
-    const applied = await applyMigrationViaManagementApi(INTERNAL_OPERATORS_MIGRATION_PATH);
-    if (applied) await reloadPostgrestSchema();
-    return applied;
-  }
+    if (exists === false) {
+      const applied = await applyMigrationViaManagementApi(INTERNAL_OPERATORS_MIGRATION_PATH);
+      if (applied) await reloadPostgrestSchema();
+      return applied;
+    }
 
-  return false;
+    return false;
+  });
 }
 
 export async function withInternalOperatorsTable<T>(operation: () => Promise<T>): Promise<T> {
@@ -1210,37 +1231,37 @@ export async function withWhiteboardProjectsTable<T>(operation: () => Promise<T>
 }
 
 export async function ensureInternalClientsTable(): Promise<boolean> {
-  const exists = await tableExistsViaManagementApi("internal_clients");
-  if (exists === true) {
-    await reloadPostgrestSchema();
-    return true;
-  }
+  return onceEnsured("table:internal_clients", async () => {
+    const exists = await tableExistsViaManagementApi("internal_clients");
+    if (exists === true) {
+      return true;
+    }
 
-  const dbUrl = getDatabaseUrl();
-  if (dbUrl) {
-    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    const dbUrl = getDatabaseUrl();
+    if (dbUrl) {
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
-    try {
-      await client.connect();
-      if (await tableExists(client, "internal_clients")) {
+      try {
+        await client.connect();
+        if (await tableExists(client, "internal_clients")) {
+          return true;
+        }
+        await applyMigration(client, INTERNAL_CLIENTS_MIGRATION_PATH);
         await reloadPostgrestSchema();
         return true;
+      } finally {
+        await client.end().catch(() => undefined);
       }
-      await applyMigration(client, INTERNAL_CLIENTS_MIGRATION_PATH);
-      await reloadPostgrestSchema();
-      return true;
-    } finally {
-      await client.end().catch(() => undefined);
     }
-  }
 
-  if (exists === false) {
-    const applied = await applyMigrationViaManagementApi(INTERNAL_CLIENTS_MIGRATION_PATH);
-    if (applied) await reloadPostgrestSchema();
-    return applied;
-  }
+    if (exists === false) {
+      const applied = await applyMigrationViaManagementApi(INTERNAL_CLIENTS_MIGRATION_PATH);
+      if (applied) await reloadPostgrestSchema();
+      return applied;
+    }
 
-  return false;
+    return false;
+  });
 }
 
 export async function withInternalClientsTable<T>(operation: () => Promise<T>): Promise<T> {

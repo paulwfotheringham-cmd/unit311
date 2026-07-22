@@ -110,7 +110,26 @@ import {
 } from "./lazy-workspaces";
 import { type ManagedUser } from "@/lib/user-management-data";
 import { useInfoEmailWhatsAppPoller } from "@/hooks/useInfoEmailWhatsAppPoller";
+import {
+  fetchCachedJson,
+  PLATFORM_CACHE_KEYS,
+} from "@/lib/platform-fetch-cache";
 import { useSurveyOperationsSimulator } from "./SurveyOperationsSimulatorProvider";
+
+const VIEWS_NEEDING_SIMULATOR = new Set<InternalOperationsView>([
+  "fleet",
+  "testing",
+  "telemetry",
+]);
+
+const PREFETCH_WORKSPACES: Array<() => Promise<unknown>> = [
+  () => import("./CrmWorkspace"),
+  () => import("./MessagingWorkspace"),
+  () => import("./ProjectsWorkspace"),
+  () => import("./CalendarWorkspace"),
+  () => import("./FinancialsWorkspace"),
+  () => import("./ClientManagementWorkspace"),
+];
 
 function NavImplementationNotice({ view }: { view: InternalOperationsView }) {
   const notice = getNavImplementationNotice(view);
@@ -227,8 +246,13 @@ export default function InternalOperationsDashboard({
   const [activeView, setActiveView] = useState<InternalOperationsView>(() =>
     readInitialView(searchParams, pathname, initialView),
   );
-  const { liveTelemetry, isRunning, setSandboxMountTarget, setExcludedProfileIds } =
-    useSurveyOperationsSimulator();
+  const {
+    liveTelemetry,
+    isRunning,
+    setSandboxMountTarget,
+    setExcludedProfileIds,
+    setSimulatorEnabled,
+  } = useSurveyOperationsSimulator();
   const [assetRegistry] = useState(() => createInitialAssetRegistry());
   const [assets, setAssets] = useState<ManagedAsset[]>([]);
   const [assetCategories, setAssetCategories] = useState<string[]>([]);
@@ -276,10 +300,10 @@ export default function InternalOperationsDashboard({
     if (!needsUsers || usersLoadedRef.current) return;
     usersLoadedRef.current = true;
 
-    void fetch("/api/users", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const data = (await response.json()) as { users?: ManagedUser[] };
+    void fetchCachedJson<{ users?: ManagedUser[] }>(PLATFORM_CACHE_KEYS.users, "/api/users", {
+      ttlMs: 120_000,
+    })
+      .then((data) => {
         setUsers(data.users ?? []);
       })
       .catch(() => {
@@ -300,18 +324,12 @@ export default function InternalOperationsDashboard({
     if (!needsClients || clientsLoadedRef.current) return;
     clientsLoadedRef.current = true;
 
-    void fetch("/api/clients", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) {
-          setClients([]);
-          return;
-        }
-        const text = await response.text();
-        if (!text || /^\s*</.test(text)) {
-          setClients([]);
-          return;
-        }
-        const data = JSON.parse(text) as { clients?: ManagedClient[] };
+    void fetchCachedJson<{ clients?: ManagedClient[] }>(
+      PLATFORM_CACHE_KEYS.clients,
+      "/api/clients",
+      { ttlMs: 120_000 },
+    )
+      .then((data) => {
         // Always replace — empty workspace must not keep mock/Unit311 seed clients.
         setClients(data.clients ?? []);
       })
@@ -319,6 +337,26 @@ export default function InternalOperationsDashboard({
         setClients([]);
       });
   }, [activeView]);
+
+  useEffect(() => {
+    setSimulatorEnabled(VIEWS_NEEDING_SIMULATOR.has(activeView));
+  }, [activeView, setSimulatorEnabled]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      for (const load of PREFETCH_WORKSPACES) void load();
+    };
+    const ric = window.requestIdleCallback?.(run, { timeout: 4000 });
+    const timer = ric == null ? window.setTimeout(run, 1800) : null;
+    return () => {
+      cancelled = true;
+      if (ric != null) window.cancelIdleCallback?.(ric);
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const viewParam = searchParams.get("view");
