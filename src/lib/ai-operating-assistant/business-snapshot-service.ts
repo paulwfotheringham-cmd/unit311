@@ -11,6 +11,8 @@ import {
 } from "@/lib/accounting/overview-service";
 import { getWiseConnectionStatus, listWiseBalances } from "@/lib/wise-service";
 import { convertToGbp } from "@/lib/treasury/treasury-utils";
+import { createInitialAssetRegistry } from "@/lib/asset-management-data";
+import { getInventoryMockSnapshot } from "@/lib/inventory-mock-store";
 import { loadLiveInvoices } from "./live-finance";
 import { isOverdue } from "./tool-result";
 import type { AssistantBusinessContext } from "./types";
@@ -22,6 +24,7 @@ export type BusinessSnapshotDomain =
   | "finance"
   | "hr"
   | "crm"
+  | "assets"
   | "all";
 
 /**
@@ -32,8 +35,22 @@ export async function buildBusinessSnapshot(
   context: AssistantBusinessContext,
   domain: BusinessSnapshotDomain = "all",
 ) {
-  const want = (name: BusinessSnapshotDomain) =>
-    domain === "all" || domain === "overview" || domain === name;
+  const want = (name: BusinessSnapshotDomain) => {
+    if (domain === name) return true;
+    if (domain === "all") return name !== "overview";
+    // Overview is a management summary — not a dump of Assets register.
+    if (domain === "overview") {
+      return (
+        name === "overview" ||
+        name === "clients" ||
+        name === "projects" ||
+        name === "crm" ||
+        name === "finance" ||
+        name === "hr"
+      );
+    }
+    return false;
+  };
 
   const [
     clients,
@@ -44,6 +61,7 @@ export async function buildBusinessSnapshot(
     invoiceLoad,
     financialOverview,
     wiseCash,
+    assetBundle,
   ] = await Promise.all([
     want("clients") || want("overview")
       ? listInternalClients().catch(() => [])
@@ -71,7 +89,6 @@ export async function buildBusinessSnapshot(
           context.workspace.id ? { workspaceId: context.workspace.id } : undefined,
         ).catch(() => null)
       : Promise.resolve(null),
-    // Always try live Wise when finance is in scope — same source as Finance → Bank.
     want("finance") && context.permissions.canAccessFinancials
       ? (async () => {
           try {
@@ -84,6 +101,7 @@ export async function buildBusinessSnapshot(
                   currency: string;
                   amount: number;
                   type: string;
+                  amountGbp?: number;
                 }>,
                 error: "Wise is not configured.",
                 connected: false,
@@ -98,6 +116,7 @@ export async function buildBusinessSnapshot(
                   currency: string;
                   amount: number;
                   type: string;
+                  amountGbp?: number;
                 }>,
                 error: status.error || "Wise is not connected.",
                 connected: false,
@@ -126,12 +145,25 @@ export async function buildBusinessSnapshot(
                 currency: string;
                 amount: number;
                 type: string;
+                amountGbp?: number;
               }>,
               error: error instanceof Error ? error.message : "Wise balances unavailable.",
               connected: false,
             };
           }
         })()
+      : Promise.resolve(null),
+    want("assets")
+      ? Promise.resolve().then(() => {
+          const registry = createInitialAssetRegistry();
+          const inventory = getInventoryMockSnapshot();
+          return {
+            physicalAssets: registry.assets,
+            categories: registry.categories,
+            locations: registry.locations,
+            inventoryItems: inventory.assets ?? [],
+          };
+        })
       : Promise.resolve(null),
   ]);
 
@@ -160,30 +192,87 @@ export async function buildBusinessSnapshot(
       ? wiseCash.totalGbp
       : financialOverview?.cashPosition ?? wiseCash?.totalGbp ?? null;
 
+  const physicalAssets = assetBundle?.physicalAssets ?? [];
+  const inventoryItems = assetBundle?.inventoryItems ?? [];
+
   return {
     asOf: new Date().toISOString(),
     organisation: context.organisation.name,
     workspace: context.workspace.name,
     domain,
-    overview: {
-      activeClients: activeClients.length,
-      totalClients: clients.length,
-      liveProjects: liveProjects.length,
-      overdueProjects: overdueProjects.length,
-      hotLeads: hotLeads.length,
-      totalLeads: leads.length,
-      headcount: employees.length,
-      outstandingInvoices: invoiceLoad.ok ? invoiceLoad.invoices.filter((i) => i.status !== "paid" && i.status !== "cancelled" && i.status !== "draft").length : null,
-      overdueInvoices: invoiceLoad.ok ? invoiceLoad.overdue.length : null,
-      unpaidExpenses: context.permissions.canAccessFinancials ? unpaidExpenses.length : null,
-      cashPosition,
-      reportingCurrency: FINANCIAL_REPORTING_CURRENCY,
-      wiseBalances: wiseCash?.balances ?? null,
-      wiseConnected: wiseCash?.connected ?? null,
-      revenueYtd: financialOverview?.revenueYtd ?? null,
-      netProfit: financialOverview?.netProfit ?? null,
-      monthlyBurn: financialOverview?.burnRate.monthly ?? null,
-    },
+    overview:
+      domain === "assets"
+        ? {
+            physicalAssetCount: physicalAssets.length,
+            inventoryItemCount: inventoryItems.length,
+            locations: assetBundle?.locations ?? [],
+            categories: assetBundle?.categories ?? [],
+          }
+        : {
+            activeClients: activeClients.length,
+            totalClients: clients.length,
+            liveProjects: liveProjects.length,
+            overdueProjects: overdueProjects.length,
+            hotLeads: hotLeads.length,
+            totalLeads: leads.length,
+            headcount: employees.length,
+            outstandingInvoices: invoiceLoad.ok
+              ? invoiceLoad.invoices.filter(
+                  (i) =>
+                    i.status !== "paid" &&
+                    i.status !== "cancelled" &&
+                    i.status !== "draft",
+                ).length
+              : null,
+            overdueInvoices: invoiceLoad.ok ? invoiceLoad.overdue.length : null,
+            unpaidExpenses: context.permissions.canAccessFinancials
+              ? unpaidExpenses.length
+              : null,
+            cashPosition,
+            reportingCurrency: FINANCIAL_REPORTING_CURRENCY,
+            wiseBalances: wiseCash?.balances ?? null,
+            wiseConnected: wiseCash?.connected ?? null,
+            revenueYtd: financialOverview?.revenueYtd ?? null,
+            netProfit: financialOverview?.netProfit ?? null,
+            monthlyBurn: financialOverview?.burnRate.monthly ?? null,
+            physicalAssetCount: want("assets") ? physicalAssets.length : null,
+          },
+    assets: want("assets")
+      ? {
+          source: "Assets register (Assets, Inventory & Logistics → Assets)",
+          total: physicalAssets.length,
+          byStatus: physicalAssets.reduce<Record<string, number>>((acc, asset) => {
+            acc[asset.operationalStatus] = (acc[asset.operationalStatus] || 0) + 1;
+            return acc;
+          }, {}),
+          byCategory: physicalAssets.reduce<Record<string, number>>((acc, asset) => {
+            acc[asset.category] = (acc[asset.category] || 0) + 1;
+            return acc;
+          }, {}),
+          byLocation: physicalAssets.reduce<Record<string, number>>((acc, asset) => {
+            acc[asset.location] = (acc[asset.location] || 0) + 1;
+            return acc;
+          }, {}),
+          items: physicalAssets.slice(0, 40).map((asset) => ({
+            assetTag: asset.assetTag,
+            category: asset.category,
+            model: asset.model,
+            location: asset.location,
+            status: asset.operationalStatus,
+            serialNumber: asset.serialNumber,
+            nextMaintenanceDue: asset.nextMaintenanceDue,
+            notes: asset.notes || null,
+          })),
+          inventorySample: inventoryItems.slice(0, 15).map((item) => ({
+            assetTag: item.assetTag,
+            name: item.name,
+            category: item.category,
+            location: item.location,
+            status: item.status,
+            currentValue: item.currentValue,
+          })),
+        }
+      : undefined,
     clients: want("clients")
       ? {
           active: activeClients.slice(0, 20).map((client) => ({
@@ -301,6 +390,8 @@ export async function buildBusinessSnapshot(
       : undefined,
     dataGaps,
     guidance:
-      "Answer the user's question using only these live figures. Cash / bank balance comes from Wise treasury (GBP total plus per-currency balances). If a field is null/empty/zero, say so plainly — do not invent numbers. Prefer GBP formatting for cashPosition.",
+      domain === "assets"
+        ? "The user asked about physical Assets. Answer ONLY from the assets register (tags, models, locations, status). Do NOT report Wise cash, bank balances, clients, or finance unless they also asked."
+        : "Answer using only these live figures. For bank/cash questions use Wise balances. For Assets section / physical assets / fleet / drones use the assets register — never confuse Assets with finance. If a field is null/empty/zero, say so plainly.",
   };
 }

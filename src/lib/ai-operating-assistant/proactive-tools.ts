@@ -38,11 +38,21 @@ function resolveSnapshotDomain(raw: string | null): BusinessSnapshotDomain {
     value === "finance" ||
     value === "hr" ||
     value === "crm" ||
+    value === "assets" ||
     value === "all"
   ) {
     return value;
   }
-  // Finance / treasury BEFORE generic “account” (bank account ≠ CRM client account).
+  // Physical Assets / fleet / inventory BEFORE finance “balance” / generic matches.
+  if (
+    /\b(assets?\s+section|physical\s+assets?|asset\s+register|fleet|drones?|equipment\s+register|look\s+in\s+(the\s+)?assets?)\b/.test(
+      value,
+    ) ||
+    (/\bassets?\b/.test(value) &&
+      !/\b(cash|bank|wise|financial|finance|balance sheet)\b/.test(value))
+  ) {
+    return "assets";
+  }
   if (
     /finance|financial|cash|bank|wise|treasury|balance|revenue|invoice|expense|p\s*&?\s*l|profit|burn|debtor|creditor/.test(
       value,
@@ -54,6 +64,7 @@ function resolveSnapshotDomain(raw: string | null): BusinessSnapshotDomain {
   if (/project|delivery|portfolio/.test(value)) return "projects";
   if (/hr|employee|staff|people|leave/.test(value)) return "hr";
   if (/crm|lead|pipeline|sales/.test(value)) return "crm";
+  if (/inventory|logistics|shipment/.test(value)) return "assets";
   if (/health|brief|overview|business|company|status/.test(value)) return "overview";
   return "all";
 }
@@ -67,9 +78,16 @@ export async function queryBusinessTool(
 ) {
   try {
     const question = asString(args.question) || "";
-    const domain = resolveSnapshotDomain(
-      asString(args.domain) || asString(args.topic) || question || null,
-    );
+    const domainArg = asString(args.domain);
+    const topic = asString(args.topic);
+    const fromQuestion = resolveSnapshotDomain(question);
+    const fromArgs = resolveSnapshotDomain(domainArg || topic || null);
+    // Prefer a specific domain inferred from the user question over a generic all/overview arg.
+    const domain =
+      fromQuestion !== "all" && fromQuestion !== "overview"
+        ? fromQuestion
+        : fromArgs;
+
     const snapshot = await buildBusinessSnapshot(ctx.business, domain);
     return toolOk("queryBusiness", [snapshot], {
       source: ["live-platform", "assistant:business-snapshot"],
@@ -78,12 +96,16 @@ export async function queryBusinessTool(
       summary: {
         domain,
         question: question || null,
-        activeClients: snapshot.overview.activeClients,
-        liveProjects: snapshot.overview.liveProjects,
-        headcount: snapshot.overview.headcount,
-        cashPosition: snapshot.overview.cashPosition,
-        reportingCurrency: snapshot.overview.reportingCurrency ?? "GBP",
+        activeClients: snapshot.overview.activeClients ?? null,
+        liveProjects: snapshot.overview.liveProjects ?? null,
+        headcount: snapshot.overview.headcount ?? null,
+        cashPosition: snapshot.overview.cashPosition ?? null,
+        reportingCurrency: snapshot.overview.reportingCurrency ?? null,
         wiseBalances: snapshot.overview.wiseBalances ?? null,
+        physicalAssetCount:
+          snapshot.overview.physicalAssetCount ??
+          snapshot.assets?.total ??
+          null,
       },
       dataGaps: snapshot.dataGaps,
       appliedContext: { activeView: ctx.business.page.activeView },

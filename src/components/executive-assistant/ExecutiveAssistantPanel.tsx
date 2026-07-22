@@ -33,6 +33,10 @@ import {
 } from "@/lib/executive-assistant-ui";
 import { cn } from "@/lib/utils";
 import {
+  fetchCachedJson,
+  PLATFORM_CACHE_KEYS,
+} from "@/lib/platform-fetch-cache";
+import {
   Download,
   Loader2,
   Mail,
@@ -205,9 +209,11 @@ export default function ExecutiveAssistantPanel({
     void refreshConversations();
     void (async () => {
       try {
-        const response = await fetch("/api/auth/whoami", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = (await response.json()) as { userId?: string; username?: string };
+        const data = await fetchCachedJson<{ userId?: string; username?: string }>(
+          PLATFORM_CACHE_KEYS.whoami,
+          "/api/auth/whoami",
+          { ttlMs: 120_000 },
+        );
         setUserId(data.userId || data.username || null);
       } catch {
         // voice prefs fall back to anon
@@ -951,12 +957,28 @@ export default function ExecutiveAssistantPanel({
               </span>
               {voice.status === "listening" ? <VoiceWaveform active /> : null}
             </div>
-            <VoiceSettingsPopover
-              open={voice.settingsOpen}
-              onOpenChange={voice.setSettingsOpen}
-              prefs={voice.prefs}
-              onChange={voice.setPrefs}
-            />
+            <div className="flex items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-white/70 hover:bg-white/[0.05]">
+                <input
+                  type="checkbox"
+                  checked={voice.prefs.voiceEnabled}
+                  onChange={(event) =>
+                    voice.setPrefs({
+                      ...voice.prefs,
+                      voiceEnabled: event.target.checked,
+                    })
+                  }
+                  className="h-3.5 w-3.5 rounded border-white/25 bg-transparent accent-sky-400"
+                />
+                Voice {voice.prefs.voiceEnabled ? "On" : "Off"}
+              </label>
+              <VoiceSettingsPopover
+                open={voice.settingsOpen}
+                onOpenChange={voice.setSettingsOpen}
+                prefs={voice.prefs}
+                onChange={voice.setPrefs}
+              />
+            </div>
           </div>
 
           {voice.micError ? (

@@ -55,8 +55,9 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
         },
         domain: {
           type: "string",
-          enum: ["all", "overview", "clients", "projects", "finance", "hr", "crm"],
-          description: "Optional domain focus; default all/overview",
+          enum: ["all", "overview", "clients", "projects", "finance", "hr", "crm", "assets"],
+          description:
+            "Optional domain focus. Use assets for physical Assets register / fleet / equipment. Use finance for cash/Wise/bank. Default all/overview.",
         },
         topic: { type: "string" },
       },
