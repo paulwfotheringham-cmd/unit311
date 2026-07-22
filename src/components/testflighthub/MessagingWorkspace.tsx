@@ -7,7 +7,6 @@ import {
   formatMessageSenderName,
   formatMessageTime,
   formatScheduledCallTime,
-  generateCallLink,
   INTERNAL_MESSAGING_ROOM,
   MESSAGING_ACTIVE_CHANNEL_KEY,
   MESSAGING_STORAGE_KEY,
@@ -783,13 +782,29 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
     setSending(true);
     setError(null);
     try {
-      const callLink = generateCallLink(type);
+      const createResponse = await fetch("/api/messaging/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callType: type,
+          channelRoom: activeRoom,
+          hostOperatorId: joinedOperator.id,
+          hostOperatorName: joinedOperator.fullName,
+        }),
+      });
+      const createData = await readApiJson<{ callLink?: string; error?: string }>(createResponse);
+      if (!createResponse.ok || !createData.callLink) {
+        throw new Error(createData.error ?? "Failed to create live call room");
+      }
+
+      const callLink = createData.callLink;
       await postMessage({
-        content: `Started a ${type} call in ${activeChannel.name}.`,
+        content: `Started a live ${type} call in ${activeChannel.name}.`,
         messageType: "call",
         callLink,
       });
       setActiveCallLink(callLink);
+      window.open(callLink, "_blank", "noopener,noreferrer");
     } catch (callError) {
       setError(callError instanceof Error ? callError.message : "Failed to start call");
     } finally {
@@ -804,7 +819,22 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
     setScheduling(true);
     setError(null);
     try {
-      const callLink = generateCallLink(scheduleCallType);
+      const createResponse = await fetch("/api/messaging/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callType: scheduleCallType,
+          channelRoom: activeRoom,
+          hostOperatorId: joinedOperator.id,
+          hostOperatorName: joinedOperator.fullName,
+        }),
+      });
+      const createData = await readApiJson<{ callLink?: string; error?: string }>(createResponse);
+      if (!createResponse.ok || !createData.callLink) {
+        throw new Error(createData.error ?? "Failed to create live call room");
+      }
+
+      const callLink = createData.callLink;
       const scheduledAt = buildScheduledCallDateTime(scheduleDate, scheduleTime);
       const response = await fetch("/api/messaging/scheduled-calls", {
         method: "POST",
@@ -1485,7 +1515,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
             <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
               <div className="flex items-center gap-2">
                 <Mic className="h-4 w-4" />
-                <span>Call started (simulated FlightHub 2 bridge)</span>
+                <span>Live call started — open the room to join</span>
               </div>
               <div className="flex items-center gap-2">
                 <a
