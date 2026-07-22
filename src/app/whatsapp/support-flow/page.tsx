@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
-import { Loader2, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 
 import {
   formatSupportDate,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/internal-messaging-data";
 import { createInitialUsers } from "@/lib/user-management-data";
 import SupportTicketClientActions from "@/components/testflighthub/SupportTicketClientActions";
+import { internalAppPath, internalAppUrl } from "@/lib/app-domains";
 import { cn } from "@/lib/utils";
 
 type ChatLine = {
@@ -569,20 +571,29 @@ export default function WhatsAppSupportFlowPage() {
 
   return (
     <main className="flex h-dvh w-full flex-col">
-      <div className="flex items-center justify-between border-b border-white/10 bg-[#0b1524] px-3 py-2">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/80">
-            Support flow demo
-          </p>
-          <p className="text-xs text-white/45">
-            Panels appear step by step — {visibleColumns} of 4 visible
-            {ticketId ? ` · ${ticketId}` : ""}
-          </p>
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#0b1524] px-3 py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href={internalAppUrl(internalAppPath("support"))}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-semibold text-white/70 transition-colors hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to platform
+          </Link>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/80">
+              Support flow demo
+            </p>
+            <p className="truncate text-xs text-white/45">
+              Panels appear step by step — {visibleColumns} of 4 visible
+              {ticketId ? ` · ${ticketId}` : ""}
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={() => void resetDemo()}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/20"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-100 transition-colors hover:bg-sky-500/20"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Start again
