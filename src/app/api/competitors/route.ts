@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
 
   try {
     await ensureCompetitorsTable();
-    await ensureCompetitorsSeedData();
+    try {
+      await ensureCompetitorsSeedData();
+    } catch (seedError) {
+      console.error(
+        "[competitors] seed failed (continuing to list):",
+        seedError instanceof Error ? seedError.message : seedError,
+      );
+    }
     const region = request.nextUrl.searchParams.get("region") as CompetitorRegion | "all" | null;
     const competitors = await withCompetitorsTable(() => listCompetitors(region ?? "all"));
     return NextResponse.json({ competitors });

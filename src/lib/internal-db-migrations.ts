@@ -1,7 +1,14 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { Client, type ClientBase } from "pg";
+
+import {
+  COMPETITORS_SAAS_MARKETS_INLINE_SQL,
+  SAAS_COMPETITOR_MARKETS,
+  SAAS_COMPETITOR_SEEDS,
+} from "@/lib/competitors-saas-seed";
+import { createSupabaseServiceRoleClient, isSupabaseServiceRoleConfigured } from "@/lib/supabase/server";
 
 export const COMPETITORS_MIGRATION_PATH = "supabase/migrations/007_create_competitors.sql";
 export const COMPETITORS_AFRICA_MIGRATION_PATH =
@@ -664,40 +671,162 @@ async function countCompetitorsInRegion(region: string): Promise<number | null> 
   return row?.count ?? null;
 }
 
+async function applySqlViaManagementApi(sql: string, label: string) {
+  const token = getSupabaseAccessToken();
+  const projectRef = getSupabaseProjectRef();
+  if (!token || !projectRef) return false;
+
+  const response = await fetch(
+    `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: sql }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error(`[migrations] ${label} failed:`, response.status, body.slice(0, 500));
+    return false;
+  }
+
+  return true;
+}
+
+async function seedSaasCompetitorsProgrammatically(): Promise<boolean> {
+  if (!isSupabaseServiceRoleConfigured()) return false;
+
+  try {
+    // Expand allowed regions first (inline SQL — no migration file required on Vercel).
+    const dbUrl = getDatabaseUrl();
+    if (dbUrl) {
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+      try {
+        await client.connect();
+        await client.query(COMPETITORS_SAAS_MARKETS_INLINE_SQL);
+        await client.query(`notify pgrst, 'reload schema'`);
+      } finally {
+        await client.end().catch(() => undefined);
+      }
+    } else {
+      await applySqlViaManagementApi(COMPETITORS_SAAS_MARKETS_INLINE_SQL, "competitors-region-check");
+      await reloadPostgrestSchema();
+    }
+
+    const supabase = createSupabaseServiceRoleClient();
+    const { data: existing, error: listError } = await supabase
+      .from("competitors")
+      .select("region, company_name")
+      .in("region", SAAS_COMPETITOR_MARKETS);
+
+    if (listError) throw new Error(listError.message);
+
+    const present = new Set(
+      (existing ?? []).map(
+        (row) => `${String(row.region).toLowerCase()}::${String(row.company_name).toLowerCase()}`,
+      ),
+    );
+
+    const rows = [];
+    for (const region of SAAS_COMPETITOR_MARKETS) {
+      for (const seed of SAAS_COMPETITOR_SEEDS) {
+        const key = `${region}::${seed.companyName.toLowerCase()}`;
+        if (present.has(key)) continue;
+        rows.push({
+          region,
+          company_name: seed.companyName,
+          website: seed.website,
+          services: seed.services,
+          service_categories: seed.serviceCategories,
+          drone_technology: null,
+          last_revenue: seed.lastRevenue,
+          notes: seed.notes,
+          sort_order: seed.sortOrder,
+        });
+      }
+    }
+
+    if (rows.length === 0) return true;
+
+    // Insert in chunks to stay within PostgREST payload limits.
+    for (let i = 0; i < rows.length; i += 40) {
+      const chunk = rows.slice(i, i + 40);
+      const { error } = await supabase.from("competitors").insert(chunk);
+      if (error) throw new Error(error.message);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(
+      "[competitors] programmatic SaaS seed failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return false;
+  }
+}
+
 export async function ensureCompetitorsSeedData(): Promise<void> {
   await onceEnsured("seed:competitors", async () => {
     await ensureCompetitorsTable();
 
     const kenyaCount = await countCompetitorsInRegion("kenya");
     if (kenyaCount === 0) {
-      const dbUrl = getDatabaseUrl();
-      if (dbUrl) {
-        const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-        try {
-          await client.connect();
-          await applyMigration(client, COMPETITORS_AFRICA_MIGRATION_PATH);
-        } finally {
-          await client.end().catch(() => undefined);
+      try {
+        const africaPath = join(process.cwd(), COMPETITORS_AFRICA_MIGRATION_PATH);
+        if (existsSync(africaPath)) {
+          const dbUrl = getDatabaseUrl();
+          if (dbUrl) {
+            const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+            try {
+              await client.connect();
+              await applyMigration(client, COMPETITORS_AFRICA_MIGRATION_PATH);
+            } finally {
+              await client.end().catch(() => undefined);
+            }
+          } else {
+            await applyMigrationViaManagementApi(COMPETITORS_AFRICA_MIGRATION_PATH);
+          }
         }
-      } else {
-        const applied = await applyMigrationViaManagementApi(COMPETITORS_AFRICA_MIGRATION_PATH);
-        if (applied) await reloadPostgrestSchema();
+      } catch (error) {
+        console.error(
+          "[competitors] africa seed skipped:",
+          error instanceof Error ? error.message : error,
+        );
       }
     }
 
-    // Idempotent: expands region check + inserts SaaS competitors for US/UK/CA/ES/FR/IT/DE.
-    const dbUrl = getDatabaseUrl();
-    if (dbUrl) {
-      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-      try {
-        await client.connect();
-        await applyMigration(client, COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
-      } finally {
-        await client.end().catch(() => undefined);
+    // Prefer programmatic seed (works without shipping .sql into the serverless bundle).
+    const seeded = await seedSaasCompetitorsProgrammatically();
+    if (!seeded) {
+      const saasPath = join(process.cwd(), COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
+      if (existsSync(saasPath)) {
+        try {
+          const dbUrl = getDatabaseUrl();
+          if (dbUrl) {
+            const client = new Client({
+              connectionString: dbUrl,
+              ssl: { rejectUnauthorized: false },
+            });
+            try {
+              await client.connect();
+              await applyMigration(client, COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
+            } finally {
+              await client.end().catch(() => undefined);
+            }
+          } else {
+            await applyMigrationViaManagementApi(COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
+          }
+        } catch (error) {
+          console.error(
+            "[competitors] SQL fallback seed failed:",
+            error instanceof Error ? error.message : error,
+          );
+        }
       }
-    } else {
-      const applied = await applyMigrationViaManagementApi(COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
-      if (applied) await reloadPostgrestSchema();
     }
 
     return true;

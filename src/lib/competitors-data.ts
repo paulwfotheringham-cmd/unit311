@@ -1,6 +1,11 @@
 export type CompetitorRegion =
+  | "us"
   | "uk"
+  | "canada"
   | "spain"
+  | "france"
+  | "italy"
+  | "germany"
   | "portugal"
   | "kenya"
   | "namibia"
@@ -8,8 +13,13 @@ export type CompetitorRegion =
   | "congo";
 
 export const COMPETITOR_REGION_IDS: CompetitorRegion[] = [
+  "us",
   "uk",
+  "canada",
   "spain",
+  "france",
+  "italy",
+  "germany",
   "portugal",
   "kenya",
   "namibia",
@@ -37,8 +47,13 @@ export const COMPETITOR_REGIONS: {
   title: string;
   subtitle: string;
 }[] = [
+  { id: "us", title: "US", subtitle: "" },
   { id: "uk", title: "UK", subtitle: "" },
+  { id: "canada", title: "Canada", subtitle: "" },
   { id: "spain", title: "Spain", subtitle: "" },
+  { id: "france", title: "France", subtitle: "" },
+  { id: "italy", title: "Italy", subtitle: "" },
+  { id: "germany", title: "Germany", subtitle: "" },
   { id: "portugal", title: "Portugal", subtitle: "" },
   { id: "kenya", title: "Kenya", subtitle: "" },
   { id: "namibia", title: "Namibia", subtitle: "" },
