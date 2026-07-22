@@ -418,7 +418,7 @@ export async function* runAssistantTurn(input: {
       return;
     }
 
-    while (toolLoops < 4) {
+    while (toolLoops < 6) {
       const stream = await createAssistantResponse({
         model: getAssistantModel(),
         instructions,
@@ -558,7 +558,7 @@ export async function* runAssistantTurn(input: {
             })),
             null,
             2,
-          )}\nIf a tool executed successfully and created a file, reply ONLY with a short confirmation like "Done." and the filename. Do not invent success. Do not suggest Excel/Email/Report unless the user asked. Do not ask what PDF to generate when context already established employees.`,
+          )}\nIf tools returned live business data (queryBusiness, search*, brief, health, insights), answer the user's question directly with those facts — never refuse as out of scope. If a tool created a file (status=ok + artifact), reply briefly that the filename is ready. Do not invent success. Do not suggest Excel/Email/Report menus unless asked.`,
         },
       ];
       assistantText = "";

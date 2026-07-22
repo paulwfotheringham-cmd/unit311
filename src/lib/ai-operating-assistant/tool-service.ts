@@ -33,6 +33,7 @@ import {
   guideWorkflowTool,
   listReleaseFeaturesTool,
   listWorkflowsTool,
+  queryBusinessTool,
 } from "./proactive-tools";
 
 /**
@@ -41,6 +42,27 @@ import {
  */
 
 export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
+  {
+    name: "queryBusiness",
+    description:
+      "Answer ANY open business question with a live snapshot (clients, projects, finance, HR, CRM, overview). Call this first for questions like how the business is doing, risks, cash, headcount, pipeline, overdue work, or general operating status. Prefer this over refusing or guessing.",
+    parameters: {
+      type: "object",
+      properties: {
+        question: {
+          type: "string",
+          description: "The user question being answered",
+        },
+        domain: {
+          type: "string",
+          enum: ["all", "overview", "clients", "projects", "finance", "hr", "crm"],
+          description: "Optional domain focus; default all/overview",
+        },
+        topic: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
   {
     name: "searchClients",
     description:
@@ -419,6 +441,7 @@ type ContextualToolHandler = (
 ) => Promise<unknown>;
 
 const handlers: Record<string, ContextualToolHandler> = {
+  queryBusiness: queryBusinessTool,
   searchClients,
   searchProjects,
   searchEmployees,

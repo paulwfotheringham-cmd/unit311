@@ -73,9 +73,13 @@ export function classifyReportIntent(message: string): ClassifiedReportIntent | 
 
   const wantsDocument =
     /\b(pdf|report|pack|directory|export|document)\b/.test(lower) ||
-    /\b(generate|create|make|export|produce|build|prepare|give me|get me)\b/.test(lower);
+    /\b(generate|create|make|export|produce|build|prepare)\s+(a\s+|the\s+|me\s+a\s+|me\s+)?(pdf|report|pack|directory|document)\b/.test(
+      lower,
+    ) ||
+    /\b(give me|get me)\s+(a\s+|the\s+)?(pdf|report|pack|directory)\b/.test(lower);
 
-  if (!wantsDocument && !/\b(employees?|staff)\b/.test(lower)) {
+  // Open business questions (no explicit document ask) must not short-circuit to PDF tools.
+  if (!wantsDocument) {
     return null;
   }
 

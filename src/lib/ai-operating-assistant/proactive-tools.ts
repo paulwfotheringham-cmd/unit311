@@ -4,6 +4,10 @@ import { buildDailyExecutiveBrief } from "./daily-brief-service";
 import { analysePlatformInsights, insightsToNotifications } from "./insight-service";
 import { buildBusinessHealthScore } from "./business-health-service";
 import {
+  buildBusinessSnapshot,
+  type BusinessSnapshotDomain,
+} from "./business-snapshot-service";
+import {
   allWorkflowSummaries,
   buildWorkflowGuideSession,
   listIntentExamples,
@@ -24,6 +28,65 @@ import { buildHighlightAction, buildStartTourAction } from "./guided-learning";
 /**
  * Proactive Executive tools — registered alongside existing search/guide tools.
  */
+
+function resolveSnapshotDomain(raw: string | null): BusinessSnapshotDomain {
+  const value = (raw || "all").toLowerCase();
+  if (
+    value === "overview" ||
+    value === "clients" ||
+    value === "projects" ||
+    value === "finance" ||
+    value === "hr" ||
+    value === "crm" ||
+    value === "all"
+  ) {
+    return value;
+  }
+  if (/client|customer|account/.test(value)) return "clients";
+  if (/project|delivery|portfolio/.test(value)) return "projects";
+  if (/finance|cash|revenue|invoice|expense|p&l|profit/.test(value)) return "finance";
+  if (/hr|employee|staff|people|leave/.test(value)) return "hr";
+  if (/crm|lead|pipeline|sales/.test(value)) return "crm";
+  if (/health|brief|overview|business|company|status/.test(value)) return "overview";
+  return "all";
+}
+
+/**
+ * Open-ended business Q&A — load live platform data for any executive question.
+ */
+export async function queryBusinessTool(
+  args: Record<string, unknown>,
+  ctx: AssistantToolExecutionContext,
+) {
+  try {
+    const domain = resolveSnapshotDomain(
+      asString(args.domain) || asString(args.topic) || null,
+    );
+    const question = asString(args.question) || "";
+    const snapshot = await buildBusinessSnapshot(ctx.business, domain);
+    return toolOk("queryBusiness", [snapshot], {
+      source: ["live-platform", "assistant:business-snapshot"],
+      page: 1,
+      pageSize: 1,
+      summary: {
+        domain,
+        question: question || null,
+        activeClients: snapshot.overview.activeClients,
+        liveProjects: snapshot.overview.liveProjects,
+        headcount: snapshot.overview.headcount,
+        cashPosition: snapshot.overview.cashPosition,
+      },
+      dataGaps: snapshot.dataGaps,
+      appliedContext: { activeView: ctx.business.page.activeView },
+    });
+  } catch (error) {
+    return toolError(
+      "queryBusiness",
+      error instanceof Error ? error.message : "Failed to load business snapshot",
+      ["live-platform"],
+    );
+  }
+}
 
 export async function getDailyBriefTool(
   _args: Record<string, unknown>,
