@@ -13,6 +13,7 @@ import {
 import {
   emailAssistantArtifact,
   generateEmployeeListPdf,
+  generateFinancialReportPdf,
 } from "./artifact-tools";
 import {
   getPageGuideTool,
@@ -173,6 +174,22 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
         clientId: { type: "string" },
       },
       required: ["reportType"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "generateFinancialReportPdf",
+    description:
+      "Generate a real board/P&L financial PDF from live GL, invoices, expenses, and cash. Use immediately for P&L, financials PDF, board financial pack, last-month finance report. Do not refuse — execute this tool. Do not ask for confirmation.",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          description: "Optional period hint such as 'last month', 'YTD', or YYYY-MM",
+        },
+        title: { type: "string" },
+      },
       additionalProperties: false,
     },
   },
@@ -379,6 +396,7 @@ const handlers: Record<string, ContextualToolHandler> = {
   searchCRM,
   generateReport,
   generateEmployeeListPdf,
+  generateFinancialReportPdf,
   emailAssistantArtifact,
   getPageGuide: getPageGuideTool,
   startGuidedTour,
