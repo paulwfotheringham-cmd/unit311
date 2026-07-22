@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Unit311 Central">
+  <text x="0" y="58" font-family="Inter, Arial Black, Arial, sans-serif" font-size="52" font-weight="900" letter-spacing="-1.5">
+    <tspan fill="#ffffff">UNIT</tspan><tspan fill="#60a5fa">311</tspan>
+  </text>
+  <line x1="18" y1="88" x2="58" y2="88" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+  <text x="160" y="94" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="4.5" fill="#60a5fa">CENTRAL</text>
+  <line x1="262" y1="88" x2="302" y2="88" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+</svg>

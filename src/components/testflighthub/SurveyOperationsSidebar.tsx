@@ -4,7 +4,8 @@ import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
-import Logo, { LOGO_SIDEBAR_HEIGHT } from "@/components/layout/Logo";
+import Logo from "@/components/layout/Logo";
+import Unit311CentralWordmark from "@/components/layout/Unit311CentralWordmark";
 import {
   getInternalNavHref,
   internalSurveyNavSections,
@@ -517,22 +518,16 @@ export default function SurveyOperationsSidebar({
       <div
         className={cn(
           "flex shrink-0 items-center justify-between border-b border-white/[0.08]",
-          // Keep overall sidebar height (full viewport); enlarge header strip so the
-          // hero mark can render ~50% larger than the previous padded/scaled draw.
           isInternalCompact
-            ? "h-[4.5rem] px-2.5 lg:h-[5.25rem] lg:px-3"
+            ? "px-2.5 pb-2 pt-2 lg:px-3"
             : "px-3 pb-4 pt-2.5 lg:px-3.5 lg:pb-5 lg:pt-3",
         )}
       >
         {mode === "internal" ? (
-          <div className="flex h-full min-w-0 flex-1 items-center justify-start overflow-hidden py-1.5">
-            <Logo
-              variant="hero"
-              fillContainer
-              height={LOGO_SIDEBAR_HEIGHT}
-              href={logoHref}
-              className="origin-left drop-shadow-[0_6px_24px_rgba(0,0,0,0.4)]"
-            />
+          <div className="flex min-w-0 flex-1 items-center justify-start">
+            <Link href={logoHref} aria-label="Unit311 Central home" className="inline-flex shrink-0">
+              <Unit311CentralWordmark variant="sidebar" />
+            </Link>
           </div>
         ) : (
           <div className="min-w-0 flex-1 rounded-lg bg-white px-2.5 py-1.5">
@@ -551,8 +546,8 @@ export default function SurveyOperationsSidebar({
 
       <nav
         className={cn(
-          "min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-2.5",
-          isInternalCompact ? "pt-2.5 lg:pt-3" : "pt-4 lg:px-3 lg:pt-5",
+          "scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-2.5",
+          isInternalCompact ? "pt-2 lg:pt-2.5" : "pt-3 lg:px-3 lg:pt-4",
         )}
       >
         {mode === "internal" ? (

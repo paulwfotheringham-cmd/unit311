@@ -1,11 +1,14 @@
 import { cn } from "@/lib/utils";
 
-type WordmarkVariant = "hero" | "nav" | "menu";
+type WordmarkVariant = "hero" | "nav" | "menu" | "sidebar";
 
 type Unit311CentralWordmarkProps = {
   variant?: WordmarkVariant;
   className?: string;
 };
+
+const BRAND_BLUE = "#60a5fa";
+const BRAND_BLUE_DEEP = "#2563eb";
 
 const VARIANTS: Record<
   WordmarkVariant,
@@ -29,6 +32,12 @@ const VARIANTS: Record<
     secondary: "text-[0.5625rem] sm:text-[0.625rem]",
     line: "w-3.5 sm:w-4",
   },
+  sidebar: {
+    root: "h-10 w-full max-w-[11.5rem]",
+    primary: "text-[1.15rem] leading-none tracking-[-0.03em]",
+    secondary: "text-[0.55rem] leading-none",
+    line: "w-3",
+  },
 };
 
 export default function Unit311CentralWordmark({
@@ -46,29 +55,31 @@ export default function Unit311CentralWordmark({
       )}
       aria-hidden
     >
-      <p className={cn("font-black tracking-[-0.04em] text-white", styles.primary)}>
+      <p className={cn("font-black", styles.primary)}>
         <span className="text-white">UNIT</span>
-        <span className="text-[#2563eb]">311</span>
+        <span style={{ color: BRAND_BLUE }}>311</span>
       </p>
 
       <div
         className={cn(
-          "mt-[0.18em] flex max-w-full items-center gap-[0.45em] self-center",
+          "mt-[0.22em] flex max-w-full items-center gap-[0.4em] self-start",
           styles.secondary,
         )}
       >
         <span
-          className={cn(
-            "inline-block h-px shrink-0 bg-gradient-to-r from-[#2563eb] via-[#60a5fa] to-white/90",
-            styles.line,
-          )}
+          className={cn("inline-block h-px shrink-0", styles.line)}
+          style={{
+            background: `linear-gradient(to right, ${BRAND_BLUE_DEEP}, ${BRAND_BLUE})`,
+          }}
         />
-        <span className="font-bold tracking-[0.24em] text-white">CENTRAL</span>
+        <span className="font-bold tracking-[0.28em]" style={{ color: BRAND_BLUE }}>
+          CENTRAL
+        </span>
         <span
-          className={cn(
-            "inline-block h-px shrink-0 bg-gradient-to-l from-[#2563eb] via-[#60a5fa] to-white/90",
-            styles.line,
-          )}
+          className={cn("inline-block h-px shrink-0", styles.line)}
+          style={{
+            background: `linear-gradient(to left, ${BRAND_BLUE_DEEP}, ${BRAND_BLUE})`,
+          }}
         />
       </div>
     </div>
