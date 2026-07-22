@@ -1,4 +1,6 @@
 import { listHrEmployees } from "@/lib/hr-employees-service";
+import { listInternalClients } from "@/lib/internal-clients-service";
+import { listProjects } from "@/lib/internal-projects-service";
 import { getFinancialOverview } from "@/lib/accounting/overview-service";
 import { sendMailboxEmail } from "@/lib/email/smtp";
 import { generateEmployeeDirectoryPdf } from "@/lib/ai-operating-assistant/employee-pdf-service";
@@ -6,6 +8,11 @@ import {
   generateFinancialBoardPdf,
   resolveFinancialPeriod,
 } from "@/lib/ai-operating-assistant/financial-pdf-service";
+import { generateTypedReportPdf } from "@/lib/ai-operating-assistant/report-pdf-service";
+import {
+  reportDisplayMeta,
+  type AssistantReportType,
+} from "@/lib/ai-operating-assistant/report-intent";
 import {
   getAssistantArtifact,
   getLatestArtifactForUser,
@@ -25,18 +32,18 @@ import {
 function artifactActions(artifactId: string) {
   return [
     {
-      id: `download_${artifactId}`,
-      label: "Download",
-      kind: "download" as const,
-      artifactId,
-      href: `/api/executive-assistant/artifacts/${artifactId}?disposition=attachment`,
-    },
-    {
       id: `open_${artifactId}`,
       label: "Open",
       kind: "open" as const,
       artifactId,
       href: `/api/executive-assistant/artifacts/${artifactId}?disposition=inline`,
+    },
+    {
+      id: `download_${artifactId}`,
+      label: "Download",
+      kind: "download" as const,
+      artifactId,
+      href: `/api/executive-assistant/artifacts/${artifactId}?disposition=attachment`,
     },
     {
       id: `email_${artifactId}`,
@@ -48,11 +55,53 @@ function artifactActions(artifactId: string) {
   ];
 }
 
+function okArtifactResult(
+  tool: string,
+  artifact: {
+    id: string;
+    title: string;
+    filename: string;
+    contentBase64?: string;
+    bytes: Buffer;
+  },
+  extras: Record<string, unknown>,
+  sources: string[],
+): AssistantToolResult {
+  return toolOk(
+    tool,
+    [
+      {
+        artifactId: artifact.id,
+        title: artifact.title,
+        filename: artifact.filename,
+        downloadUrl: `/api/executive-assistant/artifacts/${artifact.id}?disposition=attachment`,
+        openUrl: `/api/executive-assistant/artifacts/${artifact.id}?disposition=inline`,
+        contentBase64: artifact.contentBase64,
+        ...extras,
+      },
+    ],
+    {
+      source: sources,
+      pageSize: 1,
+      summary: {
+        executed: true,
+        artifactId: artifact.id,
+        title: artifact.title,
+        filename: artifact.filename,
+        byteLength: artifact.bytes.length,
+        message: `${artifact.filename}\n\nGenerated successfully.`,
+        ...extras,
+      },
+      followUpActions: artifactActions(artifact.id),
+    },
+  );
+}
+
 /**
  * Immediately generate an employee directory PDF (no salary / compensation).
  */
 export async function generateEmployeeListPdf(
-  _args: Record<string, unknown>,
+  args: Record<string, unknown>,
   ctx: AssistantToolExecutionContext,
 ): Promise<AssistantToolResult> {
   if (!ctx.business.permissions.canAccessHr) {
@@ -63,42 +112,22 @@ export async function generateEmployeeListPdf(
   }
 
   try {
+    const meta = reportDisplayMeta("employee");
     const employees = await listHrEmployees();
     let artifact = await generateEmployeeDirectoryPdf({
       employees,
       userId: ctx.business.user.id,
       organisationName: ctx.business.organisation.name,
+      title: asString(args.title) || meta.title,
+      filename: asString(args.filename) || meta.filename,
     });
     artifact = await persistArtifactToStorage(artifact);
 
-    return toolOk(
+    return okArtifactResult(
       "generateEmployeeListPdf",
-      [
-        {
-          artifactId: artifact.id,
-          title: artifact.title,
-          filename: artifact.filename,
-          employeeCount: employees.length,
-          downloadUrl: `/api/executive-assistant/artifacts/${artifact.id}?disposition=attachment`,
-          openUrl: `/api/executive-assistant/artifacts/${artifact.id}?disposition=inline`,
-          contentBase64: artifact.contentBase64,
-          columns: ["Name", "Department", "Job title", "Status"],
-        },
-      ],
-      {
-        source: ["supabase:hr_employees", "assistant:pdf"],
-        pageSize: 1,
-        summary: {
-          executed: true,
-          artifactId: artifact.id,
-          title: artifact.title,
-          filename: artifact.filename,
-          employeeCount: employees.length,
-          byteLength: artifact.bytes.length,
-          message: `${artifact.filename} ready (${employees.length} employees).`,
-        },
-        followUpActions: artifactActions(artifact.id),
-      },
+      artifact,
+      { employeeCount: employees.length, columns: ["Name", "Department", "Job title", "Status"] },
+      ["supabase:hr_employees", "assistant:pdf"],
     );
   } catch (error) {
     return toolError(
@@ -124,61 +153,127 @@ export async function generateFinancialReportPdf(
   }
 
   try {
+    const meta = reportDisplayMeta("financial");
     const periodHint = asString(args.period) || asString(args.focus) || "";
     const periodKey = resolveFinancialPeriod(periodHint);
     const overview = await getFinancialOverview(
       ctx.business.workspace.id ? { workspaceId: ctx.business.workspace.id } : undefined,
     );
+    const wantsBoard =
+      /board/i.test(periodHint) || /board/i.test(asString(args.title) || "");
     let artifact = await generateFinancialBoardPdf({
       overview,
       userId: ctx.business.user.id,
       organisationName: ctx.business.organisation.name,
       periodKey,
-      title: /board/i.test(periodHint) || /board/i.test(asString(args.title) || "")
-        ? "Board Financial Report"
-        : "Profit & Loss Report",
+      title:
+        asString(args.title) ||
+        (wantsBoard
+          ? `Board Financial Report - ${new Date().toLocaleDateString("en-GB", {
+              month: "long",
+              year: "numeric",
+            })}`
+          : meta.title),
+      filename: asString(args.filename) || undefined,
     });
     artifact = await persistArtifactToStorage(artifact);
 
-    return toolOk(
+    return okArtifactResult(
       "generateFinancialReportPdf",
+      artifact,
+      { periodKey },
       [
-        {
-          artifactId: artifact.id,
-          title: artifact.title,
-          filename: artifact.filename,
-          periodKey,
-          downloadUrl: `/api/executive-assistant/artifacts/${artifact.id}?disposition=attachment`,
-          openUrl: `/api/executive-assistant/artifacts/${artifact.id}?disposition=inline`,
-          contentBase64: artifact.contentBase64,
-        },
+        "supabase:gl",
+        "supabase:invoices",
+        "supabase:financial_expenses",
+        "wise:balances",
+        "assistant:pdf",
       ],
-      {
-        source: [
-          "supabase:gl",
-          "supabase:invoices",
-          "supabase:financial_expenses",
-          "wise:balances",
-          "assistant:pdf",
-        ],
-        pageSize: 1,
-        summary: {
-          executed: true,
-          artifactId: artifact.id,
-          title: artifact.title,
-          filename: artifact.filename,
-          periodKey,
-          byteLength: artifact.bytes.length,
-          message: `${artifact.filename} ready.`,
-        },
-        followUpActions: artifactActions(artifact.id),
-      },
     );
   } catch (error) {
     return toolError(
       "generateFinancialReportPdf",
       error instanceof Error ? error.message : "Failed to generate financial PDF",
       ["supabase:financials"],
+    );
+  }
+}
+
+/**
+ * Generate engineering / board / project / client PDFs from live workspace data.
+ */
+export async function generateReportPdf(
+  args: Record<string, unknown>,
+  ctx: AssistantToolExecutionContext,
+): Promise<AssistantToolResult> {
+  const reportType = (asString(args.reportType) || "board") as AssistantReportType;
+
+  if (reportType === "employee") {
+    return generateEmployeeListPdf(args, ctx);
+  }
+  if (reportType === "financial") {
+    return generateFinancialReportPdf(args, ctx);
+  }
+
+  if (
+    reportType !== "engineering" &&
+    reportType !== "board" &&
+    reportType !== "project" &&
+    reportType !== "client"
+  ) {
+    return toolError(
+      "generateReportPdf",
+      `Unknown report type "${reportType}". Use engineering, board, financial, employee, project, or client.`,
+      [],
+    );
+  }
+
+  try {
+    const meta = reportDisplayMeta(reportType);
+    const [projects, clients, employees, overview] = await Promise.all([
+      listProjects().catch(() => []),
+      listInternalClients().catch(() => []),
+      ctx.business.permissions.canAccessHr
+        ? listHrEmployees().catch(() => [])
+        : Promise.resolve([]),
+      ctx.business.permissions.canAccessFinancials && reportType === "board"
+        ? getFinancialOverview(
+            ctx.business.workspace.id
+              ? { workspaceId: ctx.business.workspace.id }
+              : undefined,
+          ).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    let artifact = await generateTypedReportPdf({
+      reportType,
+      userId: ctx.business.user.id,
+      organisationName: ctx.business.organisation.name,
+      title: asString(args.title) || meta.title,
+      filename: asString(args.filename) || meta.filename,
+      projects,
+      clients,
+      employees,
+      overview,
+    });
+    artifact = await persistArtifactToStorage(artifact);
+
+    return okArtifactResult(
+      "generateReportPdf",
+      artifact,
+      { reportType },
+      [
+        "supabase:internal_projects",
+        "supabase:internal_clients",
+        "supabase:hr_employees",
+        "assistant:pdf",
+      ],
+    );
+  } catch (error) {
+    return toolError(
+      "generateReportPdf",
+      error instanceof Error ? error.message : "Failed to generate report PDF",
+      ["supabase:workspace"],
     );
   }
 }

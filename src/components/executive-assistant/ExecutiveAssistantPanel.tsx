@@ -368,16 +368,22 @@ export default function ExecutiveAssistantPanel({
     }
 
     if (action.kind === "email_artifact") {
-      void handleSend(undefined, "Email it to the Board.");
+      const artifactId = action.artifactId;
+      const prompt = artifactId
+        ? `Email artifact ${artifactId} to the Board.`
+        : "Email it to the Board.";
+      void handleSend(undefined, prompt);
       return;
     }
 
     if (
       action.kind === "generate" ||
       /^generate\s*pdf$/i.test(action.label) ||
-      action.actionId === "generateEmployeeListPdf"
+      action.actionId === "generateEmployeeListPdf" ||
+      action.actionId === "generateReportPdf" ||
+      action.actionId === "generateFinancialReportPdf"
     ) {
-      void handleSend(undefined, "Generate PDF");
+      void handleSend(undefined, action.label || "Generate PDF");
       return;
     }
 
@@ -539,7 +545,7 @@ export default function ExecutiveAssistantPanel({
             className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5"
           >
             <p className="text-xs font-semibold text-sky-50">{artifact.filename}</p>
-            <p className="mt-0.5 text-[10px] text-sky-100/60">Generated successfully</p>
+            <p className="mt-0.5 text-[10px] text-sky-100/60">Generated successfully.</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <ActionButton
                 label="Open"
@@ -553,7 +559,12 @@ export default function ExecutiveAssistantPanel({
               <ActionButton
                 label="Email"
                 icon={<Mail className="h-3 w-3" />}
-                onClick={() => void handleSend(undefined, "Email it to the Board.")}
+                onClick={() =>
+                  void handleSend(
+                    undefined,
+                    `Email artifact ${artifact.id} to the Board.`,
+                  )
+                }
               />
             </div>
           </div>
@@ -740,7 +751,11 @@ export default function ExecutiveAssistantPanel({
                   : "ml-8 border border-sky-400/20 bg-sky-500/10 text-sky-50",
               )}
             >
-              <p className="whitespace-pre-wrap">{entry.content || (sending ? "…" : "")}</p>
+              {entry.artifacts?.length ? null : (
+                <p className="whitespace-pre-wrap">
+                  {entry.content || (sending ? "…" : "")}
+                </p>
+              )}
               {entry.role === "assistant" ? renderArtifacts(entry.artifacts) : null}
               {entry.role === "assistant" &&
               entry.followUpActions &&
@@ -750,7 +765,9 @@ export default function ExecutiveAssistantPanel({
                   {entry.followUpActions
                     .filter(
                       (action) =>
-                        !/excel|email summary|generate report/i.test(action.label),
+                        !/excel|email summary|generate report|generate pdf/i.test(
+                          action.label,
+                        ),
                     )
                     .map((action) => (
                       <ActionButton

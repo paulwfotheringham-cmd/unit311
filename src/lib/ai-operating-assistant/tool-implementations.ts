@@ -852,10 +852,7 @@ export async function generateReport(
           "Careers openings/applicants are not connected to live storage.",
           "Board narrative text must be written from these figures only — do not invent metrics.",
         ],
-        followUpActions: actionFollowUps(["generate_report"]).filter(
-          (action) =>
-            !/excel|email summary|generate pdf/i.test(action.label),
-        ),
+        followUpActions: [],
         appliedContext: {
           clientId: ctx.business.selection.clientId,
           projectId: ctx.business.selection.projectId,

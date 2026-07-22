@@ -88,6 +88,8 @@ export async function generateEmployeeDirectoryPdf(input: {
   employees: HrEmployee[];
   userId: string;
   organisationName?: string | null;
+  title?: string;
+  filename?: string;
 }): Promise<AssistantStoredArtifact> {
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -96,6 +98,8 @@ export async function generateEmployeeDirectoryPdf(input: {
     month: "long",
     year: "numeric",
   });
+  const title = input.title?.trim() || "Employee Directory";
+  const filename = input.filename?.trim() || "Employee Directory.pdf";
 
   doc.setFillColor(14, 165, 233);
   doc.roundedRect(40, 36, 28, 28, 6, 6, "F");
@@ -115,7 +119,7 @@ export async function generateEmployeeDirectoryPdf(input: {
   doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("Employee Directory", 40, 100);
+  doc.text(title, 40, 100);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
@@ -125,7 +129,6 @@ export async function generateEmployeeDirectoryPdf(input: {
 
   drawTable(doc, toRows(input.employees), 132);
 
-  const filename = `unit311-employee-directory-${new Date().toISOString().slice(0, 10)}.pdf`;
   const arrayBuffer = doc.output("arraybuffer");
   const bytes = Buffer.from(arrayBuffer);
   const id = createArtifactId();
@@ -133,7 +136,7 @@ export async function generateEmployeeDirectoryPdf(input: {
   return putAssistantArtifact({
     id,
     kind: "pdf",
-    title: "Employee Directory",
+    title,
     filename,
     mimeType: "application/pdf",
     bytes,

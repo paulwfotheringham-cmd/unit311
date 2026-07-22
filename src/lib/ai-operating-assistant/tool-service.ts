@@ -14,6 +14,7 @@ import {
   emailAssistantArtifact,
   generateEmployeeListPdf,
   generateFinancialReportPdf,
+  generateReportPdf,
 } from "./artifact-tools";
 import {
   getPageGuideTool,
@@ -162,13 +163,22 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
   {
     name: "generateReport",
     description:
-      "Generate an executive/board/client/project/HR/finance summary from live tool data. Never invent metrics.",
+      "Generate a text executive/board/client/project/HR/finance/engineering summary from live tool data. Prefer generateReportPdf / generateFinancialReportPdf / generateEmployeeListPdf when the user asked for a PDF.",
     parameters: {
       type: "object",
       properties: {
         reportType: {
           type: "string",
-          enum: ["board", "weekly", "client", "finance", "project", "hr", "executive"],
+          enum: [
+            "board",
+            "weekly",
+            "client",
+            "finance",
+            "project",
+            "hr",
+            "executive",
+            "engineering",
+          ],
         },
         focus: { type: "string" },
         clientId: { type: "string" },
@@ -178,9 +188,27 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
     },
   },
   {
+    name: "generateReportPdf",
+    description:
+      "Generate a real PDF from live workspace data for engineering, board, project portfolio, or client reports. Use immediately when the user asks for those PDFs. Do not ask for confirmation. Do not use this for financial P&L (use generateFinancialReportPdf) or employee directory (use generateEmployeeListPdf).",
+    parameters: {
+      type: "object",
+      properties: {
+        reportType: {
+          type: "string",
+          enum: ["engineering", "board", "project", "client"],
+        },
+        title: { type: "string" },
+        filename: { type: "string" },
+      },
+      required: ["reportType"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "generateFinancialReportPdf",
     description:
-      "Generate a real board/P&L financial PDF from live GL, invoices, expenses, and cash. Use immediately for P&L, financials PDF, board financial pack, last-month finance report. Do not refuse — execute this tool. Do not ask for confirmation.",
+      "Generate a real financial/P&L PDF from live GL, invoices, expenses, and cash. Use for financial report, P&L, board financials. Do not use for engineering/project/client/employee PDFs.",
     parameters: {
       type: "object",
       properties: {
@@ -189,6 +217,7 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
           description: "Optional period hint such as 'last month', 'YTD', or YYYY-MM",
         },
         title: { type: "string" },
+        filename: { type: "string" },
       },
       additionalProperties: false,
     },
@@ -199,7 +228,10 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
       "Generate a real employee directory PDF (name, department, job title, status only — never salary). Call ONLY when the user explicitly asks for a PDF/export/download of employees. Do NOT call this for a plain list/show employees request — use searchEmployees instead.",
     parameters: {
       type: "object",
-      properties: {},
+      properties: {
+        title: { type: "string" },
+        filename: { type: "string" },
+      },
       additionalProperties: false,
     },
   },
@@ -397,6 +429,7 @@ const handlers: Record<string, ContextualToolHandler> = {
   generateReport,
   generateEmployeeListPdf,
   generateFinancialReportPdf,
+  generateReportPdf,
   emailAssistantArtifact,
   getPageGuide: getPageGuideTool,
   startGuidedTour,

@@ -55,6 +55,7 @@ export async function generateFinancialBoardPdf(input: {
   organisationName?: string | null;
   periodKey?: string;
   title?: string;
+  filename?: string;
 }): Promise<AssistantStoredArtifact> {
   const periodKey = input.periodKey || resolveFinancialPeriod(null);
   const isYtd = periodKey === "ytd";
@@ -195,7 +196,11 @@ export async function generateFinancialBoardPdf(input: {
     { maxWidth: usable },
   );
 
-  const filename = `unit311-board-financials-${periodKey}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  const filename =
+    input.filename?.trim() ||
+    (title.toLowerCase().includes("board")
+      ? `Board Financial Report - ${periodTitle}.pdf`
+      : `Financial Report - ${periodTitle}.pdf`);
   const arrayBuffer = doc.output("arraybuffer");
   const bytes = Buffer.from(arrayBuffer);
   const id = createArtifactId();

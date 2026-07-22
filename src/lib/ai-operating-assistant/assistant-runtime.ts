@@ -232,7 +232,9 @@ function extractArtifactsFromToolResult(
         contentBase64,
       },
     ],
-    successText: `Done.\n\n${filename} is ready.`,
+    successText:
+      (typeof summary?.message === "string" && summary.message) ||
+      `${filename}\n\nGenerated successfully.`,
     errorText: null,
   };
 }
