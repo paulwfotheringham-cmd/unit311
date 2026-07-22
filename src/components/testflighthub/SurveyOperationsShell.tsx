@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import PlatformFloatingAiAssistant from "./PlatformFloatingAiAssistant";
 import SurveyOperationsSidebar from "./SurveyOperationsSidebar";
 import { WorkspaceBreadcrumb } from "./workspace-chrome";
+import { prefetchViewOnIntent } from "@/lib/workspace-prefetch";
 
 type SurveyOperationsShellProps = {
   children: React.ReactNode;
@@ -150,6 +151,7 @@ export default function SurveyOperationsShell({
         activeView={activeView}
         onViewChange={onViewChange}
         basePath={basePath}
+        onPrefetchView={(view) => prefetchViewOnIntent(view)}
       />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#0b1220]">

@@ -146,6 +146,7 @@ type SurveyOperationsSidebarProps = {
   activeView?: SurveyOperationsView | InternalOperationsView;
   onViewChange?: (view: SurveyOperationsView | InternalOperationsView) => void;
   basePath?: SurveyOperationsBasePath;
+  onPrefetchView?: (view: InternalOperationsView) => void;
 };
 
 export default function SurveyOperationsSidebar({
@@ -155,6 +156,7 @@ export default function SurveyOperationsSidebar({
   activeView,
   onViewChange,
   basePath = "/testflighthub",
+  onPrefetchView,
 }: SurveyOperationsSidebarProps) {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
@@ -228,6 +230,7 @@ export default function SurveyOperationsSidebar({
     asLink: boolean,
     href: string,
     compact = false,
+    prefetchView?: InternalOperationsView,
   ) {
     const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
     const content = (
@@ -241,6 +244,9 @@ export default function SurveyOperationsSidebar({
         <span className="flex-1 truncate">{item.label}</span>
       </>
     );
+    const onIntent = () => {
+      if (prefetchView) onPrefetchView?.(prefetchView);
+    };
 
     if (asLink) {
       return (
@@ -249,6 +255,8 @@ export default function SurveyOperationsSidebar({
           href={href}
           aria-current={active ? "page" : undefined}
           onClick={onClose}
+          onPointerEnter={onIntent}
+          onFocus={onIntent}
           className={navItemClass(active, compact)}
         >
           {content}
@@ -262,6 +270,8 @@ export default function SurveyOperationsSidebar({
         type="button"
         aria-current={active ? "page" : undefined}
         onClick={onNavigate}
+        onPointerEnter={onIntent}
+        onFocus={onIntent}
         className={navItemClass(active, compact)}
       >
         {content}
@@ -344,6 +354,8 @@ export default function SurveyOperationsSidebar({
             (onViewChange as (view: InternalOperationsView) => void)(child.view!);
             onClose?.();
           }}
+          onPointerEnter={() => onPrefetchView?.(child.view!)}
+          onFocus={() => onPrefetchView?.(child.view!)}
           className={itemClass}
         >
           <span className="truncate">{childNavLabel(child)}</span>
@@ -392,6 +404,8 @@ export default function SurveyOperationsSidebar({
               (onViewChange as (view: InternalOperationsView) => void)(item.view as InternalOperationsView);
               onClose?.();
             }}
+            onPointerEnter={() => onPrefetchView?.(item.view as InternalOperationsView)}
+            onFocus={() => onPrefetchView?.(item.view as InternalOperationsView)}
             className={childNavItemClass(linkActive)}
           >
             <Icon className="mr-1.5 h-3 w-3 shrink-0 opacity-70" />
@@ -463,6 +477,7 @@ export default function SurveyOperationsSidebar({
         false,
         navHref,
         true,
+        item.view as InternalOperationsView,
       );
     }
 

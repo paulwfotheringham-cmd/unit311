@@ -1,6 +1,8 @@
 "use client";
 
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+
+import WorkspaceLoadingFallback from "@/components/testflighthub/WorkspaceLoadingFallback";
 
 type WorkspaceBreadcrumbProps = {
   readonly crumbs: readonly string[];
@@ -30,17 +32,8 @@ type WorkspaceLoadingProps = {
   readonly label?: string;
 };
 
-export function WorkspaceLoading({ label = "Loading…" }: WorkspaceLoadingProps) {
-  return (
-    <div
-      className="flex min-h-[12rem] flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-10"
-      role="status"
-      aria-live="polite"
-    >
-      <Loader2 className="h-5 w-5 animate-spin text-sky-300" aria-hidden />
-      <p className="text-sm text-white/60">{label}</p>
-    </div>
-  );
+export function WorkspaceLoading({ label = "Loading workspace" }: WorkspaceLoadingProps) {
+  return <WorkspaceLoadingFallback label={label} />;
 }
 
 type WorkspaceEmptyProps = {

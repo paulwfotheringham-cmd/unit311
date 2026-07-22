@@ -7,6 +7,10 @@ import {
   WorkspaceError,
   WorkspaceLoading,
 } from "@/components/testflighthub/workspace-chrome";
+import {
+  fetchCachedJson,
+  PLATFORM_CACHE_KEYS,
+} from "@/lib/platform-fetch-cache";
 
 type ProfilePayload = {
   displayName: string;
@@ -29,13 +33,11 @@ export default function ProfileWorkspace() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/auth/whoami", { cache: "no-store" });
-      const body = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      } & Partial<ProfilePayload>;
-      if (!response.ok) {
-        throw new Error(body.error || "Failed to load profile.");
-      }
+      const body = await fetchCachedJson<ProfilePayload & { error?: string }>(
+        PLATFORM_CACHE_KEYS.whoami,
+        "/api/auth/whoami",
+        { ttlMs: 120_000 },
+      );
       setProfile({
         displayName: body.displayName?.trim() || "Operator",
         username: body.username?.trim() || "",

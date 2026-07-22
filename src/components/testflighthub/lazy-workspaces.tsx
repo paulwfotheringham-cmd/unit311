@@ -1,20 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Loader2 } from "lucide-react";
 
-function WorkspaceChunkFallback() {
-  return (
-    <div
-      className="flex min-h-[14rem] flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-10"
-      role="status"
-      aria-live="polite"
-    >
-      <Loader2 className="h-5 w-5 animate-spin text-sky-300" aria-hidden />
-      <p className="text-sm text-white/55">Loading workspace…</p>
-    </div>
-  );
-}
+import WorkspaceLoadingFallback from "./WorkspaceLoadingFallback";
 
 function lazyWorkspace(
   // Workspace props vary widely; dynamic() erases the specific prop type at the boundary.
@@ -22,7 +10,7 @@ function lazyWorkspace(
   loader: () => Promise<{ default: React.ComponentType<any> }>,
 ) {
   return dynamic(loader, {
-    loading: () => <WorkspaceChunkFallback />,
+    loading: () => <WorkspaceLoadingFallback />,
     ssr: false,
   });
 }

@@ -3,6 +3,13 @@
  * Dedupes concurrent requests and keeps short-lived responses warm across views.
  */
 
+import {
+  recordApiCall,
+  recordCacheHit,
+  recordCacheMiss,
+  isPerformanceModeEnabled,
+} from "@/lib/platform-performance";
+
 type CacheEntry<T> = {
   value: T;
   expiresAt: number;
@@ -52,15 +59,37 @@ export async function fetchCachedJson<T>(
 ): Promise<T> {
   const ttlMs = init?.ttlMs ?? DEFAULT_TTL_MS;
   const force = init?.force ?? false;
+  const url =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
 
   if (!force) {
     const cached = peekCachedJson<T>(key);
-    if (cached !== null) return cached;
+    if (cached !== null) {
+      recordCacheHit();
+      if (isPerformanceModeEnabled()) {
+        recordApiCall({
+          url: url.replace(/^https?:\/\/[^/]+/, "").slice(0, 120),
+          method: (init?.method ?? "GET").toUpperCase(),
+          durationMs: 0,
+          ok: true,
+          cached: true,
+        });
+      }
+      return cached;
+    }
 
     const pending = inflight.get(key) as InflightEntry<T> | undefined;
-    if (pending) return pending.promise;
+    if (pending) {
+      recordCacheHit();
+      return pending.promise;
+    }
   }
 
+  recordCacheMiss();
   const { ttlMs: _ttl, force: _force, ...fetchInit } = init ?? {};
   const promise = (async () => {
     const response = await fetch(input, {
@@ -88,4 +117,7 @@ export const PLATFORM_CACHE_KEYS = {
   whoami: "platform:whoami",
   users: "platform:users",
   clients: "platform:clients",
+  projects: "platform:projects",
+  settings: "platform:settings",
+  permissions: "platform:permissions",
 } as const;

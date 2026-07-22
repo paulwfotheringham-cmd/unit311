@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import {
@@ -33,8 +34,21 @@ import {
 } from "@/lib/potential-clients-data";
 import type { SurveyOperationsBasePath } from "@/lib/survey-operations-mock-data";
 import { InternalOperationsBasePathProvider } from "./InternalOperationsBasePathContext";
-import InternalDashboardHome from "./InternalDashboardHome";
 import SurveyOperationsShell from "./SurveyOperationsShell";
+import WorkspaceLoadingFallback from "./WorkspaceLoadingFallback";
+import WorkspacePane from "./WorkspacePane";
+import AdminPerformanceMode from "./AdminPerformanceMode";
+import {
+  prefetchNeighborsForView,
+  prefetchViewOnIntent,
+  WORKSPACE_CHUNK_LOADERS,
+} from "@/lib/workspace-prefetch";
+import { markWorkspaceView } from "@/lib/platform-performance";
+
+const InternalDashboardHome = dynamic(() => import("./InternalDashboardHome"), {
+  loading: () => <WorkspaceLoadingFallback label="Loading home" />,
+  ssr: false,
+});
 import {
   AccountsPayableWorkspace,
   AccountsReceivableWorkspace,
@@ -121,15 +135,6 @@ const VIEWS_NEEDING_SIMULATOR = new Set<InternalOperationsView>([
   "testing",
   "telemetry",
 ]);
-
-const PREFETCH_WORKSPACES: Array<() => Promise<unknown>> = [
-  () => import("./CrmWorkspace"),
-  () => import("./MessagingWorkspace"),
-  () => import("./ProjectsWorkspace"),
-  () => import("./CalendarWorkspace"),
-  () => import("./FinancialsWorkspace"),
-  () => import("./ClientManagementWorkspace"),
-];
 
 function NavImplementationNotice({ view }: { view: InternalOperationsView }) {
   const notice = getNavImplementationNotice(view);
@@ -246,6 +251,11 @@ export default function InternalOperationsDashboard({
   const [activeView, setActiveView] = useState<InternalOperationsView>(() =>
     readInitialView(searchParams, pathname, initialView),
   );
+  const [warmViews, setWarmViews] = useState<InternalOperationsView[]>(() => [
+    readInitialView(searchParams, pathname, initialView),
+  ]);
+  const warmSet = useMemo(() => new Set(warmViews), [warmViews]);
+  const isWarm = useCallback((view: InternalOperationsView) => warmSet.has(view), [warmSet]);
   const {
     liveTelemetry,
     isRunning,
@@ -343,11 +353,23 @@ export default function InternalOperationsDashboard({
   }, [activeView, setSimulatorEnabled]);
 
   useEffect(() => {
+    markWorkspaceView(activeView);
+    setWarmViews((prev) => {
+      const next = [activeView, ...prev.filter((view) => view !== activeView)];
+      return next.slice(0, 8);
+    });
+    prefetchNeighborsForView(activeView);
+  }, [activeView]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     let cancelled = false;
     const run = () => {
       if (cancelled) return;
-      for (const load of PREFETCH_WORKSPACES) void load();
+      for (const view of ["crm", "messaging", "projects", "calendar", "financials", "clients"] as InternalOperationsView[]) {
+        const loader = WORKSPACE_CHUNK_LOADERS[view];
+        if (loader) void loader();
+      }
     };
     const ric = window.requestIdleCallback?.(run, { timeout: 4000 });
     const timer = ric == null ? window.setTimeout(run, 1800) : null;
@@ -473,6 +495,7 @@ export default function InternalOperationsDashboard({
   }, [activeView]);
 
   const handleViewChange = useCallback((view: InternalOperationsView) => {
+    prefetchViewOnIntent(view);
     setActiveView(view);
   }, []);
 
@@ -497,7 +520,11 @@ export default function InternalOperationsDashboard({
       >
         <div className={activeView === "home" ? "relative min-w-0" : "relative min-w-0 space-y-4 sm:space-y-6"}>
           {activeView !== "home" && <NavImplementationNotice view={activeView} />}
-          {activeView === "home" && <InternalDashboardHome showCustomize />}
+          {isWarm("home") && (
+            <WorkspacePane view="home" activeView={activeView} keepMounted={isWarm("home")}>
+              <InternalDashboardHome showCustomize />
+            </WorkspacePane>
+          )}
 
           {EXECUTIVE_ASSISTANT_VISIBLE && activeView === "executive-assistant" && (
             <ExecutiveAssistantWorkspace />
@@ -515,12 +542,16 @@ export default function InternalOperationsDashboard({
             <InternalDesignMockups onBack={() => handleViewChange("home")} />
           )}
 
-          {activeView === "clients" && (
-            <ClientManagementWorkspace onClientsChange={setClients} />
+          {isWarm("clients") && (
+            <WorkspacePane view="clients" activeView={activeView} keepMounted={isWarm("clients")}>
+              <ClientManagementWorkspace onClientsChange={setClients} />
+            </WorkspacePane>
           )}
 
-          {activeView === "clients-dashboard" && (
-            <ClientsDashboardWorkspace onClientsChange={setClients} />
+          {isWarm("clients-dashboard") && (
+            <WorkspacePane view="clients-dashboard" activeView={activeView} keepMounted={isWarm("clients-dashboard")}>
+              <ClientsDashboardWorkspace onClientsChange={setClients} />
+            </WorkspacePane>
           )}
 
           {activeView === "client-onboarding" && <ClientOnboardingWorkspace />}
@@ -558,11 +589,28 @@ export default function InternalOperationsDashboard({
             </div>
           )}
 
-          {(activeView === "projects" ||
-            activeView === "projects-dashboard" ||
-            activeView === "projects-internal" ||
-            activeView === "projects-external") && (
-            <ProjectsWorkspace clients={clients} />
+          {(isWarm("projects") ||
+            isWarm("projects-dashboard") ||
+            isWarm("projects-internal") ||
+            isWarm("projects-external")) && (
+            <div
+              hidden={
+                activeView !== "projects" &&
+                activeView !== "projects-dashboard" &&
+                activeView !== "projects-internal" &&
+                activeView !== "projects-external"
+              }
+              className={
+                activeView === "projects" ||
+                activeView === "projects-dashboard" ||
+                activeView === "projects-internal" ||
+                activeView === "projects-external"
+                  ? "min-w-0"
+                  : "hidden"
+              }
+            >
+              <ProjectsWorkspace clients={clients} />
+            </div>
           )}
 
           {activeView === "grants" && <GrantsWorkspace />}
@@ -571,11 +619,17 @@ export default function InternalOperationsDashboard({
 
           {activeView === "webodm" && <WebODMWorkspace />}
 
-          {activeView === "crm" && (
-            <CrmWorkspace onOpenConnections={() => handleViewChange("connections")} />
+          {isWarm("crm") && (
+            <WorkspacePane view="crm" activeView={activeView} keepMounted={isWarm("crm")}>
+              <CrmWorkspace onOpenConnections={() => handleViewChange("connections")} />
+            </WorkspacePane>
           )}
 
-          {activeView === "crm-meetings" && <MeetingsWorkspace />}
+          {isWarm("crm-meetings") && (
+            <WorkspacePane view="crm-meetings" activeView={activeView} keepMounted={isWarm("crm-meetings")}>
+              <MeetingsWorkspace />
+            </WorkspacePane>
+          )}
 
           {activeView === "crm-questions-test" && <CrmQuestionsTestWorkspace />}
 
@@ -592,7 +646,11 @@ export default function InternalOperationsDashboard({
             />
           )}
 
-          {activeView === "financials" && <FinancialsWorkspace />}
+          {isWarm("financials") && (
+            <WorkspacePane view="financials" activeView={activeView} keepMounted={isWarm("financials")}>
+              <FinancialsWorkspace />
+            </WorkspacePane>
+          )}
 
           {activeView === "general-ledger" && <GeneralLedgerWorkspace />}
 
@@ -643,24 +701,38 @@ export default function InternalOperationsDashboard({
 
           {activeView === "external-client-access" && <ExternalClientAccessWorkspace />}
 
-          {activeView === "messaging" && <MessagingWorkspace />}
+          {isWarm("messaging") && (
+            <WorkspacePane view="messaging" activeView={activeView} keepMounted={isWarm("messaging")}>
+              <MessagingWorkspace />
+            </WorkspacePane>
+          )}
 
           {activeView === "social" && <SocialWorkspace />}
 
-          {activeView === "settings" && <SettingsWorkspace />}
+          {isWarm("settings") && (
+            <WorkspacePane view="settings" activeView={activeView} keepMounted={isWarm("settings")}>
+              <SettingsWorkspace />
+            </WorkspacePane>
+          )}
 
           {activeView === "billing" &&
             (isInternalHost ? <PlatformBillingWorkspace /> : <BillingWorkspace />)}
 
-          {activeView === "calendar" && (
-            <CalendarWorkspace users={users} clients={clients} />
+          {isWarm("calendar") && (
+            <WorkspacePane view="calendar" activeView={activeView} keepMounted={isWarm("calendar")}>
+              <CalendarWorkspace users={users} clients={clients} />
+            </WorkspacePane>
           )}
 
           {activeView === "logistics" && (
             <LogisticsWorkspace key={`logistics-entry-${logisticsEntryId}`} />
           )}
 
-          {activeView === "info-email" && <InfoEmailWorkspace />}
+          {isWarm("info-email") && (
+            <WorkspacePane view="info-email" activeView={activeView} keepMounted={isWarm("info-email")}>
+              <InfoEmailWorkspace />
+            </WorkspacePane>
+          )}
 
           {activeView === "files-internal" && (
             <FileRepositoryWorkspace
@@ -705,6 +777,7 @@ export default function InternalOperationsDashboard({
           {activeView === "engineering-capacity" && <EngineeringCapacityWorkspace />}
         </div>
       </div>
+      <AdminPerformanceMode activeView={activeView} />
       </SurveyOperationsShell>
     </InternalOperationsBasePathProvider>
   );

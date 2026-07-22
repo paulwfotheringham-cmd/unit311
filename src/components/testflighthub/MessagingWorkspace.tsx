@@ -22,6 +22,11 @@ import { CLIENT_MESSAGING_OPTIONS } from "@/lib/client-messaging-config";
 import { type ManagedUser } from "@/lib/user-management-data";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  fetchCachedJson,
+  PLATFORM_CACHE_KEYS,
+} from "@/lib/platform-fetch-cache";
+import WorkspaceLoadingFallback from "@/components/testflighthub/WorkspaceLoadingFallback";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
 import {
   CalendarClock,
@@ -162,9 +167,11 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
   const loadInternalUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
-      const response = await fetch("/api/users", { cache: "no-store" });
-      const data = await readApiJson<{ users?: ManagedUser[]; error?: string }>(response);
-      if (!response.ok) throw new Error(data.error ?? "Failed to load internal users");
+      const data = await fetchCachedJson<{ users?: ManagedUser[] }>(
+        PLATFORM_CACHE_KEYS.users,
+        "/api/users",
+        { ttlMs: 120_000 },
+      );
       setInternalUsers(data.users ?? []);
     } catch (loadError) {
       setInternalUsers([]);
@@ -1545,10 +1552,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {loading ? (
-            <div className="flex items-center gap-3 text-sm text-white/55">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading messages…
-            </div>
+            <WorkspaceLoadingFallback variant="messages" label="Loading messages" />
           ) : messages.length === 0 ? (
             <div className="flex h-full min-h-[280px] items-center justify-center text-sm text-white/45">
               No messages yet. Send the first message in this channel.

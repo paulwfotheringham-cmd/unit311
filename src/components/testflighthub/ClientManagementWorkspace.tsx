@@ -20,6 +20,12 @@ import { isCrmLinkedClientNotes } from "@/lib/crm-lead-client-data";
 import { centralLoginUrl } from "@/lib/app-domains";
 import { useInternalOperationsBasePath } from "./InternalOperationsBasePathContext";
 import { cn } from "@/lib/utils";
+import {
+  fetchCachedJson,
+  invalidateCachedJson,
+  PLATFORM_CACHE_KEYS,
+} from "@/lib/platform-fetch-cache";
+import WorkspaceLoadingFallback from "@/components/testflighthub/WorkspaceLoadingFallback";
 import { ExternalLink, FolderOpen, FolderPlus, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
 
 function formatFinanceMoney(amount: number, currency = "EUR") {
@@ -154,9 +160,11 @@ export default function ClientManagementWorkspace({
     setError(null);
 
     try {
-      const response = await fetch("/api/clients", { cache: "no-store" });
-      const data = await readApiJson<{ clients?: ManagedClient[]; error?: string }>(response);
-      if (!response.ok) throw new Error(data.error ?? "Failed to load clients");
+      const data = await fetchCachedJson<{ clients?: ManagedClient[] }>(
+        PLATFORM_CACHE_KEYS.clients,
+        "/api/clients",
+        { ttlMs: 120_000 },
+      );
 
       const nextClients = data.clients ?? [];
       syncClients(nextClients);
@@ -272,6 +280,7 @@ export default function ClientManagementWorkspace({
       const data = await readApiJson<{ client?: ManagedClient; error?: string }>(response);
       if (!response.ok || !data.client) throw new Error(data.error ?? "Failed to save client");
 
+      invalidateCachedJson(PLATFORM_CACHE_KEYS.clients);
       syncClients(clients.map((item) => (item.id === data.client!.id ? data.client! : item)));
       snapshottedIdRef.current = data.client.id;
       setSavedSnapshot(data.client);
@@ -338,6 +347,7 @@ export default function ClientManagementWorkspace({
       const data = await readApiJson<{ client?: ManagedClient; error?: string }>(response);
       if (!response.ok || !data.client) throw new Error(data.error ?? "Failed to create client");
 
+      invalidateCachedJson(PLATFORM_CACHE_KEYS.clients);
       syncClients([data.client, ...clients]);
       setSelectedClientId(data.client.id);
       setDetailClientId(data.client.id);
@@ -366,6 +376,7 @@ export default function ClientManagementWorkspace({
       const data = await readApiJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(data.error ?? "Failed to delete client");
 
+      invalidateCachedJson(PLATFORM_CACHE_KEYS.clients);
       const remaining = clients.filter((item) => item.id !== target.id);
       syncClients(remaining);
       if (detailClientId === target.id) setDetailClientId(null);
@@ -423,10 +434,7 @@ export default function ClientManagementWorkspace({
       )}
 
       {loading ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-sm text-white/50">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading clients…
-          </div>
+          <WorkspaceLoadingFallback variant="list" label="Loading clients" />
         ) : (
         <div className="space-y-4">
           <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
@@ -549,7 +557,7 @@ export default function ClientManagementWorkspace({
                       key={client.id}
                       className={cn(
                         CLIENT_EXPLORER_ROW_GRID,
-                        "px-4 py-3 transition-colors",
+                        "px-4 py-3 transition-colors [content-visibility:auto] [contain-intrinsic-size:0_3.5rem]",
                         selected && "bg-sky-500/[0.06]",
                       )}
                     >
