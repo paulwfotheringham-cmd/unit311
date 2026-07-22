@@ -18,7 +18,7 @@ export function HrSection({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-5",
+        "rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6",
         className,
       )}
     >
@@ -44,9 +44,9 @@ export function HrKpiTile({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0b1524]/80 px-3 py-3">
+    <div className="flex h-full min-h-[4.5rem] flex-col justify-center rounded-xl border border-white/10 bg-[#0b1524]/80 px-3.5 py-3.5">
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">{label}</p>
-      <p className="mt-1.5 text-2xl font-semibold tabular-nums text-white">{value}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-white">{value}</p>
       {hint ? <p className="mt-1 text-xs text-white/40">{hint}</p> : null}
     </div>
   );

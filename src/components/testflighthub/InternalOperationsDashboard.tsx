@@ -37,7 +37,9 @@ import { InternalOperationsBasePathProvider } from "./InternalOperationsBasePath
 import SurveyOperationsShell from "./SurveyOperationsShell";
 import WorkspaceLoadingFallback from "./WorkspaceLoadingFallback";
 import WorkspacePane from "./WorkspacePane";
+import WorkspaceErrorBoundary from "./WorkspaceErrorBoundary";
 import AdminPerformanceMode from "./AdminPerformanceMode";
+import InventoryManagementWorkspace from "./InventoryManagementWorkspace";
 import {
   prefetchNeighborsForView,
   prefetchViewOnIntent,
@@ -87,7 +89,6 @@ import {
   InfoEmailWorkspace,
   InternalAuditsWorkspace,
   InternalDesignMockups,
-  InventoryManagementWorkspace,
   LeaveManagementWorkspace,
   LogisticsWorkspace,
   ManagementReviewWorkspace,
@@ -571,7 +572,11 @@ export default function InternalOperationsDashboard({
             />
           )}
 
-          {activeView === "inventory-management" && <InventoryManagementWorkspace />}
+          {activeView === "inventory-management" && (
+            <WorkspaceErrorBoundary title="Inventory">
+              <InventoryManagementWorkspace />
+            </WorkspaceErrorBoundary>
+          )}
 
           {activeView === "fleet" && (
             <FleetWorkspace
@@ -686,7 +691,11 @@ export default function InternalOperationsDashboard({
 
           {activeView === "whiteboard" && <WhiteboardWorkspace />}
 
-          {activeView === "competitors" && <CompetitorsWorkspace />}
+          {activeView === "competitors" && (
+            <WorkspaceErrorBoundary title="Competitors">
+              <CompetitorsWorkspace />
+            </WorkspaceErrorBoundary>
+          )}
 
           {activeView === "sector" && <SectorWorkspace />}
 

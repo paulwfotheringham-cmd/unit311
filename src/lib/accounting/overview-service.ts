@@ -5,6 +5,7 @@ import {
   getTypeTotals,
 } from "@/lib/accounting/balances";
 import { buildBurnRateSnapshot } from "@/lib/accounting/burn-rate";
+import { getOperatingObligations } from "@/lib/accounting/operating-obligations";
 import { listInvoices } from "@/lib/accounting/invoices-service";
 import type { FinancialOverviewSnapshot } from "@/lib/accounting/types";
 import { listExpenses } from "@/lib/financial-expenses-service";
@@ -147,6 +148,7 @@ export async function getFinancialOverview(
       activityResult,
       postedExpensesResult,
       expensesResult,
+      obligationsResult,
     ] = await Promise.all([
       getTypeTotals(workspaceScope).then(
         (value) => ({ ok: true as const, value }),
@@ -170,6 +172,10 @@ export async function getFinancialOverview(
       ),
       // Same service as Accounts Payable (`/api/financials/expenses`).
       listExpenses({ workspaceId }).then(
+        (value) => ({ ok: true as const, value }),
+        () => ({ ok: false as const }),
+      ),
+      getOperatingObligations(workspaceScope).then(
         (value) => ({ ok: true as const, value }),
         () => ({ ok: false as const }),
       ),
@@ -281,31 +287,113 @@ export async function getFinancialOverview(
           })
         : emptyBurnRate(cashPosition);
 
+    const obligations = obligationsResult.ok
+      ? obligationsResult.value
+      : {
+          payroll: {
+            monthly: 0,
+            annual: 0,
+            employees: 0,
+            nextPayrollDate: todayIso,
+            liability: 0,
+            currency: FINANCIAL_REPORTING_CURRENCY,
+          },
+          software: {
+            monthly: 0,
+            annual: 0,
+            count: 0,
+            currency: FINANCIAL_REPORTING_CURRENCY,
+            lines: [],
+            upcoming: [],
+          },
+          monthlyRecurring: 0,
+        };
+
     const glRevenue = totals.income;
     const glSpend = totals.expenses;
     const netProfit = roundMoney(glRevenue - glSpend);
 
-    // Monthly burn from posted expense journals only — never invent a forecast.
-    const monthlyBurn =
-      burnRate.lines.length > 0 ? burnRate.monthly : (monthlyExpensePoint?.amount ?? 0);
-    const forecastMonthly = burnRate.lines.length > 0 ? burnRate.forecastMonthly : 0;
-
     const payrollPoint =
       burnRate.series.find((point) => point.month === monthPrefix) ??
       burnRate.series[burnRate.series.length - 1];
-    const payrollMonthly = payrollPoint?.payroll ?? 0;
-    const payrollTrend = burnRate.series.slice(-6).map((point) => ({
-      month: point.month,
-      amount: point.payroll,
-    }));
+    const glPayrollMonthly = payrollPoint?.payroll ?? 0;
+    const glSoftwareMonthly = payrollPoint?.software ?? 0;
+
+    // Live HR salaries and software licences are the operating source of truth when present.
+    const payrollMonthly =
+      obligations.payroll.employees > 0
+        ? obligations.payroll.monthly
+        : glPayrollMonthly;
+    const softwareMonthly =
+      obligations.software.count > 0 ? obligations.software.monthly : glSoftwareMonthly;
+
+    const glBurnBase =
+      burnRate.lines.length > 0 ? burnRate.monthly : (monthlyExpensePoint?.amount ?? 0);
+    // Replace overlapping GL payroll/software categories with live register totals (no double count).
+    const monthlyBurn = roundMoney(
+      Math.max(0, glBurnBase - glPayrollMonthly - glSoftwareMonthly) +
+        payrollMonthly +
+        softwareMonthly,
+    );
+    const forecastMonthly = roundMoney(
+      burnRate.lines.length > 0
+        ? Math.max(0, burnRate.forecastMonthly - glPayrollMonthly - glSoftwareMonthly) +
+            payrollMonthly +
+            softwareMonthly
+        : monthlyBurn,
+    );
+
+    const payrollTrend =
+      burnRate.series.length > 0
+        ? burnRate.series.slice(-6).map((point) => ({
+            month: point.month,
+            amount:
+              obligations.payroll.employees > 0 ? payrollMonthly : point.payroll,
+          }))
+        : [
+            {
+              month: monthPrefix,
+              amount: payrollMonthly,
+            },
+          ];
 
     // Debtors / Creditors from the same AR / AP modules (invoices + expenses).
     const arOutstanding = roundMoney(
       unpaid.reduce((sum, invoice) => sum + invoice.amount, 0),
     );
-    const apOutstanding = roundMoney(
-      unpaidExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
+    const softwareApUpcoming = roundMoney(
+      obligations.software.upcoming.reduce((sum, line) => sum + line.monthlyCost, 0),
     );
+    const apOutstanding = roundMoney(
+      unpaidExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0) +
+        softwareApUpcoming +
+        (obligations.payroll.employees > 0 ? obligations.payroll.liability : 0),
+    );
+
+    const softwareApRecent = obligations.software.upcoming.slice(0, 6).map((line) => ({
+      id: `software-${line.id}`,
+      supplier: line.vendor,
+      description: `${line.name} licence (${line.frequency})`,
+      amount: line.monthlyCost,
+      currency: line.currency,
+      dueDate: line.nextPaymentDate,
+      paid: false,
+    }));
+
+    const payrollApRecent =
+      obligations.payroll.employees > 0
+        ? [
+            {
+              id: "payroll-next",
+              supplier: "Payroll",
+              description: `Monthly payroll · ${obligations.payroll.employees} employees`,
+              amount: obligations.payroll.liability,
+              currency: obligations.payroll.currency,
+              dueDate: obligations.payroll.nextPayrollDate,
+              paid: false,
+            },
+          ]
+        : [];
 
     return {
       revenueYtd: glRevenue,
@@ -315,16 +403,22 @@ export async function getFinancialOverview(
       netProfit,
       outstandingInvoices: unpaid.length,
       monthlyRevenue: glRevenue,
-      monthlyExpenses: glSpend,
+      monthlyExpenses: roundMoney(glSpend + softwareMonthly + Math.max(0, payrollMonthly - glPayrollMonthly)),
       annualRevenue,
-      annualExpenses,
+      annualExpenses: roundMoney(annualExpenses + softwareMonthly * 12),
       burnRate: {
         ...burnRate,
         monthly: roundMoney(monthlyBurn),
+        quarterly: roundMoney(monthlyBurn * 3),
+        annual: roundMoney(monthlyBurn * 12),
         forecastMonthly: roundMoney(forecastMonthly),
         cashBalance: cashPosition,
         currency: FINANCIAL_REPORTING_CURRENCY,
-        trendLabel: burnRate.lines.length > 0 ? burnRate.trendLabel : "No change",
+        trendLabel: burnRate.lines.length > 0 ? burnRate.trendLabel : "Operating registers",
+        runwayMonths:
+          cashPosition > 0 && monthlyBurn > 0
+            ? Math.round((cashPosition / monthlyBurn) * 10) / 10
+            : burnRate.runwayMonths,
       },
       ar: {
         outstanding: arOutstanding,
@@ -337,7 +431,9 @@ export async function getFinancialOverview(
       ap: {
         outstanding: apOutstanding,
         dueThisMonth: roundMoney(
-          apDueThisMonth.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
+          apDueThisMonth.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0) +
+            softwareApUpcoming +
+            (obligations.payroll.employees > 0 ? obligations.payroll.liability : 0),
         ),
         overdue: roundMoney(
           apOverdue.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
@@ -348,9 +444,11 @@ export async function getFinancialOverview(
               (expense) =>
                 String(expense.expenseDate ?? expense.dateSubmitted) >= todayIso,
             )
-            .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
+            .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0) +
+            softwareApUpcoming +
+            (obligations.payroll.employees > 0 ? obligations.payroll.liability : 0),
         ),
-        recent: unpaidExpenses.slice(0, 8).map((expense) => ({
+        recent: [...payrollApRecent, ...softwareApRecent, ...unpaidExpenses.slice(0, 8).map((expense) => ({
           id: String(expense.id),
           supplier: String(expense.supplier ?? expense.submitterName ?? "Supplier"),
           description: String(expense.purposeDescription ?? ""),
@@ -358,12 +456,12 @@ export async function getFinancialOverview(
           currency: String(expense.currency ?? FINANCIAL_REPORTING_CURRENCY),
           dueDate: String(expense.expenseDate ?? expense.dateSubmitted),
           paid: Boolean(expense.paid),
-        })),
+        }))].slice(0, 12),
       },
       payroll: {
         current: payrollMonthly,
         next: payrollMonthly,
-        employees: 0,
+        employees: obligations.payroll.employees,
         annual: roundMoney(payrollMonthly * 12),
         monthly: payrollMonthly,
         trend: payrollTrend,

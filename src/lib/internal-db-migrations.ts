@@ -679,28 +679,30 @@ async function columnExists(client: ClientBase, tableName: string, columnName: s
 }
 
 export async function ensureCompetitorsTable(): Promise<boolean> {
-  const exists = await tableExistsViaManagementApi("competitors");
-  if (exists === true) return true;
+  return onceEnsured("table:competitors", async () => {
+    const exists = await tableExistsViaManagementApi("competitors");
+    if (exists === true) return true;
 
-  const dbUrl = getDatabaseUrl();
-  if (dbUrl) {
-    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    const dbUrl = getDatabaseUrl();
+    if (dbUrl) {
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
-    try {
-      await client.connect();
-      if (await tableExists(client, "competitors")) return true;
-      await applyMigration(client, COMPETITORS_MIGRATION_PATH);
-      return true;
-    } finally {
-      await client.end().catch(() => undefined);
+      try {
+        await client.connect();
+        if (await tableExists(client, "competitors")) return true;
+        await applyMigration(client, COMPETITORS_MIGRATION_PATH);
+        return true;
+      } finally {
+        await client.end().catch(() => undefined);
+      }
     }
-  }
 
-  if (exists === false) {
-    return applyMigrationViaManagementApi(COMPETITORS_MIGRATION_PATH);
-  }
+    if (exists === false) {
+      return applyMigrationViaManagementApi(COMPETITORS_MIGRATION_PATH);
+    }
 
-  return false;
+    return false;
+  });
 }
 
 export async function ensureWhiteboardTable(): Promise<boolean> {
@@ -903,43 +905,45 @@ async function applyHrEmployeesMigrations(client: ClientBase) {
 }
 
 export async function ensureHrEmployeesTable(): Promise<boolean> {
-  const exists = await tableExistsViaManagementApi("hr_employees");
-  if (exists === true) {
-    const extended = await applyMigrationViaManagementApi(HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
-    const foundation = await applyMigrationViaManagementApi(HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
-    if (extended || foundation) await reloadPostgrestSchema();
-    return true;
-  }
+  return onceEnsured("table:hr_employees", async () => {
+    const exists = await tableExistsViaManagementApi("hr_employees");
+    if (exists === true) {
+      const extended = await applyMigrationViaManagementApi(HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
+      const foundation = await applyMigrationViaManagementApi(HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
+      if (extended || foundation) await reloadPostgrestSchema();
+      return true;
+    }
 
-  const dbUrl = getDatabaseUrl();
-  if (dbUrl) {
-    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    const dbUrl = getDatabaseUrl();
+    if (dbUrl) {
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
-    try {
-      await client.connect();
-      if (await tableExists(client, "hr_employees")) {
-        await applyMigration(client, HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
-        await applyMigration(client, HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
+      try {
+        await client.connect();
+        if (await tableExists(client, "hr_employees")) {
+          await applyMigration(client, HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
+          await applyMigration(client, HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
+          await reloadPostgrestSchema();
+          return true;
+        }
+        await applyHrEmployeesMigrations(client);
         await reloadPostgrestSchema();
         return true;
+      } finally {
+        await client.end().catch(() => undefined);
       }
-      await applyHrEmployeesMigrations(client);
-      await reloadPostgrestSchema();
-      return true;
-    } finally {
-      await client.end().catch(() => undefined);
     }
-  }
 
-  if (exists === false) {
-    const baseApplied = await applyMigrationViaManagementApi(HR_EMPLOYEES_MIGRATION_PATH);
-    const extendedApplied = await applyMigrationViaManagementApi(HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
-    const foundationApplied = await applyMigrationViaManagementApi(HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
-    if (baseApplied || extendedApplied || foundationApplied) await reloadPostgrestSchema();
-    return baseApplied || extendedApplied || foundationApplied;
-  }
+    if (exists === false) {
+      const baseApplied = await applyMigrationViaManagementApi(HR_EMPLOYEES_MIGRATION_PATH);
+      const extendedApplied = await applyMigrationViaManagementApi(HR_EMPLOYEES_EXTENDED_MIGRATION_PATH);
+      const foundationApplied = await applyMigrationViaManagementApi(HR_EMPLOYEE_FOUNDATION_MIGRATION_PATH);
+      if (baseApplied || extendedApplied || foundationApplied) await reloadPostgrestSchema();
+      return baseApplied || extendedApplied || foundationApplied;
+    }
 
-  return false;
+    return false;
+  });
 }
 
 export async function withHrEmployeesTable<T>(operation: () => Promise<T>): Promise<T> {

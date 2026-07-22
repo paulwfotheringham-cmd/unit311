@@ -477,16 +477,9 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
   {
     label: "Strategy",
     items: [
-      {
-        label: "Strategy",
-        icon: "Compass",
-        children: [
-          { label: "Strategy", view: "strategy" as const },
-          { label: "Competitors", view: "competitors" as const },
-          { label: "Whiteboard", view: "whiteboard" as const },
-          { label: "Board deck", view: "board-pack" as const },
-        ],
-      },
+      { label: "Competitors", icon: "Binoculars", view: "competitors" as const },
+      { label: "Whiteboard", icon: "PenLine", view: "whiteboard" as const },
+      { label: "Board Deck", icon: "ScrollText", view: "board-pack" as const },
     ],
   },
   {

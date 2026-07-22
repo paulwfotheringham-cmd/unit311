@@ -818,11 +818,17 @@ export default function SoftwareAssetRegisterWorkspace() {
                     </div>
                     <div>
                       <FieldLabel>Currency</FieldLabel>
-                      <input
+                      <select
                         className={inputClassName()}
-                        value={selected.currency}
+                        value={selected.currency || "USD"}
                         onChange={(event) => patchSelected({ currency: event.target.value })}
-                      />
+                      >
+                        {["USD", "GBP", "EUR", "AED", "ZAR"].map((code) => (
+                          <option key={code} value={code}>
+                            {code}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <FieldLabel>Last payment amount</FieldLabel>

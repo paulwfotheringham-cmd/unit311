@@ -179,8 +179,9 @@ export default function EmployeeRecordWorkspace() {
       }));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load employee");
-      setDetail(null);
-      setDraft(null);
+      // Keep optimistic list snapshot if present; only clear when nothing to show.
+      setDetail((current) => (current?.id === id ? current : null));
+      setDraft((current) => (current?.id === id ? current : null));
     } finally {
       setDetailLoading(false);
     }
@@ -230,8 +231,27 @@ export default function EmployeeRecordWorkspace() {
   );
 
   function selectEmployee(id: string) {
+    const listed = employees.find((employee) => employee.id === id) ?? null;
     setSelectedId(id);
     setTab("Overview");
+    if (listed) {
+      const optimistic: HrEmployeeDetail = {
+        ...listed,
+        compensationHistory: [],
+        documents: [],
+        notes: [],
+        timeline: [],
+        employmentHistory: [],
+      };
+      setDetail(optimistic);
+      setDraft(optimistic);
+      setCompForm((current) => ({
+        ...current,
+        amount: listed.salaryCurrent,
+        currency: listed.currency,
+      }));
+      setDetailLoading(false);
+    }
     openDetail();
   }
 

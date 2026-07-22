@@ -108,6 +108,26 @@ export type SoftwareAssetsSummary = {
   currency: string;
 };
 
+/** Default licence payment cadence for registers that pre-date finance fields. */
+export const SOFTWARE_DEFAULT_LAST_PAYMENT = "2026-07-01";
+export const SOFTWARE_DEFAULT_NEXT_PAYMENT = "2026-08-01";
+export const SOFTWARE_DEFAULT_CURRENCY = "USD";
+
+export function normalizeSoftwareAssetFinance<T extends SoftwareAsset>(asset: T): T {
+  const monthlyCost = Number(asset.monthlyCost || 0);
+  return {
+    ...asset,
+    currency: asset.currency?.trim() || SOFTWARE_DEFAULT_CURRENCY,
+    renewalFrequency: asset.renewalFrequency || "Monthly",
+    lastPaymentDate: asset.lastPaymentDate || SOFTWARE_DEFAULT_LAST_PAYMENT,
+    nextRenewalDate: asset.nextRenewalDate || SOFTWARE_DEFAULT_NEXT_PAYMENT,
+    lastPaymentAmount:
+      asset.lastPaymentAmount == null || Number.isNaN(Number(asset.lastPaymentAmount))
+        ? monthlyCost || null
+        : asset.lastPaymentAmount,
+  };
+}
+
 export function availableLicences(asset: Pick<SoftwareAsset, "licencesPurchased" | "licencesAllocated" | "licenceType">) {
   if (asset.licenceType === "Unlimited") return null;
   return Math.max(0, asset.licencesPurchased - asset.licencesAllocated);
@@ -131,11 +151,11 @@ export function createBlankSoftwareAsset(workspaceId = ""): SoftwareAsset {
     licenceType: "Named",
     monthlyCost: 0,
     annualCost: 0,
-    currency: "GBP",
+    currency: "USD",
     lastPaymentAmount: null,
-    lastPaymentDate: null,
-    nextRenewalDate: null,
-    renewalFrequency: "Annually",
+    lastPaymentDate: "2026-07-01",
+    nextRenewalDate: "2026-08-01",
+    renewalFrequency: "Monthly",
     contractLength: "",
     costCentre: "",
     budgetOwner: "",

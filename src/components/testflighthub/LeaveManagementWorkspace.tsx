@@ -23,7 +23,6 @@ import { useHrMockStore } from "./useHrMockStore";
 import {
   HrFieldLabel,
   hrInputClass,
-  HrKpiTile,
   hrPrimaryButtonClass,
   HrSection,
   hrSecondaryButtonClass,
@@ -193,14 +192,7 @@ export default function LeaveManagementWorkspace() {
   const selected = filtered.find((item) => item.id === selectedId) ?? null;
 
   return (
-    <div className="space-y-5">
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <HrKpiTile label="Today's Absences" value={todaysAbsences.length} />
-        <HrKpiTile label="Off This Week" value={offThisWeek.length} hint={weekRange.label} />
-        <HrKpiTile label="Pending Approvals" value={pending.length} />
-        <HrKpiTile label="Upcoming Leave" value={upcoming.length} />
-      </section>
-
+    <div className="space-y-6">
       <HrSection title="Filters">
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {(
@@ -245,119 +237,6 @@ export default function LeaveManagementWorkspace() {
           </div>
         </div>
       </HrSection>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <HrSection title="Today's Absences" subtitle="Approved leave covering today.">
-          <ul className="space-y-2">
-            {todaysAbsences.length === 0 ? (
-              <li className="text-sm text-white/45">No absences today.</li>
-            ) : (
-              todaysAbsences.map((request) => (
-                <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2 text-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-white">{request.employeeName}</p>
-                      <p className="text-xs text-white/45">
-                        {request.department} · {request.role}
-                      </p>
-                    </div>
-                    <HrStatusPill
-                      className={`${HR_LEAVE_TYPE_COLORS[request.type].bg} ${HR_LEAVE_TYPE_COLORS[request.type].text} border-transparent`}
-                    >
-                      {HR_LEAVE_TYPE_LABELS[request.type]}
-                    </HrStatusPill>
-                  </div>
-                  <p className="mt-1 text-xs text-white/45">
-                    {formatRange(request.startDate, request.endDate)} · {request.days} days
-                  </p>
-                </li>
-              ))
-            )}
-          </ul>
-        </HrSection>
-
-        <HrSection
-          title="Who's Off This Week"
-          subtitle={`Mon–Sun · ${weekRange.label}`}
-        >
-          <ul className="space-y-2">
-            {offThisWeek.length === 0 ? (
-              <li className="text-sm text-white/45">No approved leave this week.</li>
-            ) : (
-              offThisWeek.map((request) => (
-                <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2 text-sm">
-                  <p className="font-medium text-white">{request.employeeName}</p>
-                  <p className="text-xs text-white/45">
-                    {HR_LEAVE_TYPE_LABELS[request.type]} · {request.department}
-                  </p>
-                  <p className="mt-1 text-xs text-white/45">
-                    {formatRange(request.startDate, request.endDate)} · {request.days} days
-                  </p>
-                </li>
-              ))
-            )}
-          </ul>
-        </HrSection>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <HrSection title="Pending Approvals" subtitle="Requests awaiting manager decision.">
-          <ul className="space-y-2">
-            {pending.length === 0 ? (
-              <li className="text-sm text-white/45">No pending requests.</li>
-            ) : (
-              pending.map((request) => (
-                <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2">
-                  <p className="text-sm font-medium text-white">{request.employeeName}</p>
-                  <p className="text-xs text-white/45">
-                    {HR_LEAVE_TYPE_LABELS[request.type]} · {formatRange(request.startDate, request.endDate)} ·{" "}
-                    {request.days} days
-                  </p>
-                  <p className="text-xs text-white/40">Manager: {request.managerName}</p>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      className={hrPrimaryButtonClass()}
-                      onClick={() => updateLeaveRequestStatus(request.id, "approved")}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      className={hrSecondaryButtonClass()}
-                      onClick={() => updateLeaveRequestStatus(request.id, "rejected")}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      Reject
-                    </button>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </HrSection>
-
-        <HrSection title="Upcoming Leave" subtitle="Approved leave starting after today.">
-          <ul className="space-y-2">
-            {upcoming.length === 0 ? (
-              <li className="text-sm text-white/45">No upcoming approved leave.</li>
-            ) : (
-              upcoming.map((request) => (
-                <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2 text-sm">
-                  <p className="font-medium text-white">{request.employeeName}</p>
-                  <p className="text-xs text-white/45">
-                    {HR_LEAVE_TYPE_LABELS[request.type]} · {request.department}
-                  </p>
-                  <p className="mt-1 text-xs text-white/45">
-                    {formatRange(request.startDate, request.endDate)} · {request.days} days
-                  </p>
-                </li>
-              ))
-            )}
-          </ul>
-        </HrSection>
-      </div>
 
       <HrSection
         title="Department Calendar"
@@ -454,6 +333,121 @@ export default function LeaveManagementWorkspace() {
           })}
         </div>
       </HrSection>
+
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-5">
+          <HrSection title="Today's Absences" subtitle="Approved leave covering today.">
+            <ul className="space-y-2">
+              {todaysAbsences.length === 0 ? (
+                <li className="text-sm text-white/45">No absences today.</li>
+              ) : (
+                todaysAbsences.map((request) => (
+                  <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-white">{request.employeeName}</p>
+                        <p className="text-xs text-white/45">
+                          {request.department} · {request.role}
+                        </p>
+                      </div>
+                      <HrStatusPill
+                        className={`${HR_LEAVE_TYPE_COLORS[request.type].bg} ${HR_LEAVE_TYPE_COLORS[request.type].text} border-transparent`}
+                      >
+                        {HR_LEAVE_TYPE_LABELS[request.type]}
+                      </HrStatusPill>
+                    </div>
+                    <p className="mt-1 text-xs text-white/45">
+                      {formatRange(request.startDate, request.endDate)} · {request.days} days
+                    </p>
+                  </li>
+                ))
+              )}
+            </ul>
+          </HrSection>
+
+          <HrSection
+            title="Who's Off This Week"
+            subtitle={`Mon–Sun · ${weekRange.label}`}
+          >
+            <ul className="space-y-2">
+              {offThisWeek.length === 0 ? (
+                <li className="text-sm text-white/45">No approved leave this week.</li>
+              ) : (
+                offThisWeek.map((request) => (
+                  <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2 text-sm">
+                    <p className="font-medium text-white">{request.employeeName}</p>
+                    <p className="text-xs text-white/45">
+                      {HR_LEAVE_TYPE_LABELS[request.type]} · {request.department}
+                    </p>
+                    <p className="mt-1 text-xs text-white/45">
+                      {formatRange(request.startDate, request.endDate)} · {request.days} days
+                    </p>
+                  </li>
+                ))
+              )}
+            </ul>
+          </HrSection>
+        </div>
+
+        <div className="space-y-5">
+          <HrSection title="Pending Approvals" subtitle="Requests awaiting manager decision.">
+            <ul className="space-y-2">
+              {pending.length === 0 ? (
+                <li className="text-sm text-white/45">No pending requests.</li>
+              ) : (
+                pending.map((request) => (
+                  <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2">
+                    <p className="text-sm font-medium text-white">{request.employeeName}</p>
+                    <p className="text-xs text-white/45">
+                      {HR_LEAVE_TYPE_LABELS[request.type]} · {formatRange(request.startDate, request.endDate)} ·{" "}
+                      {request.days} days
+                    </p>
+                    <p className="text-xs text-white/40">Manager: {request.managerName}</p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        className={hrPrimaryButtonClass()}
+                        onClick={() => updateLeaveRequestStatus(request.id, "approved")}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className={hrSecondaryButtonClass()}
+                        onClick={() => updateLeaveRequestStatus(request.id, "rejected")}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          </HrSection>
+
+          <HrSection title="Upcoming Leave" subtitle="Approved leave starting after today.">
+            <ul className="space-y-2">
+              {upcoming.length === 0 ? (
+                <li className="text-sm text-white/45">No upcoming approved leave.</li>
+              ) : (
+                upcoming.map((request) => (
+                  <li key={request.id} className="rounded-xl border border-white/10 px-3 py-2 text-sm">
+                    <p className="font-medium text-white">{request.employeeName}</p>
+                    <p className="text-xs text-white/45">
+                      {HR_LEAVE_TYPE_LABELS[request.type]} · {request.department}
+                    </p>
+                    <p className="mt-1 text-xs text-white/45">
+                      {formatRange(request.startDate, request.endDate)} · {request.days} days
+                    </p>
+                  </li>
+                ))
+              )}
+            </ul>
+          </HrSection>
+        </div>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <HrSection title="Public Holidays" subtitle="Company calendar dates.">

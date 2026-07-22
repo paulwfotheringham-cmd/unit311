@@ -1,6 +1,10 @@
 import {
-  createBlankSoftwareAsset,
   computeSoftwareAssetsSummary,
+  createBlankSoftwareAsset,
+  normalizeSoftwareAssetFinance,
+  SOFTWARE_DEFAULT_CURRENCY,
+  SOFTWARE_DEFAULT_LAST_PAYMENT,
+  SOFTWARE_DEFAULT_NEXT_PAYMENT,
   type LicenceType,
   type RenewalFrequency,
   type SoftwareAsset,
@@ -81,7 +85,7 @@ function mapAsset(
   credentials?: Record<string, unknown> | null,
   files: SoftwareAssetFile[] = [],
 ): SoftwareAsset {
-  return {
+  return normalizeSoftwareAssetFinance({
     id: String(row.id),
     workspaceId: String(row.workspace_id),
     name: String(row.name ?? ""),
@@ -97,14 +101,14 @@ function mapAsset(
     licenceType: (row.licence_type as LicenceType) || "Named",
     monthlyCost: toNumber(row.monthly_cost),
     annualCost: toNumber(row.annual_cost),
-    currency: String(row.currency ?? "GBP"),
+    currency: String(row.currency ?? SOFTWARE_DEFAULT_CURRENCY),
     lastPaymentAmount:
       row.last_payment_amount === null || row.last_payment_amount === undefined
         ? null
         : toNumber(row.last_payment_amount),
-    lastPaymentDate: (row.last_payment_date as string | null) ?? null,
-    nextRenewalDate: (row.next_renewal_date as string | null) ?? null,
-    renewalFrequency: (row.renewal_frequency as RenewalFrequency) || "Annually",
+    lastPaymentDate: (row.last_payment_date as string | null) ?? SOFTWARE_DEFAULT_LAST_PAYMENT,
+    nextRenewalDate: (row.next_renewal_date as string | null) ?? SOFTWARE_DEFAULT_NEXT_PAYMENT,
+    renewalFrequency: (row.renewal_frequency as RenewalFrequency) || "Monthly",
     contractLength: String(row.contract_length ?? ""),
     costCentre: String(row.cost_centre ?? ""),
     budgetOwner: String(row.budget_owner ?? ""),
@@ -131,7 +135,7 @@ function mapAsset(
     files,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
-  };
+  });
 }
 
 async function writeAudit(input: {

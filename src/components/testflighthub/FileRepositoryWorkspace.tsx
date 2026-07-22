@@ -133,6 +133,8 @@ export default function FileRepositoryWorkspace({
   const [query, setQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [categories, setCategories] = useState<FileCategory[]>([]);
   const [entries, setEntries] = useState<BrowseEntry[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<BreadcrumbSegment[]>([
@@ -163,6 +165,32 @@ export default function FileRepositoryWorkspace({
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
   );
+
+  const visibleEntries = useMemo(() => {
+    if (typeFilter === "all" || categoryFilter != null) return entries;
+    return entries.filter((entry) => {
+      if (entry.kind === "folder") return true;
+      const label = fileTypeLabel(entry.item.extension ?? null, entry.item.mimeType ?? null).toLowerCase();
+      const ext = (entry.item.extension ?? "").toLowerCase();
+      const mime = (entry.item.mimeType ?? "").toLowerCase();
+      switch (typeFilter) {
+        case "documents":
+          return label === "word" || label === "text" || ["doc", "docx", "txt", "rtf", "md"].includes(ext);
+        case "pdfs":
+          return label === "pdf" || ext === "pdf" || mime.includes("pdf");
+        case "images":
+          return label === "image" || mime.startsWith("image/");
+        case "presentations":
+          return label === "powerpoint" || ["ppt", "pptx"].includes(ext);
+        case "spreadsheets":
+          return label === "excel" || ["xls", "xlsx", "csv"].includes(ext);
+        case "archives":
+          return label === "archive" || ["zip", "rar", "7z"].includes(ext);
+        default:
+          return true;
+      }
+    });
+  }, [categoryFilter, entries, typeFilter]);
 
   const loadCategories = useCallback(async () => {
     if (!usesApi) {
@@ -687,62 +715,110 @@ export default function FileRepositoryWorkspace({
   }
 
   return (
-    <div className={cn("grid gap-4 max-xl:grid-cols-1", usesApi && "xl:grid-cols-[240px_minmax(0,1fr)]")}>
-      {usesApi && (
-      <aside className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl xl:sticky xl:top-0 xl:self-start">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-            Categories
-          </p>
-          <button
-            type="button"
-            onClick={() => void handleCreateCategory()}
-            className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45 hover:text-white"
-          >
-            Add
-          </button>
-        </div>
-
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 xl:block xl:space-y-1 xl:overflow-visible xl:pb-0">
-          <button
-            type="button"
-            onClick={() => setCategoryFilter(null)}
-            className={cn(
-              "flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors xl:w-full",
-              categoryFilter === null
-                ? "bg-[#0D1B2A] text-white"
-                : "text-white/55 hover:bg-white/[0.04] hover:text-white/80",
-            )}
-          >
-            <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
-            All files
-          </button>
-
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => setCategoryFilter(category.id)}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors xl:w-full",
-                categoryFilter === category.id
-                  ? "bg-[#0D1B2A] text-white"
-                  : "text-white/55 hover:bg-white/[0.04] hover:text-white/80",
-              )}
-            >
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: category.color }}
-              />
-              {category.name}
-            </button>
-          ))}
-        </div>
-      </aside>
-      )}
-
+    <div className="grid gap-4 grid-cols-1">
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
         <div className="border-b border-white/10 p-4 sm:p-5">
+          {usesApi ? (
+            <div className="mb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
+                  Category
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateCategory()}
+                  className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45 hover:text-white"
+                >
+                  Add
+                </button>
+              </div>
+              <div className="relative mt-2 max-w-sm">
+                <button
+                  type="button"
+                  onClick={() => setCategoriesOpen((open) => !open)}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-white/12 bg-[#0b1524] px-3 py-2.5 text-left text-sm text-white transition-colors hover:border-white/20"
+                  aria-expanded={categoriesOpen}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor:
+                          categoryFilter == null
+                            ? "rgba(255,255,255,0.3)"
+                            : categoryMap.get(categoryFilter)?.color ?? "rgba(255,255,255,0.3)",
+                      }}
+                    />
+                    <span className="truncate">
+                      {categoryFilter != null
+                        ? categoryMap.get(categoryFilter)?.name ?? "Category"
+                        : typeFilter === "all"
+                          ? "All Files"
+                          : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
+                    </span>
+                  </span>
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-white/40 transition-transform",
+                      categoriesOpen && "rotate-90",
+                    )}
+                  />
+                </button>
+                {categoriesOpen ? (
+                  <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-white/12 bg-[#0b1524] p-1 shadow-xl">
+                    {[
+                      { id: "all", name: "All Files", color: "rgba(255,255,255,0.3)", kind: "type" as const },
+                      { id: "documents", name: "Documents", color: "#60a5fa", kind: "type" as const },
+                      { id: "pdfs", name: "PDFs", color: "#f87171", kind: "type" as const },
+                      { id: "images", name: "Images", color: "#34d399", kind: "type" as const },
+                      { id: "presentations", name: "Presentations", color: "#fbbf24", kind: "type" as const },
+                      { id: "spreadsheets", name: "Spreadsheets", color: "#a78bfa", kind: "type" as const },
+                      { id: "archives", name: "Archives", color: "#94a3b8", kind: "type" as const },
+                      ...categories.map((category) => ({
+                        id: category.id,
+                        name: category.name,
+                        color: category.color,
+                        kind: "category" as const,
+                      })),
+                    ].map((option) => {
+                      const selected =
+                        option.kind === "category"
+                          ? categoryFilter === option.id
+                          : categoryFilter == null && typeFilter === option.id;
+                      return (
+                        <button
+                          key={`${option.kind}-${option.id}`}
+                          type="button"
+                          onClick={() => {
+                            if (option.kind === "category") {
+                              setCategoryFilter(option.id);
+                              setTypeFilter("all");
+                            } else {
+                              setCategoryFilter(null);
+                              setTypeFilter(option.id);
+                            }
+                            setCategoriesOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm",
+                            selected
+                              ? "bg-white/[0.08] text-white"
+                              : "text-white/65 hover:bg-white/[0.04] hover:text-white",
+                          )}
+                        >
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: option.color }}
+                          />
+                          {option.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 text-sm text-white/55">
             {breadcrumb.map((segment, index) => (
               <div key={`${segment.id ?? "root"}-${index}`} className="flex items-center gap-2">
@@ -899,7 +975,7 @@ export default function FileRepositoryWorkspace({
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading repository...
             </div>
-          ) : entries.length === 0 ? (
+          ) : visibleEntries.length === 0 ? (
             <div className="px-5 py-10 text-sm text-white/55">
               This folder is empty. Create a folder or upload Word, Excel, PowerPoint, PDF, and other
               internal files.
@@ -917,7 +993,7 @@ export default function FileRepositoryWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry) => {
+                {visibleEntries.map((entry) => {
                   const Icon = entryIcon(entry);
                   const isSelected = selectedId === entry.item.id && selectedKind === entry.kind;
                   const category =

@@ -251,8 +251,8 @@ function ProjectHealthStrip({
   } as const;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col justify-end gap-2">
-      <div className="flex h-3 overflow-hidden rounded-full bg-white/[0.06] ring-1 ring-white/[0.06]">
+    <div className="flex min-h-0 flex-1 flex-col justify-end gap-4 pt-1">
+      <div className="flex h-5 overflow-hidden rounded-full bg-white/[0.06] ring-1 ring-white/[0.06]">
         {rows.map((row) =>
           row.count > 0 ? (
             <div
@@ -264,16 +264,16 @@ function ProjectHealthStrip({
           ) : null,
         )}
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-2.5">
         {rows.map((row) => (
           <div
             key={row.label}
-            className="rounded-lg bg-white/[0.035] px-2 py-1.5 text-center ring-1 ring-white/[0.06]"
+            className="flex min-h-[3.25rem] flex-col items-center justify-center rounded-lg bg-white/[0.035] px-2 py-2.5 text-center ring-1 ring-white/[0.06]"
           >
             <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               {row.label}
             </p>
-            <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">{row.count}</p>
+            <p className="mt-1 text-sm font-semibold tabular-nums text-white">{row.count}</p>
           </div>
         ))}
       </div>
@@ -1223,9 +1223,9 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
           {(tab) => (
             <>
               {tab === 0 ? (
-                <div className="flex h-full flex-col gap-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    <KpiCell label="Active" value={String(projectsLive)} />
+                <div className="flex h-full flex-col gap-4">
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <KpiCell label="On track" value={String(Math.max(projectsLive - projectsAtRisk.length, 0))} />
                     <KpiCell label="At risk" value={String(projectsAtRisk.length)} />
                     <KpiCell
                       label="Upcoming"
@@ -1235,10 +1235,12 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
                       )}
                     />
                   </div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Portfolio health
-                  </p>
-                  <ProjectHealthStrip rows={projectHealth} />
+                  <div className="space-y-2.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Portfolio health
+                    </p>
+                    <ProjectHealthStrip rows={projectHealth} />
+                  </div>
                 </div>
               ) : null}
               {tab === 1 ? (
@@ -1270,8 +1272,8 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
                 </div>
               ) : null}
               {tab === 2 ? (
-                <div className="flex h-full flex-col gap-2">
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="flex h-full flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <KpiCell
                       label="Avg progress"
                       value={projectsLive > 0 ? `${avgProgress}%` : "—"}
@@ -1283,10 +1285,12 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
                     <KpiCell label="At risk" value={String(projectsAtRisk.length)} />
                     <KpiCell label="Live" value={String(projectsLive)} />
                   </div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Delivery status
-                  </p>
-                  <ProjectHealthStrip rows={projectHealth} />
+                  <div className="space-y-2.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Delivery status
+                    </p>
+                    <ProjectHealthStrip rows={projectHealth} />
+                  </div>
                 </div>
               ) : null}
             </>

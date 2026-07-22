@@ -1490,6 +1490,7 @@ export default function InventoryManagementWorkspace() {
 
       {selected ? (
         <AssetDetailPanel
+          key={selected.id}
           asset={selected}
           tab={panelTab}
           onTab={setPanelTab}

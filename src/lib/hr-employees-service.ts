@@ -313,11 +313,19 @@ export async function getHrEmployeeDetail(
   scope?: HrWorkspaceScope,
 ): Promise<HrEmployeeDetail | null> {
   const workspaceId = await resolveHrWorkspaceId(scope);
-  await ensureHrEmployeesTable();
   return withHrEmployeesTable(async () => {
-    const employee = await getHrEmployee(id, { workspaceId });
-    if (!employee) return null;
     const supabase = requireHrSupabase();
+    const { data: employeeRow, error: employeeError } = await supabase
+      .from("hr_employees")
+      .select("*")
+      .eq("id", id)
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+
+    if (employeeError) throw new Error(employeeError.message);
+    if (!employeeRow) return null;
+
+    const employee = mapHrEmployee(employeeRow as DbEmployee);
 
     const [comp, docs, notes, timeline, history] = await Promise.all([
       supabase
