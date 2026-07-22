@@ -44,11 +44,16 @@ export default function HomeOfferPlatform() {
           Explore everything Unit311 Central has to offer
         </HomeSectionTitle>
 
-        <p className="mx-auto mt-5 max-w-[900px] text-balance text-center text-sm leading-relaxed text-white/55 sm:mt-6 sm:text-[15px] md:text-[17px] md:leading-relaxed">
-          Unit311 Central brings together every major business function into a single intelligent
-          platform. Explore each workspace below to discover how Unit311 Central helps manage your
-          organisation, connect your existing business systems and automate the way you work.
-        </p>
+        <div className="mx-auto mt-5 max-w-[900px] text-center sm:mt-6">
+          <p className="text-balance text-[15px] font-medium leading-relaxed text-white/72 sm:text-[16px] md:text-[18px] md:leading-relaxed">
+            Unit311 Central brings together every major business function into a single intelligent
+            platform.
+          </p>
+          <p className="mx-auto mt-8 text-balance text-sm leading-relaxed text-white/55 sm:mt-10 sm:text-[15px] md:mt-12 md:text-[17px] md:leading-relaxed">
+            Explore each workspace below to discover how Unit311 Central helps manage your
+            organisation, connect your existing business systems, and automate the way you work.
+          </p>
+        </div>
 
         <HomeWorkspaceExplorer />
 
