@@ -511,7 +511,7 @@ export default function SurveyOperationsSidebar({
       role={mobileOpen ? "dialog" : undefined}
       aria-label={mobileOpen ? "Navigation menu" : undefined}
       className={cn(
-        "safe-area-px fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(300px,92vw)] flex-col overflow-hidden border-r border-white/[0.08] bg-[#07111F] pt-[env(safe-area-inset-top)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:pt-0 xl:w-[252px]",
+        "safe-area-px fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh w-[min(300px,92vw)] flex-col overflow-hidden border-r border-white/[0.08] bg-[#07111F] pt-[env(safe-area-inset-top)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:h-full lg:max-h-full lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:pt-0 xl:w-[252px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
     >
@@ -546,7 +546,7 @@ export default function SurveyOperationsSidebar({
 
       <nav
         className={cn(
-          "scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-2.5",
+          "sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-2.5",
           isInternalCompact ? "pt-2 lg:pt-2.5" : "pt-3 lg:px-3 lg:pt-4",
         )}
       >
