@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
 import EmployeePerformancePanel from "./EmployeePerformancePanel";
+import EmployeePayrollPanel from "./EmployeePayrollPanel";
 import { useInternalOperationsBasePath } from "./InternalOperationsBasePathContext";
 import { useHrMockStore } from "./useHrMockStore";
 import { HrStatusPill } from "./hr-ui";
@@ -44,6 +45,7 @@ const TABS = [
   "Overview",
   "Employment",
   "Compensation",
+  "Payroll",
   "Leave",
   "Documents",
   "Performance",
@@ -845,6 +847,10 @@ export default function EmployeeRecordWorkspace() {
 
         {tab === "Compensation" ? (
           <div className="space-y-4">
+            <p className="text-sm text-white/50">
+              Compensation history drives HR salary. Open the Payroll tab for tax, bank, and live net
+              pay calculations.
+            </p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-white/45">Current salary</p>
@@ -986,6 +992,8 @@ export default function EmployeeRecordWorkspace() {
             </div>
           </div>
         ) : null}
+
+        {tab === "Payroll" && draft ? <EmployeePayrollPanel employeeId={draft.id} /> : null}
 
         {tab === "Leave" ? (
           <div className="space-y-4">

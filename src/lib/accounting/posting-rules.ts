@@ -198,3 +198,101 @@ export async function postWiseOutboundJournal(input: {
     ],
   });
 }
+
+/** Accrue payroll: Dr salary + employer tax, Cr clearing + employer tax payable. */
+export async function postPayrollAccrualJournal(input: {
+  runId: string;
+  payDate: string;
+  gross: number;
+  employerTax: number;
+  employeeTax: number;
+  net: number;
+  currency: string;
+  workspaceId?: string | null;
+}) {
+  const clearing = roundMoney(input.net + input.employeeTax);
+  return createAndPostJournal({
+    reference: `PAYROLL-${input.runId.slice(0, 8)}`,
+    description: `Payroll accrual ${input.payDate}`,
+    workspaceId: input.workspaceId ?? null,
+    sourceType: "payroll",
+    sourceId: input.runId,
+    journalDate: input.payDate,
+    lines: [
+      {
+        accountCode: ACCOUNT_CODES.payroll,
+        debit: input.gross,
+        description: "Salary expense",
+      },
+      {
+        accountCode: ACCOUNT_CODES.employerPayrollTax,
+        debit: input.employerTax,
+        description: "Employer payroll tax",
+      },
+      {
+        accountCode: ACCOUNT_CODES.payrollClearing,
+        credit: clearing,
+        description: "Payroll clearing (net + withholdings)",
+      },
+      {
+        accountCode: ACCOUNT_CODES.employerPayrollTaxPayable,
+        credit: input.employerTax,
+        description: "Employer payroll tax payable",
+      },
+    ],
+  });
+}
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+/** Pay payroll from Wise: clear payroll clearing (+ optional employer tax) against bank. */
+export async function postPayrollPaymentJournal(input: {
+  runId: string;
+  payDate: string;
+  clearingAmount: number;
+  employerTax: number;
+  currency: string;
+  wiseBatchId?: string;
+  workspaceId?: string | null;
+  remittanceEmployerTax?: boolean;
+}) {
+  const remittance = input.remittanceEmployerTax !== false;
+  const bankOut = remittance
+    ? roundMoney(input.clearingAmount + input.employerTax)
+    : roundMoney(input.clearingAmount);
+  const lines = [
+    {
+      accountCode: ACCOUNT_CODES.payrollClearing,
+      debit: input.clearingAmount,
+      description: "Clear payroll liability",
+    },
+    ...(remittance && input.employerTax > 0
+      ? [
+          {
+            accountCode: ACCOUNT_CODES.employerPayrollTaxPayable,
+            debit: input.employerTax,
+            description: "Remit employer payroll tax",
+          },
+        ]
+      : []),
+    {
+      accountCode: wiseAccountCodeForCurrency(input.currency),
+      credit: bankOut,
+      description: input.wiseBatchId
+        ? `Wise payroll batch ${input.wiseBatchId}`
+        : "Wise payroll payment",
+    },
+  ];
+
+  return createAndPostJournal({
+    reference: `PAYROLLPAY-${input.runId.slice(0, 8)}`,
+    description: `Payroll payment ${input.payDate}`,
+    workspaceId: input.workspaceId ?? null,
+    sourceType: "payroll_payment",
+    sourceId: `${input.runId}:payment`,
+    journalDate: input.payDate,
+    lines,
+  });
+}

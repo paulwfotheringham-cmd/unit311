@@ -63,6 +63,9 @@ const MIGRATIONS = [
   "supabase/migrations/098_unit311_details_go_live_dedupe.sql",
   "supabase/migrations/099_website_cms_integration_providers.sql",
   "supabase/migrations/100_mod900_list_query_indexes.sql",
+  "supabase/migrations/101_executive_assistant_conversations.sql",
+  "supabase/migrations/102_executive_assistant_trust.sql",
+  "supabase/migrations/103_payroll_module.sql",
 ];
 
 function isAuthorized(request: NextRequest) {

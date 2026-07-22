@@ -36,10 +36,34 @@ export async function ensureChartOfAccountsSeeded(scope?: FinancialsWorkspaceSco
     }
     throw new Error(error.message);
   }
-  if ((data?.length ?? 0) > 0) return;
+  if ((data?.length ?? 0) === 0) {
+    const { error: insertError } = await supabase.from("accounts").insert(
+      CHART_OF_ACCOUNTS_SEED.map((account) => ({
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        currency: account.currency ?? null,
+        is_active: true,
+        workspace_id: workspaceId,
+      })),
+    );
+    if (insertError && !insertError.message.includes("duplicate")) {
+      throw new Error(insertError.message);
+    }
+    return;
+  }
 
-  const { error: insertError } = await supabase.from("accounts").insert(
-    CHART_OF_ACCOUNTS_SEED.map((account) => ({
+  // Upsert any newly introduced COA codes (e.g. payroll clearing) without wiping balances.
+  const { data: existingCodes, error: codesError } = await supabase
+    .from("accounts")
+    .select("code")
+    .eq("workspace_id", workspaceId);
+  if (codesError) throw new Error(codesError.message);
+  const have = new Set((existingCodes ?? []).map((row) => String(row.code)));
+  const missing = CHART_OF_ACCOUNTS_SEED.filter((account) => !have.has(account.code));
+  if (missing.length === 0) return;
+  const { error: missingError } = await supabase.from("accounts").insert(
+    missing.map((account) => ({
       code: account.code,
       name: account.name,
       type: account.type,
@@ -48,8 +72,8 @@ export async function ensureChartOfAccountsSeeded(scope?: FinancialsWorkspaceSco
       workspace_id: workspaceId,
     })),
   );
-  if (insertError && !insertError.message.includes("duplicate")) {
-    throw new Error(insertError.message);
+  if (missingError && !missingError.message.includes("duplicate")) {
+    throw new Error(missingError.message);
   }
 }
 

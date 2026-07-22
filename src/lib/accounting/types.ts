@@ -9,6 +9,8 @@ export type JournalSourceType =
   | "expense_payment"
   | "wise_inbound"
   | "wise_outbound"
+  | "payroll"
+  | "payroll_payment"
   | "manual";
 
 export type LedgerAccount = {

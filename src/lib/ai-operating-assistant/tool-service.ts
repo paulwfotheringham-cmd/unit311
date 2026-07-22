@@ -35,6 +35,11 @@ import {
   listWorkflowsTool,
   queryBusinessTool,
 } from "./proactive-tools";
+import {
+  createPayrollRunTool,
+  generatePayrollPdf,
+  queryPayroll,
+} from "./payroll-tools";
 
 /**
  * Tool Service — register OpenAI function tools and handlers here.
@@ -434,6 +439,58 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "queryPayroll",
+    description:
+      "Live payroll questions: next payroll date, department cost, salary filters (e.g. who earns more than $100000), unpaid runs, and payroll trend.",
+    parameters: {
+      type: "object",
+      properties: {
+        intent: {
+          type: "string",
+          enum: [
+            "overview",
+            "next_payroll",
+            "trend",
+            "department_cost",
+            "unpaid",
+            "salary_filter",
+          ],
+        },
+        department: { type: "string" },
+        minAnnualSalary: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "createPayrollRun",
+    description: "Create this month's draft payroll run from live employee salaries.",
+    parameters: {
+      type: "object",
+      properties: {
+        payDate: { type: "string" },
+        notes: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "generatePayrollPdf",
+    description:
+      "Generate payroll PDFs: summary, department, employee, cost, or board payroll report.",
+    parameters: {
+      type: "object",
+      properties: {
+        reportType: {
+          type: "string",
+          enum: ["summary", "department", "employee", "cost", "board"],
+        },
+        runId: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 type ContextualToolHandler = (
@@ -469,6 +526,9 @@ const handlers: Record<string, ContextualToolHandler> = {
   getReleaseIntelligence: getReleaseIntelligenceTool,
   getRoleFocus: getRoleFocusTool,
   listReleaseFeatures: listReleaseFeaturesTool,
+  queryPayroll,
+  createPayrollRun: createPayrollRunTool,
+  generatePayrollPdf,
 };
 
 /** @deprecated Prefer contextual handlers — kept for registerAssistantTool compatibility. */

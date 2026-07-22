@@ -97,6 +97,7 @@ import {
   MessagingWorkspace,
   ModuleGoLiveWorkspace,
   PerformanceHubWorkspace,
+  PayrollWorkspace,
   PlatformBillingWorkspace,
   PotentialClientsWorkspace,
   ProfileWorkspace,
@@ -680,6 +681,8 @@ export default function InternalOperationsDashboard({
           {activeView === "hr-leave" && <LeaveManagementWorkspace />}
 
           {activeView === "hr-performance" && <PerformanceHubWorkspace />}
+
+          {activeView === "hr-payroll" && <PayrollWorkspace />}
 
           {activeView === "hr-reports" && (
             <HrReportsWorkspace initialEmployeeId={searchParams.get("employeeId") ?? ""} />

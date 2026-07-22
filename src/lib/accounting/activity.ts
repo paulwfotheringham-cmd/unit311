@@ -21,6 +21,8 @@ function activityLabel(sourceType: string, description: string) {
   if (sourceType === "wise_outbound") return "Wise Payment";
   if (sourceType === "expense") return "Expense Recorded";
   if (sourceType === "expense_payment") return "Expense Recorded";
+  if (sourceType === "payroll") return "Payroll Accrued";
+  if (sourceType === "payroll_payment") return "Payroll Paid";
   return "Journal Posted";
 }
 

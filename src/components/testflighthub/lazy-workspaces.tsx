@@ -44,6 +44,7 @@ export const GrantsWorkspace = lazyWorkspace(() => import("./GrantsWorkspace"));
 export const HrWorkspace = lazyWorkspace(() => import("./HrWorkspace"));
 export const LeaveManagementWorkspace = lazyWorkspace(() => import("./LeaveManagementWorkspace"));
 export const PerformanceHubWorkspace = lazyWorkspace(() => import("./PerformanceHubWorkspace"));
+export const PayrollWorkspace = lazyWorkspace(() => import("./PayrollWorkspace"));
 export const RecruitmentWorkspace = lazyWorkspace(() => import("./RecruitmentWorkspace"));
 export const HrReportsWorkspace = lazyWorkspace(() => import("./HrReportsWorkspace"));
 export const FleetWorkspace = lazyWorkspace(() => import("./FleetWorkspace"));

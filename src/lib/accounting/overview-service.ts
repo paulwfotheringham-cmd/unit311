@@ -13,6 +13,7 @@ import {
   resolveFinancialsWorkspaceId,
   type FinancialsWorkspaceScope,
 } from "@/lib/financials-workspace";
+import { calculateLivePayrollSnapshot } from "@/lib/payroll/payroll-service";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { convertToGbp } from "@/lib/treasury/treasury-utils";
 import { getWiseConnectionStatus, listWiseBalances } from "@/lib/wise-service";
@@ -149,6 +150,7 @@ export async function getFinancialOverview(
       postedExpensesResult,
       expensesResult,
       obligationsResult,
+      payrollLiveResult,
     ] = await Promise.all([
       getTypeTotals(workspaceScope).then(
         (value) => ({ ok: true as const, value }),
@@ -176,6 +178,10 @@ export async function getFinancialOverview(
         () => ({ ok: false as const }),
       ),
       getOperatingObligations(workspaceScope).then(
+        (value) => ({ ok: true as const, value }),
+        () => ({ ok: false as const }),
+      ),
+      calculateLivePayrollSnapshot({ workspaceId }).then(
         (value) => ({ ok: true as const, value }),
         () => ({ ok: false as const }),
       ),
@@ -309,6 +315,10 @@ export async function getFinancialOverview(
           monthlyRecurring: 0,
         };
 
+    const payrollLive = payrollLiveResult.ok ? payrollLiveResult.value : null;
+    const toReporting = (amount: number, currency: string) =>
+      currency.toUpperCase() === "GBP" ? roundMoney(amount) : convertToGbp(amount, currency);
+
     const glRevenue = totals.income;
     const glSpend = totals.expenses;
     const netProfit = roundMoney(glRevenue - glSpend);
@@ -319,11 +329,26 @@ export async function getFinancialOverview(
     const glPayrollMonthly = payrollPoint?.payroll ?? 0;
     const glSoftwareMonthly = payrollPoint?.software ?? 0;
 
-    // Live HR salaries and software licences are the operating source of truth when present.
+    // Payroll engine (HR salaries + tax settings) is the SSOT when employees exist.
     const payrollMonthly =
-      obligations.payroll.employees > 0
-        ? obligations.payroll.monthly
-        : glPayrollMonthly;
+      payrollLive && payrollLive.employeeCount > 0
+        ? toReporting(payrollLive.monthlyGross, payrollLive.currency)
+        : obligations.payroll.employees > 0
+          ? toReporting(obligations.payroll.monthly, obligations.payroll.currency)
+          : glPayrollMonthly;
+    const payrollLiability =
+      payrollLive && payrollLive.employeeCount > 0
+        ? toReporting(
+            payrollLive.net + payrollLive.employeeTax + payrollLive.employerTax,
+            payrollLive.currency,
+          )
+        : obligations.payroll.employees > 0
+          ? toReporting(obligations.payroll.liability, obligations.payroll.currency)
+          : 0;
+    const payrollEmployees =
+      payrollLive?.employeeCount || obligations.payroll.employees || 0;
+    const payrollNextDate =
+      payrollLive?.nextPayrollDate || obligations.payroll.nextPayrollDate || todayIso;
     const softwareMonthly =
       obligations.software.count > 0 ? obligations.software.monthly : glSoftwareMonthly;
 
@@ -347,8 +372,7 @@ export async function getFinancialOverview(
       burnRate.series.length > 0
         ? burnRate.series.slice(-6).map((point) => ({
             month: point.month,
-            amount:
-              obligations.payroll.employees > 0 ? payrollMonthly : point.payroll,
+            amount: payrollEmployees > 0 ? payrollMonthly : point.payroll,
           }))
         : [
             {
@@ -367,7 +391,7 @@ export async function getFinancialOverview(
     const apOutstanding = roundMoney(
       unpaidExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0) +
         softwareApUpcoming +
-        (obligations.payroll.employees > 0 ? obligations.payroll.liability : 0),
+        (payrollEmployees > 0 ? payrollLiability : 0),
     );
 
     const softwareApRecent = obligations.software.upcoming.slice(0, 6).map((line) => ({
@@ -381,17 +405,30 @@ export async function getFinancialOverview(
     }));
 
     const payrollApRecent =
-      obligations.payroll.employees > 0
+      payrollEmployees > 0
         ? [
             {
               id: "payroll-next",
               supplier: "Payroll",
-              description: `Monthly payroll · ${obligations.payroll.employees} employees`,
-              amount: obligations.payroll.liability,
-              currency: obligations.payroll.currency,
-              dueDate: obligations.payroll.nextPayrollDate,
+              description: `Monthly payroll · ${payrollEmployees} employees`,
+              amount: payrollLiability,
+              currency: FINANCIAL_REPORTING_CURRENCY,
+              dueDate: payrollNextDate,
               paid: false,
             },
+            ...(payrollLive && payrollLive.employerTax > 0
+              ? [
+                  {
+                    id: "payroll-employer-tax",
+                    supplier: "Employer payroll tax",
+                    description: "Estimated employer payroll tax",
+                    amount: toReporting(payrollLive.employerTax, payrollLive.currency),
+                    currency: FINANCIAL_REPORTING_CURRENCY,
+                    dueDate: payrollNextDate,
+                    paid: false,
+                  },
+                ]
+              : []),
           ]
         : [];
 
@@ -433,7 +470,7 @@ export async function getFinancialOverview(
         dueThisMonth: roundMoney(
           apDueThisMonth.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0) +
             softwareApUpcoming +
-            (obligations.payroll.employees > 0 ? obligations.payroll.liability : 0),
+            (payrollEmployees > 0 ? payrollLiability : 0),
         ),
         overdue: roundMoney(
           apOverdue.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0),
@@ -446,7 +483,7 @@ export async function getFinancialOverview(
             )
             .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0) +
             softwareApUpcoming +
-            (obligations.payroll.employees > 0 ? obligations.payroll.liability : 0),
+            (payrollEmployees > 0 ? payrollLiability : 0),
         ),
         recent: [...payrollApRecent, ...softwareApRecent, ...unpaidExpenses.slice(0, 8).map((expense) => ({
           id: String(expense.id),
@@ -461,7 +498,7 @@ export async function getFinancialOverview(
       payroll: {
         current: payrollMonthly,
         next: payrollMonthly,
-        employees: obligations.payroll.employees,
+        employees: payrollEmployees,
         annual: roundMoney(payrollMonthly * 12),
         monthly: payrollMonthly,
         trend: payrollTrend,
