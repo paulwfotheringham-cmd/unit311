@@ -75,6 +75,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         userId: session.sub,
         messages: body.messages,
         title: body.title?.trim() || undefined,
+        isSaved: true,
       });
       return NextResponse.json({ conversation });
     }

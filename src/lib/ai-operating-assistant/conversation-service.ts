@@ -19,9 +19,12 @@ type DbRow = {
   organisation_id: string | null;
   messages: AssistantChatMessage[] | null;
   workspace_context: AssistantBusinessContext | null;
+  is_saved?: boolean | null;
   created_at: string;
   updated_at: string;
 };
+
+let savedColumnReady: boolean | null = null;
 
 function mapRow(row: DbRow): AssistantConversationRecord {
   return {
@@ -32,6 +35,7 @@ function mapRow(row: DbRow): AssistantConversationRecord {
     organisationId: row.organisation_id,
     messages: Array.isArray(row.messages) ? row.messages : [],
     workspaceContext: row.workspace_context ?? null,
+    isSaved: Boolean(row.is_saved),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -46,6 +50,7 @@ function mapListRow(row: Omit<DbRow, "messages"> & { messages?: AssistantChatMes
     organisationId: row.organisation_id,
     messages: [],
     workspaceContext: row.workspace_context ?? null,
+    isSaved: Boolean(row.is_saved),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   } satisfies AssistantConversationRecord;
@@ -60,6 +65,13 @@ function requireClient() {
   return createSupabaseServiceRoleClient();
 }
 
+function isPersistedConversationId(conversationId: string | null | undefined): conversationId is string {
+  if (!conversationId) return false;
+  if (conversationId === "pending") return false;
+  if (conversationId.startsWith("local_")) return false;
+  return true;
+}
+
 export function createMessageId() {
   return `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -71,6 +83,35 @@ export function titleFromMessages(messages: AssistantChatMessage[]) {
   return trimmed.length <= 56 ? trimmed : `${trimmed.slice(0, 56).trimEnd()}…`;
 }
 
+async function ensureSavedColumn(supabase: ReturnType<typeof requireClient>) {
+  if (savedColumnReady === true) return true;
+  if (savedColumnReady === false) return false;
+
+  const probe = await supabase.from(TABLE).select("is_saved").limit(1);
+  if (!probe.error) {
+    savedColumnReady = true;
+    return true;
+  }
+
+  // Best-effort apply via Supabase Management API when available in the runtime.
+  try {
+    const { applyExecutiveAssistantSavedFlagMigration } = await import(
+      "@/lib/internal-db-migrations"
+    );
+    const applied = await applyExecutiveAssistantSavedFlagMigration();
+    if (applied) {
+      const retry = await supabase.from(TABLE).select("is_saved").limit(1);
+      savedColumnReady = !retry.error;
+      return savedColumnReady;
+    }
+  } catch {
+    // Column may already exist on environments without management token.
+  }
+
+  savedColumnReady = false;
+  return false;
+}
+
 export async function listConversationsForUser(input: {
   userId: string;
   workspaceId?: string | null;
@@ -78,14 +119,37 @@ export async function listConversationsForUser(input: {
 }): Promise<AssistantConversationRecord[]> {
   await ensureConversationTables();
   const supabase = requireClient();
+  const hasSavedColumn = await ensureSavedColumn(supabase);
+  const limit = input.limit ?? 40;
+
+  if (!hasSavedColumn) {
+    let query = supabase
+      .from(TABLE)
+      .select(
+        "id, title, user_id, workspace_id, organisation_id, created_at, updated_at, workspace_context",
+      )
+      .eq("user_id", input.userId)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+    if (input.workspaceId) query = query.eq("workspace_id", input.workspaceId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    // Without is_saved, only newly Save-created rows should appear going forward
+    // (auto-create is disabled). Surface what exists so Save still works pre-migration.
+    return ((data ?? []) as unknown as Array<Omit<DbRow, "messages">>).map((row) =>
+      mapListRow({ ...row, is_saved: false }),
+    );
+  }
+
   let query = supabase
     .from(TABLE)
     .select(
-      "id, title, user_id, workspace_id, organisation_id, created_at, updated_at, workspace_context",
+      "id, title, user_id, workspace_id, organisation_id, created_at, updated_at, workspace_context, is_saved",
     )
     .eq("user_id", input.userId)
+    .eq("is_saved", true)
     .order("updated_at", { ascending: false })
-    .limit(input.limit ?? 40);
+    .limit(limit);
 
   if (input.workspaceId) {
     query = query.eq("workspace_id", input.workspaceId);
@@ -93,13 +157,14 @@ export async function listConversationsForUser(input: {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data as Array<Omit<DbRow, "messages">>).map(mapListRow);
+  return ((data ?? []) as unknown as Array<Omit<DbRow, "messages">>).map(mapListRow);
 }
 
 export async function getConversationForUser(
   conversationId: string,
   userId: string,
 ): Promise<AssistantConversationRecord | null> {
+  if (!isPersistedConversationId(conversationId)) return null;
   const supabase = requireClient();
   const { data, error } = await supabase
     .from(TABLE)
@@ -119,25 +184,28 @@ export async function createConversation(input: {
   title?: string;
   messages?: AssistantChatMessage[];
   workspaceContext?: AssistantBusinessContext | null;
+  isSaved?: boolean;
 }): Promise<AssistantConversationRecord> {
   await ensureConversationTables();
   const supabase = requireClient();
+  const hasSavedColumn = await ensureSavedColumn(supabase);
   const now = new Date().toISOString();
   const messages = input.messages ?? [];
-  const { data, error } = await supabase
-    .from(TABLE)
-    .insert({
-      title: input.title ?? titleFromMessages(messages) ?? "New conversation",
-      user_id: input.userId,
-      workspace_id: input.workspaceId ?? null,
-      organisation_id: input.organisationId ?? null,
-      messages,
-      workspace_context: input.workspaceContext ?? null,
-      created_at: now,
-      updated_at: now,
-    })
-    .select("*")
-    .single();
+  const payload: Record<string, unknown> = {
+    title: input.title ?? titleFromMessages(messages) ?? "New conversation",
+    user_id: input.userId,
+    workspace_id: input.workspaceId ?? null,
+    organisation_id: input.organisationId ?? null,
+    messages,
+    workspace_context: input.workspaceContext ?? null,
+    created_at: now,
+    updated_at: now,
+  };
+  if (hasSavedColumn) {
+    payload.is_saved = input.isSaved ?? true;
+  }
+
+  const { data, error } = await supabase.from(TABLE).insert(payload).select("*").single();
 
   if (error) throw new Error(error.message);
   return mapRow(data as DbRow);
@@ -149,8 +217,13 @@ export async function updateConversation(input: {
   title?: string;
   messages?: AssistantChatMessage[];
   workspaceContext?: AssistantBusinessContext | null;
+  isSaved?: boolean;
 }): Promise<AssistantConversationRecord> {
+  if (!isPersistedConversationId(input.conversationId)) {
+    throw new Error("Conversation is not persisted yet. Press Save Chat first.");
+  }
   const supabase = requireClient();
+  const hasSavedColumn = await ensureSavedColumn(supabase);
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -163,6 +236,9 @@ export async function updateConversation(input: {
   }
   if (input.workspaceContext !== undefined) {
     patch.workspace_context = input.workspaceContext;
+  }
+  if (hasSavedColumn && input.isSaved !== undefined) {
+    patch.is_saved = input.isSaved;
   }
 
   const { data, error } = await supabase
@@ -202,14 +278,18 @@ export async function deleteConversation(input: {
   if (error) throw new Error(error.message);
 }
 
+export { isPersistedConversationId };
+
 export async function ensureConversationTables(): Promise<boolean> {
   if (!isSupabaseServiceRoleConfigured()) return false;
   try {
     // Tables are created by supabase/migrations/101_executive_assistant_conversations.sql
-    // (and 102 for trust). Probe availability; do not auto-apply migrations here.
+    // (and 102 for trust / 106 for is_saved). Probe availability; do not auto-apply base migrations here.
     const supabase = createSupabaseServiceRoleClient();
     const { error } = await supabase.from(TABLE).select("id").limit(1);
-    return !error;
+    if (error) return false;
+    await ensureSavedColumn(supabase);
+    return true;
   } catch {
     return false;
   }

@@ -41,7 +41,6 @@ import {
   Loader2,
   Mail,
   Mic,
-  MoreHorizontal,
   Pencil,
   Plus,
   Save,
@@ -73,6 +72,36 @@ const WELCOME: AssistantChatMessage = {
   content: "Ready when you are. Ask me to brief you, generate a report, or take an action.",
   createdAt: new Date().toISOString(),
 };
+
+const SAVED_CONVERSATION_IDS_KEY = "unit311.ea.savedConversationIds";
+
+function readSavedConversationIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(SAVED_CONVERSATION_IDS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSavedConversationIds(ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SAVED_CONVERSATION_IDS_KEY, JSON.stringify([...ids]));
+}
+
+function markConversationSavedLocally(conversationId: string) {
+  const ids = readSavedConversationIds();
+  ids.add(conversationId);
+  writeSavedConversationIds(ids);
+}
+
+function unmarkConversationSavedLocally(conversationId: string) {
+  const ids = readSavedConversationIds();
+  ids.delete(conversationId);
+  writeSavedConversationIds(ids);
+}
 
 async function readSseStream(
   response: Response,
@@ -154,7 +183,6 @@ export default function ExecutiveAssistantPanel({
   const [messages, setMessages] = useState<AssistantChatMessage[]>([WELCOME]);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [menuId, setMenuId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{
     kind: AssistantPendingActionKind;
     label: string;
@@ -194,7 +222,11 @@ export default function ExecutiveAssistantPanel({
       const data = (await response.json()) as {
         conversations?: AssistantConversationRecord[];
       };
-      setConversations(data.conversations ?? []);
+      const localSavedIds = readSavedConversationIds();
+      const listed = (data.conversations ?? []).filter(
+        (conversation) => conversation.isSaved || localSavedIds.has(conversation.id),
+      );
+      setConversations(listed);
     } catch {
       // persistence optional until migration applied
     }
@@ -260,12 +292,10 @@ export default function ExecutiveAssistantPanel({
     setMessages([WELCOME]);
     setMessage("");
     setRenameId(null);
-    setMenuId(null);
     showNotice("New chat ready");
   }
 
   async function openConversation(conversation: AssistantConversationRecord) {
-    setMenuId(null);
     try {
       const response = await fetch(
         `/api/executive-assistant/conversations/${conversation.id}`,
@@ -295,10 +325,17 @@ export default function ExecutiveAssistantPanel({
       return;
     }
 
+    const persistedId =
+      activeConversationId &&
+      !activeConversationId.startsWith("local_") &&
+      activeConversationId !== "pending"
+        ? activeConversationId
+        : null;
+
     try {
-      if (activeConversationId) {
+      if (persistedId) {
         const response = await fetch(
-          `/api/executive-assistant/conversations/${activeConversationId}`,
+          `/api/executive-assistant/conversations/${persistedId}`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -315,6 +352,7 @@ export default function ExecutiveAssistantPanel({
         if (!response.ok) {
           throw new Error(data?.error ?? `Save failed (${response.status})`);
         }
+        if (persistedId) markConversationSavedLocally(persistedId);
       } else {
         const response = await fetch("/api/executive-assistant/conversations", {
           method: "POST",
@@ -331,7 +369,10 @@ export default function ExecutiveAssistantPanel({
         if (!response.ok) {
           throw new Error(data?.error ?? `Save failed (${response.status})`);
         }
-        if (data?.conversation?.id) setActiveConversationId(data.conversation.id);
+        if (data?.conversation?.id) {
+          setActiveConversationId(data.conversation.id);
+          markConversationSavedLocally(data.conversation.id);
+        }
       }
       await refreshConversations();
       showNotice("Chat saved");
@@ -357,10 +398,13 @@ export default function ExecutiveAssistantPanel({
   }
 
   async function deleteConversation(conversationId: string) {
+    const confirmed = window.confirm("Delete this saved conversation? This cannot be undone.");
+    if (!confirmed) return;
     const response = await fetch(`/api/executive-assistant/conversations/${conversationId}`, {
       method: "DELETE",
     });
     if (response.ok) {
+      unmarkConversationSavedLocally(conversationId);
       if (activeConversationId === conversationId) startNewConversation();
       await refreshConversations();
       showNotice("Conversation deleted");
@@ -577,8 +621,6 @@ export default function ExecutiveAssistantPanel({
         );
       }
 
-      await refreshConversations();
-
       if (finalReply && voice.prefs.voiceEnabled && !opts?.skipSpeak) {
         void voice.speakText(finalReply);
       }
@@ -654,7 +696,7 @@ export default function ExecutiveAssistantPanel({
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
         {conversations.length === 0 ? (
           <p className="px-2 py-4 text-[11px] leading-relaxed text-white/35">
-            Saved chats appear here.
+            Saved chats appear here. Press Save Chat to keep a conversation.
           </p>
         ) : (
           conversations.map((conversation) => (
@@ -702,7 +744,7 @@ export default function ExecutiveAssistantPanel({
                   <button
                     type="button"
                     onClick={() => void openConversation(conversation)}
-                    className="w-full text-left"
+                    className="w-full pr-14 text-left"
                   >
                     <p className="truncate text-[12px] font-medium text-white/90">
                       {conversation.title}
@@ -713,43 +755,29 @@ export default function ExecutiveAssistantPanel({
                       Updated {formatConversationDate(conversation.updatedAt)}
                     </p>
                   </button>
-                  <button
-                    type="button"
-                    aria-label="Conversation menu"
-                    onClick={() =>
-                      setMenuId((value) => (value === conversation.id ? null : conversation.id))
-                    }
-                    className="absolute right-1.5 top-1.5 rounded-md p-1 text-white/30 opacity-0 transition-opacity hover:bg-white/10 hover:text-white group-hover:opacity-100"
-                  >
-                    <MoreHorizontal className="h-3.5 w-3.5" />
-                  </button>
-                  {menuId === conversation.id ? (
-                    <div className="absolute right-1 top-8 z-10 w-32 overflow-hidden rounded-lg border border-white/12 bg-[#0b1524] shadow-xl">
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-white/75 hover:bg-white/[0.06]"
-                        onClick={() => {
-                          setRenameId(conversation.id);
-                          setRenameValue(conversation.title);
-                          setMenuId(null);
-                        }}
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Rename
-                      </button>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-rose-200 hover:bg-white/[0.06]"
-                        onClick={() => {
-                          setMenuId(null);
-                          void deleteConversation(conversation.id);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Delete
-                      </button>
-                    </div>
-                  ) : null}
+                  <div className="absolute right-1 top-1.5 flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      aria-label="Rename conversation"
+                      title="Rename"
+                      onClick={() => {
+                        setRenameId(conversation.id);
+                        setRenameValue(conversation.title);
+                      }}
+                      className="rounded-md p-1 text-white/35 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Delete conversation"
+                      title="Delete"
+                      onClick={() => void deleteConversation(conversation.id)}
+                      className="rounded-md p-1 text-rose-300/80 transition-colors hover:bg-rose-500/15 hover:text-rose-200"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </>
               )}
             </div>

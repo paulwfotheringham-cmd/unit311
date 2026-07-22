@@ -80,6 +80,7 @@ export type AssistantConversationRecord = {
   organisationId: string | null;
   messages: AssistantChatMessage[];
   workspaceContext: AssistantBusinessContext | null;
+  isSaved: boolean;
   createdAt: string;
   updatedAt: string;
 };

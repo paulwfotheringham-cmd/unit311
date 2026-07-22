@@ -105,6 +105,46 @@ export const WHITEBOARD_MIGRATION_PATH = "supabase/migrations/008_create_interna
 export const WHITEBOARD_PROJECTS_MIGRATION_PATH =
   "supabase/migrations/010_create_whiteboard_projects.sql";
 export const PAYROLL_MODULE_MIGRATION_PATH = "supabase/migrations/103_payroll_module.sql";
+export const EXECUTIVE_ASSISTANT_SAVED_FLAG_MIGRATION_PATH =
+  "supabase/migrations/106_executive_assistant_saved_flag.sql";
+
+export async function applyExecutiveAssistantSavedFlagMigration(): Promise<boolean> {
+  const dbUrl = getDatabaseUrl();
+  if (dbUrl) {
+    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    try {
+      await client.connect();
+      await applyMigration(client, EXECUTIVE_ASSISTANT_SAVED_FLAG_MIGRATION_PATH);
+      await reloadPostgrestSchema();
+      return true;
+    } catch (error) {
+      if (!isDirectDbConnectionError(error)) {
+        console.warn("[executive-assistant] direct DB saved-flag ensure failed", error);
+      }
+    } finally {
+      await client.end().catch(() => undefined);
+    }
+  }
+
+  const applied = await applyMigrationViaManagementApi(
+    EXECUTIVE_ASSISTANT_SAVED_FLAG_MIGRATION_PATH,
+  );
+  if (applied) {
+    await reloadPostgrestSchema();
+    return true;
+  }
+
+  const appliedViaResolved = await withResolvedDatabaseClient(async (client) => {
+    await applyMigration(client, EXECUTIVE_ASSISTANT_SAVED_FLAG_MIGRATION_PATH);
+    return true;
+  });
+  if (appliedViaResolved) {
+    await reloadPostgrestSchema();
+    return true;
+  }
+
+  return false;
+}
 
 export async function ensurePayrollModuleTables(): Promise<boolean> {
   const exists = await tableExistsViaManagementApi("payroll_runs");

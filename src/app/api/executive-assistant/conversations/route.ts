@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       workspaceId: body.workspaceId ?? null,
       organisationId: body.organisationId ?? null,
       messages: body.messages ?? [],
+      isSaved: true,
     });
 
     return NextResponse.json({ conversation });

@@ -9,7 +9,6 @@ import { buildBusinessContext } from "./context-service";
 import { buildStructuredJsonHint, buildSystemInstructions } from "./prompt-service";
 import { executeAssistantTool, getOpenAIToolSchemas } from "./tool-service";
 import {
-  createConversation,
   createMessageId,
   getConversationForUser,
   titleFromMessages,
@@ -370,36 +369,40 @@ async function persistTurn(input: {
   context: AssistantBusinessContext;
   title: string;
 }) {
+  const messages = [...input.history, input.userMessage, input.assistantMessage];
+  const title = titleFromMessages(messages);
+  const localId = input.conversationId?.startsWith("local_")
+    ? input.conversationId
+    : `local_${createMessageId()}`;
+
   if (!isSupabaseServiceRoleConfigured()) {
     return {
-      conversationId: input.conversationId ?? `local_${createMessageId()}`,
-      title: input.title,
+      conversationId: localId,
+      title,
     };
   }
 
-  const messages = [...input.history, input.userMessage, input.assistantMessage];
-  const title = titleFromMessages(messages);
-
-  if (input.conversationId) {
-    const updated = await updateConversation({
-      conversationId: input.conversationId,
-      userId: input.session.sub,
-      messages,
-      workspaceContext: input.context,
-      title,
-    });
-    return { conversationId: updated.id, title: updated.title };
+  // Only update conversations that already exist in the database (explicit Save Chat).
+  // Never auto-create list entries from ordinary chat turns.
+  if (input.conversationId && !input.conversationId.startsWith("local_") && input.conversationId !== "pending") {
+    const existing = await getConversationForUser(input.conversationId, input.session.sub);
+    if (existing) {
+      const updated = await updateConversation({
+        conversationId: input.conversationId,
+        userId: input.session.sub,
+        messages,
+        workspaceContext: input.context,
+        title,
+        isSaved: true,
+      });
+      return { conversationId: updated.id, title: updated.title };
+    }
   }
 
-  const created = await createConversation({
-    userId: input.session.sub,
-    workspaceId: input.context.workspace.id,
-    organisationId: input.context.organisation.id,
-    messages,
-    workspaceContext: input.context,
+  return {
+    conversationId: localId,
     title,
-  });
-  return { conversationId: created.id, title: created.title };
+  };
 }
 
 /**
