@@ -6,6 +6,8 @@ import { Client, type ClientBase } from "pg";
 export const COMPETITORS_MIGRATION_PATH = "supabase/migrations/007_create_competitors.sql";
 export const COMPETITORS_AFRICA_MIGRATION_PATH =
   "supabase/migrations/025_competitors_africa_regions.sql";
+export const COMPETITORS_SAAS_MARKETS_MIGRATION_PATH =
+  "supabase/migrations/105_competitors_saas_markets.sql";
 export const SUPPORT_TICKETS_MIGRATION_PATH =
   "supabase/migrations/026_create_support_tickets.sql";
 export const CRM_CONNECTIONS_MIGRATION_PATH =
@@ -95,6 +97,70 @@ export const PAYMENT_RECEIPT_FILE_ID_MIGRATION_PATH =
 export const WHITEBOARD_MIGRATION_PATH = "supabase/migrations/008_create_internal_whiteboard.sql";
 export const WHITEBOARD_PROJECTS_MIGRATION_PATH =
   "supabase/migrations/010_create_whiteboard_projects.sql";
+export const PAYROLL_MODULE_MIGRATION_PATH = "supabase/migrations/103_payroll_module.sql";
+
+export async function ensurePayrollModuleTables(): Promise<boolean> {
+  const exists = await tableExistsViaManagementApi("payroll_runs");
+  if (exists === true) return true;
+
+  const dbUrl = getDatabaseUrl();
+  if (dbUrl) {
+    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    try {
+      await client.connect();
+      if (await tableExists(client, "payroll_runs")) return true;
+      await applyMigration(client, PAYROLL_MODULE_MIGRATION_PATH);
+      await reloadPostgrestSchema();
+      return true;
+    } catch (error) {
+      if (!isDirectDbConnectionError(error)) {
+        console.warn("[payroll] direct DB ensure failed", error);
+      }
+    } finally {
+      await client.end().catch(() => undefined);
+    }
+  }
+
+  const applied = await applyMigrationViaManagementApi(PAYROLL_MODULE_MIGRATION_PATH);
+  if (applied) {
+    await reloadPostgrestSchema();
+    return true;
+  }
+
+  // Last resort: pooler / password candidates used by other ensures.
+  const appliedViaResolved = await withResolvedDatabaseClient(async (client) => {
+    if (await tableExists(client, "payroll_runs")) return true;
+    await applyMigration(client, PAYROLL_MODULE_MIGRATION_PATH);
+    return true;
+  });
+  if (appliedViaResolved) {
+    await reloadPostgrestSchema();
+    return true;
+  }
+
+  return false;
+}
+
+export async function withPayrollModuleTables<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const missing =
+        isMissingTableError(error, "payroll_runs") ||
+        isMissingTableError(error, "payroll_settings") ||
+        isMissingTableError(error, "payroll_employee_profiles") ||
+        isMissingTableError(error, "payroll_run_lines");
+      if (!missing) throw error;
+      await ensurePayrollModuleTables();
+      await reloadPostgrestSchema();
+      if (attempt === 4) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+    }
+  }
+
+  throw new Error("Payroll tables are unavailable.");
+}
 
 export async function ensureSoftwareAssetRegisterTables(): Promise<boolean> {
   const exists = await tableExistsViaManagementApi("software_assets");
@@ -599,25 +665,43 @@ async function countCompetitorsInRegion(region: string): Promise<number | null> 
 }
 
 export async function ensureCompetitorsSeedData(): Promise<void> {
-  await ensureCompetitorsTable();
+  await onceEnsured("seed:competitors", async () => {
+    await ensureCompetitorsTable();
 
-  const kenyaCount = await countCompetitorsInRegion("kenya");
-  if (kenyaCount !== 0) return;
-
-  const dbUrl = getDatabaseUrl();
-  if (dbUrl) {
-    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-    try {
-      await client.connect();
-      await applyMigration(client, COMPETITORS_AFRICA_MIGRATION_PATH);
-      return;
-    } finally {
-      await client.end().catch(() => undefined);
+    const kenyaCount = await countCompetitorsInRegion("kenya");
+    if (kenyaCount === 0) {
+      const dbUrl = getDatabaseUrl();
+      if (dbUrl) {
+        const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+        try {
+          await client.connect();
+          await applyMigration(client, COMPETITORS_AFRICA_MIGRATION_PATH);
+        } finally {
+          await client.end().catch(() => undefined);
+        }
+      } else {
+        const applied = await applyMigrationViaManagementApi(COMPETITORS_AFRICA_MIGRATION_PATH);
+        if (applied) await reloadPostgrestSchema();
+      }
     }
-  }
 
-  const applied = await applyMigrationViaManagementApi(COMPETITORS_AFRICA_MIGRATION_PATH);
-  if (applied) await reloadPostgrestSchema();
+    // Idempotent: expands region check + inserts SaaS competitors for US/UK/CA/ES/FR/IT/DE.
+    const dbUrl = getDatabaseUrl();
+    if (dbUrl) {
+      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+      try {
+        await client.connect();
+        await applyMigration(client, COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
+      } finally {
+        await client.end().catch(() => undefined);
+      }
+    } else {
+      const applied = await applyMigrationViaManagementApi(COMPETITORS_SAAS_MARKETS_MIGRATION_PATH);
+      if (applied) await reloadPostgrestSchema();
+    }
+
+    return true;
+  });
 }
 
 export function isMissingTableError(error: unknown, tableName: string) {

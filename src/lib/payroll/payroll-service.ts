@@ -4,6 +4,10 @@ import { isBoardPackPayrollEligible, type HrEmployee } from "@/lib/hr-data";
 import { listHrEmployees, getHrEmployee } from "@/lib/hr-employees-service";
 import { resolveHrWorkspaceId, type HrWorkspaceScope } from "@/lib/hr-workspace";
 import {
+  ensurePayrollModuleTables,
+  withPayrollModuleTables,
+} from "@/lib/internal-db-migrations";
+import {
   calculateEmployeePayroll,
   nextPayDateFromSettings,
   periodBoundsForPayDate,
@@ -23,6 +27,11 @@ import {
   roundPayrollMoney,
 } from "@/lib/payroll/types";
 import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+
+async function withPayrollDb<T>(operation: () => Promise<T>): Promise<T> {
+  await ensurePayrollModuleTables();
+  return withPayrollModuleTables(operation);
+}
 
 function requireDb() {
   if (!isSupabaseConfigured()) {
@@ -138,52 +147,48 @@ function mapRun(row: Record<string, unknown>, lines?: PayrollRunLine[]): Payroll
 }
 
 export async function getPayrollSettings(scope?: HrWorkspaceScope): Promise<PayrollSettings> {
-  const workspaceId = await resolveHrWorkspaceId(scope);
-  const supabase = requireDb();
-  const { data, error } = await supabase
-    .from("payroll_settings")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
-  if (error) {
-    if (error.message.includes("does not exist") || error.code === "42P01") {
-      return { ...DEFAULT_PAYROLL_SETTINGS, workspaceId, updatedAt: new Date().toISOString() };
-    }
-    throw new Error(error.message);
-  }
-  if (!data) {
-    const now = new Date().toISOString();
-    const insert = {
-      workspace_id: workspaceId,
-      federal_tax_pct: DEFAULT_PAYROLL_SETTINGS.federalTaxPct,
-      state_tax_pct: DEFAULT_PAYROLL_SETTINGS.stateTaxPct,
-      social_security_pct: DEFAULT_PAYROLL_SETTINGS.socialSecurityPct,
-      medicare_pct: DEFAULT_PAYROLL_SETTINGS.medicarePct,
-      employer_payroll_pct: DEFAULT_PAYROLL_SETTINGS.employerPayrollPct,
-      default_currency: DEFAULT_PAYROLL_SETTINGS.defaultCurrency,
-      payroll_frequency: DEFAULT_PAYROLL_SETTINGS.payrollFrequency,
-      pay_day: DEFAULT_PAYROLL_SETTINGS.payDay,
-      country_code: DEFAULT_PAYROLL_SETTINGS.countryCode,
-      default_tax_state: DEFAULT_PAYROLL_SETTINGS.defaultTaxState,
-      updated_at: now,
-    };
-    const { data: created, error: insertError } = await supabase
+  return withPayrollDb(async () => {
+    const workspaceId = await resolveHrWorkspaceId(scope);
+    const supabase = requireDb();
+    const { data, error } = await supabase
       .from("payroll_settings")
-      .upsert(insert, { onConflict: "workspace_id" })
       .select("*")
-      .single();
-    if (insertError) {
-      return { ...DEFAULT_PAYROLL_SETTINGS, workspaceId, updatedAt: now };
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) {
+      const now = new Date().toISOString();
+      const insert = {
+        workspace_id: workspaceId,
+        federal_tax_pct: DEFAULT_PAYROLL_SETTINGS.federalTaxPct,
+        state_tax_pct: DEFAULT_PAYROLL_SETTINGS.stateTaxPct,
+        social_security_pct: DEFAULT_PAYROLL_SETTINGS.socialSecurityPct,
+        medicare_pct: DEFAULT_PAYROLL_SETTINGS.medicarePct,
+        employer_payroll_pct: DEFAULT_PAYROLL_SETTINGS.employerPayrollPct,
+        default_currency: DEFAULT_PAYROLL_SETTINGS.defaultCurrency,
+        payroll_frequency: DEFAULT_PAYROLL_SETTINGS.payrollFrequency,
+        pay_day: DEFAULT_PAYROLL_SETTINGS.payDay,
+        country_code: DEFAULT_PAYROLL_SETTINGS.countryCode,
+        default_tax_state: DEFAULT_PAYROLL_SETTINGS.defaultTaxState,
+        updated_at: now,
+      };
+      const { data: created, error: insertError } = await supabase
+        .from("payroll_settings")
+        .upsert(insert, { onConflict: "workspace_id" })
+        .select("*")
+        .single();
+      if (insertError) throw new Error(insertError.message);
+      return mapSettings(created as Record<string, unknown>, workspaceId);
     }
-    return mapSettings(created as Record<string, unknown>, workspaceId);
-  }
-  return mapSettings(data as Record<string, unknown>, workspaceId);
+    return mapSettings(data as Record<string, unknown>, workspaceId);
+  });
 }
 
 export async function updatePayrollSettings(
   patch: Partial<PayrollSettings>,
   scope?: HrWorkspaceScope,
 ): Promise<PayrollSettings> {
+  return withPayrollDb(async () => {
   const current = await getPayrollSettings(scope);
   const workspaceId = current.workspaceId;
   const supabase = requireDb();
@@ -208,12 +213,14 @@ export async function updatePayrollSettings(
     .single();
   if (error) throw new Error(error.message);
   return mapSettings(data as Record<string, unknown>, workspaceId);
+  });
 }
 
 export async function getEmployeePayrollProfile(
   employeeId: string,
   scope?: HrWorkspaceScope,
 ): Promise<PayrollEmployeeProfile | null> {
+  return withPayrollDb(async () => {
   const workspaceId = await resolveHrWorkspaceId(scope);
   const supabase = requireDb();
   const { data, error } = await supabase
@@ -222,11 +229,9 @@ export async function getEmployeePayrollProfile(
     .eq("workspace_id", workspaceId)
     .eq("employee_id", employeeId)
     .maybeSingle();
-  if (error) {
-    if (error.message.includes("does not exist") || error.code === "42P01") return null;
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   return data ? mapProfile(data as Record<string, unknown>) : null;
+  });
 }
 
 export async function upsertEmployeePayrollProfile(
@@ -234,6 +239,7 @@ export async function upsertEmployeePayrollProfile(
   patch: Partial<PayrollEmployeeProfile>,
   scope?: HrWorkspaceScope,
 ): Promise<PayrollEmployeeProfile> {
+  return withPayrollDb(async () => {
   const workspaceId = await resolveHrWorkspaceId(scope);
   const existing = await getEmployeePayrollProfile(employeeId, { workspaceId });
   const employee = await getHrEmployee(employeeId, { workspaceId });
@@ -282,6 +288,7 @@ export async function upsertEmployeePayrollProfile(
     .single();
   if (error) throw new Error(error.message);
   return mapProfile(data as Record<string, unknown>);
+  });
 }
 
 function eligibleEmployees(employees: HrEmployee[]) {
@@ -289,16 +296,18 @@ function eligibleEmployees(employees: HrEmployee[]) {
 }
 
 export async function calculateLivePayrollSnapshot(scope?: HrWorkspaceScope) {
+  return withPayrollDb(async () => {
   const workspaceId = await resolveHrWorkspaceId(scope);
   const [settings, employees] = await Promise.all([
     getPayrollSettings({ workspaceId }),
     listHrEmployees({ workspaceId }),
   ]);
   const supabase = requireDb();
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profilesError } = await supabase
     .from("payroll_employee_profiles")
     .select("*")
     .eq("workspace_id", workspaceId);
+  if (profilesError) throw new Error(profilesError.message);
   const profileByEmployee = new Map(
     (profiles ?? []).map((row) => {
       const profile = mapProfile(row as Record<string, unknown>);
@@ -353,9 +362,11 @@ export async function calculateLivePayrollSnapshot(scope?: HrWorkspaceScope) {
     nextPayrollDate: nextPayDateFromSettings(settings),
     currency: settings.defaultCurrency,
   };
+  });
 }
 
 export async function listPayrollRuns(scope?: HrWorkspaceScope): Promise<PayrollRun[]> {
+  return withPayrollDb(async () => {
   const workspaceId = await resolveHrWorkspaceId(scope);
   const supabase = requireDb();
   const { data, error } = await supabase
@@ -364,11 +375,9 @@ export async function listPayrollRuns(scope?: HrWorkspaceScope): Promise<Payroll
     .eq("workspace_id", workspaceId)
     .order("pay_date", { ascending: false })
     .limit(50);
-  if (error) {
-    if (error.message.includes("does not exist") || error.code === "42P01") return [];
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   return (data ?? []).map((row) => mapRun(row as Record<string, unknown>));
+  });
 }
 
 export async function getPayrollRun(
@@ -587,6 +596,7 @@ export async function payPayrollRun(
 export async function getPayrollDashboard(
   scope?: HrWorkspaceScope,
 ): Promise<PayrollDashboardSnapshot> {
+  return withPayrollDb(async () => {
   const workspaceId = await resolveHrWorkspaceId(scope);
   const [live, runs] = await Promise.all([
     calculateLivePayrollSnapshot({ workspaceId }),
@@ -668,4 +678,5 @@ export async function getPayrollDashboard(
     upcomingCalendar: upcoming,
     recentRuns: runs.slice(0, 8),
   };
+  });
 }
