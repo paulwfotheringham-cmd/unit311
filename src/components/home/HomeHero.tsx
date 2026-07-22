@@ -36,7 +36,9 @@ export default function HomeHero() {
       <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] items-end px-4 pb-12 pt-[3.75rem] sm:px-8 sm:pb-20 sm:pt-[6.5rem] lg:items-center lg:px-10 lg:pb-24 lg:pt-[120px]">
         <div className="relative max-w-[800px]">
           <h1 className="text-[1.75rem] font-bold leading-[1.08] tracking-[-0.03em] text-white sm:text-[2.75rem] sm:leading-[0.95] lg:text-[3.35rem] xl:text-[3.75rem]">
-            Your Business. Connected. Intelligent.
+            <span className="block">Your Business.</span>
+            <span className="block">Connected.</span>
+            <span className="block">Intelligent.</span>
           </h1>
 
           <p className="mt-5 max-w-[760px] text-[15px] font-medium leading-[1.65] text-white/88 sm:mt-6 sm:text-[17px] sm:leading-[1.7]">
