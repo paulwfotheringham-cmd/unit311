@@ -246,6 +246,7 @@ export const ENGINEERING_NAV_VIEWS = [
 export const ASSETS_NAV_VIEWS = [
   "assets",
   "inventory-management",
+  "logistics",
 ] as const satisfies readonly InternalOperationsView[];
 
 export function isProjectsNavView(view: InternalOperationsView): boolean {
@@ -466,17 +467,11 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
     ],
   },
   {
-    label: "Assets",
+    label: "Assets, Inventory & Logistics",
     items: [
-      {
-        label: "Assets",
-        icon: "Package",
-        children: [
-          { label: "Assets", view: "assets" as const },
-          { label: "Inventory Management", view: "inventory-management" as const },
-          { label: "Logistics", view: "logistics" as const },
-        ],
-      },
+      { label: "Assets", icon: "Package", view: "assets" as const },
+      { label: "Inventory", icon: "Layers", view: "inventory-management" as const },
+      { label: "Logistics", icon: "Truck", view: "logistics" as const },
     ],
   },
   {
@@ -510,7 +505,14 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
       { label: "Email", icon: "Mail", view: "info-email" as const },
       { label: "Messaging", icon: "MessageSquare", view: "messaging" as const },
       { label: "Social", icon: "Share2", view: "social" as const },
-      { label: "Support Desk", icon: "LifeBuoy", view: "support" as const },
+      {
+        label: "Support Desk",
+        icon: "LifeBuoy",
+        children: [
+          { label: "Tickets", view: "support" as const },
+          { label: "WhatsApp Integration Testing", href: "/whatsapp/support-flow" },
+        ],
+      },
     ],
   },
   {
@@ -606,8 +608,8 @@ export const internalViewTitles: Record<
 > = {
   home: { title: "Dashboard", subtitle: "Home" },
   clients: { title: "Client Directory", subtitle: "Clients" },
-  "clients-dashboard": { title: "Clients", subtitle: "Clients" },
-  crm: { title: "CRM Pipeline", subtitle: "CRM" },
+  "clients-dashboard": { title: "Dashboard", subtitle: "Clients" },
+  crm: { title: "Pipeline", subtitle: "CRM" },
   "crm-meetings": {
     title: "Discovery & Demo Sessions",
     subtitle: "CRM",
@@ -649,8 +651,8 @@ export const internalViewTitles: Record<
   "potential-clients": { title: "Potential Clients", subtitle: "CRM" },
   whiteboard: { title: "Whiteboard", subtitle: "Strategy" },
   competitors: { title: "Competitors", subtitle: "Strategy" },
-  assets: { title: "Assets", subtitle: "Assets" },
-  "inventory-management": { title: "Inventory Management", subtitle: "Assets" },
+  assets: { title: "Assets", subtitle: "Assets, Inventory & Logistics" },
+  "inventory-management": { title: "Inventory", subtitle: "Assets, Inventory & Logistics" },
   fleet: { title: "Fleet", subtitle: "Internal Operations" },
   testing: { title: "Flight Simulator Testing", subtitle: "Tools" },
   projects: { title: "Projects", subtitle: "Projects" },
@@ -688,7 +690,7 @@ export const internalViewTitles: Record<
   sector: { title: "Sector Intelligence", subtitle: "Unit311" },
   training: { title: "Staff Training", subtitle: "Training" },
   "training-dashboard": { title: "Training Dashboard", subtitle: "Training" },
-  logistics: { title: "Logistics", subtitle: "Assets" },
+  logistics: { title: "Logistics", subtitle: "Assets, Inventory & Logistics" },
   "client-onboarding": { title: "Client Onboarding", subtitle: "CRM" },
   "quality-management": { title: "Quality Management System", subtitle: "QMS" },
   "qms-training": { title: "QMS Training", subtitle: "Training" },
@@ -709,31 +711,24 @@ export const internalViewTitles: Record<
   "engineering-capacity": { title: "Capacity Planning", subtitle: "Engineering" },
 };
 
-/** Breadcrumb labels for the active internal leaf (section → … → page). */
+/** Breadcrumb labels for the active internal leaf (section → … → page).
+ * Uses navigation labels only — never appends the page title (h1 owns that).
+ */
 export function getInternalNavBreadcrumb(
   activeView: InternalOperationsView,
 ): readonly string[] {
   const titles = internalViewTitles[activeView];
-  const pageTitle = titles?.title ?? activeView;
 
   for (const section of internalSurveyNavSections) {
     for (const item of section.items) {
       const trail = findNavTrailLabels(item, activeView, []);
       if (trail) {
-        const crumbs =
-          section.label != null ? [section.label, ...trail] : [...trail];
-        // Drop generic "Dashboard" leaf so module pages read as Section / Module.
-        if (crumbs[crumbs.length - 1] === "Dashboard" && crumbs.length > 1) {
-          crumbs.pop();
-        }
-        if (crumbs[crumbs.length - 1] !== pageTitle) {
-          crumbs.push(pageTitle);
-        }
-        return crumbs;
+        return section.label != null ? [section.label, ...trail] : [...trail];
       }
     }
   }
 
+  const pageTitle = titles?.title ?? activeView;
   return titles?.subtitle ? [titles.subtitle, pageTitle] : [pageTitle];
 }
 

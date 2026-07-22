@@ -70,12 +70,14 @@ async function handle(request: NextRequest) {
       selection: parseSelection(body.selection),
     });
 
-    const include = String(body.include ?? url.searchParams.get("include") ?? "all");
+    const include = String(body.include ?? url.searchParams.get("include") ?? "insights,health,release");
 
-    const wantBrief = include === "all" || include.includes("brief");
+    // Daily Brief and floating notification cards are removed from the product UI.
+    // Brief is only built when an authenticated caller explicitly requests include=brief (e.g. assistant tool).
+    const wantBrief = include.includes("brief");
     const wantInsights = include === "all" || include.includes("insights");
     const wantHealth = include === "all" || include.includes("health");
-    const wantNotifications = include === "all" || include.includes("notifications");
+    const wantNotifications = include.includes("notifications");
     const wantRelease = include === "all" || include.includes("release");
 
     const needInsights = wantBrief || wantInsights || wantNotifications || wantHealth;

@@ -2,23 +2,17 @@
 
 import { startTransition, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, BookOpen, Menu, Sparkles, X } from "lucide-react";
+import { BookOpen, Menu, Sparkles, X } from "lucide-react";
 
 import GuidedLearningOverlay from "@/components/executive-assistant/GuidedLearningOverlay";
 import {
   GuidedLearningProvider,
   requestShowMeAround,
 } from "@/components/executive-assistant/GuidedLearningProvider";
-import ExecutiveProactiveLayer from "@/components/executive-assistant/ExecutiveProactiveLayer";
 import {
   hasNeverShowTours,
   markNeverShowTours,
 } from "@/lib/ai-operating-assistant/guided-learning";
-import {
-  BRIEF_READY_EVENT,
-  markDailyBriefSeen,
-  type BriefReadyDetail,
-} from "@/lib/ai-operating-assistant/proactive-client";
 import {
   getInternalNavBreadcrumb,
   internalViewTitles,
@@ -59,8 +53,6 @@ export default function SurveyOperationsShell({
 }: SurveyOperationsShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [briefReady, setBriefReady] = useState<BriefReadyDetail | null>(null);
-  const [briefOpen, setBriefOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const isHomeView = mode === "internal" && activeView === "home";
   const pathname = usePathname() ?? "";
@@ -110,16 +102,6 @@ export default function SurveyOperationsShell({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [tutorialOpen]);
-
-  useEffect(() => {
-    const onBrief = (event: Event) => {
-      const detail = (event as CustomEvent<BriefReadyDetail>).detail;
-      setBriefReady(detail?.available ? detail : null);
-      if (!detail?.available) setBriefOpen(false);
-    };
-    window.addEventListener(BRIEF_READY_EVENT, onBrief as EventListener);
-    return () => window.removeEventListener(BRIEF_READY_EVENT, onBrief as EventListener);
-  }, []);
 
   const resolvedTitle =
     activeView != null
@@ -242,80 +224,8 @@ export default function SurveyOperationsShell({
                   </button>
                 </>
               ) : null}
-              {showPlatformAi && briefReady?.available ? (
-                <button
-                  type="button"
-                  aria-label="Open daily brief"
-                  aria-expanded={briefOpen}
-                  onClick={() => setBriefOpen((value) => !value)}
-                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/65 transition-colors hover:bg-white/[0.06] hover:text-white"
-                >
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sky-400" />
-                </button>
-              ) : null}
             </div>
           </div>
-
-          {briefOpen && briefReady?.available ? (
-            <div className="absolute right-2 top-[3.6rem] z-20 w-[min(340px,calc(100vw-1rem))] rounded-xl border border-white/12 bg-[#0b1524] p-3.5 text-white shadow-xl sm:right-4 lg:right-8">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/85">
-                    Daily brief
-                  </p>
-                  <p className="mt-1 text-sm font-semibold">{briefReady.greeting}</p>
-                  <p className="mt-1 text-xs text-white/55">{briefReady.headline}</p>
-                </div>
-                <button
-                  type="button"
-                  aria-label="Close brief"
-                  onClick={() => {
-                    markDailyBriefSeen();
-                    setBriefOpen(false);
-                    setBriefReady(null);
-                  }}
-                  className="rounded-md p-1 text-white/40 hover:bg-white/[0.06]"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              {(briefReady.priorities?.length ?? 0) > 0 ? (
-                <ul className="mt-3 space-y-1.5">
-                  {briefReady.priorities!.map((priority) => (
-                    <li key={priority} className="text-xs leading-snug text-white/75">
-                      · {priority}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    markDailyBriefSeen();
-                    setBriefOpen(false);
-                    setBriefReady(null);
-                    setAssistantOpen(true);
-                  }}
-                  className="rounded-md border border-sky-400/35 bg-sky-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-sky-100"
-                >
-                  Discuss
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    markDailyBriefSeen();
-                    setBriefOpen(false);
-                    setBriefReady(null);
-                  }}
-                  className="rounded-md border border-white/10 px-2.5 py-1.5 text-[11px] text-white/55"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          ) : null}
         </header>
 
         <div
@@ -405,16 +315,7 @@ export default function SurveyOperationsShell({
         mode={mode}
       />
 
-      {showPlatformAi ? (
-        <>
-          <GuidedLearningOverlay />
-          <ExecutiveProactiveLayer
-            activeView={activeView ?? "home"}
-            roleView={null}
-            onOpenAssistant={() => setAssistantOpen(true)}
-          />
-        </>
-      ) : null}
+      {showPlatformAi ? <GuidedLearningOverlay /> : null}
     </div>
   );
 

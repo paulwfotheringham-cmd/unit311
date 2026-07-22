@@ -36,6 +36,7 @@ import {
   Download,
   Loader2,
   Mail,
+  Mic,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -45,6 +46,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { VoiceIntroModal } from "@/components/executive-assistant/voice/VoiceIntroModal";
+import { VoiceSettingsPopover } from "@/components/executive-assistant/voice/VoiceSettingsPopover";
+import { VoiceWaveform } from "@/components/executive-assistant/voice/VoiceWaveform";
+import { useExecutiveVoice } from "@/components/executive-assistant/voice/useExecutiveVoice";
+import { voiceStatusLabel } from "@/lib/executive-assistant-voice";
 
 export type ExecutiveAssistantPanelProps = {
   variant: ExecutiveAssistantVariant;
@@ -824,10 +830,6 @@ export default function ExecutiveAssistantPanel({
 
           {!sending && messages.length <= 1 ? (
             <div className="flex flex-wrap gap-1.5 pt-1">
-              <ActionButton
-                label="Daily brief"
-                onClick={() => void handleSend(undefined, "Give me today's Daily Executive Brief.")}
-              />
               <ActionButton
                 label="Employee PDF"
                 onClick={() => void handleSend(undefined, "Create a PDF of all employees.")}
