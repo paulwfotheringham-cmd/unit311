@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState, startTransition } from "reac
 
 import {
   CALENDAR_EVENT_TYPE_OPTIONS,
-  combineDateAndTime,
   createBlankEventInput,
   dateKeyFromIso,
   eventTypeClass,
@@ -18,6 +17,18 @@ import {
   type CalendarEvent,
   type CalendarEventType,
 } from "@/lib/calendar-data";
+import {
+  addMinutesToIso,
+  CALENDAR_MEETING_DURATIONS_MINUTES,
+  CALENDAR_TIMEZONES,
+  combineDateTimeInTimezone,
+  DEFAULT_CALENDAR_TIMEZONE,
+  extractTimezoneFromNotes,
+  fromTwentyFourHourTime,
+  stripTimezoneFromNotes,
+  toTwentyFourHourTime,
+  type CalendarMeetingDurationMinutes,
+} from "@/lib/calendar-meeting-time";
 import type { ManagedClient } from "@/lib/client-management-data";
 import { createInitialUsers, type ManagedUser } from "@/lib/user-management-data";
 import { cn } from "@/lib/utils";
@@ -61,39 +72,64 @@ type EventDraft = {
   title: string;
   eventType: CalendarEventType;
   date: string;
-  startTime: string;
-  endTime: string;
+  startHour12: number;
+  startMinute: number;
+  startMeridiem: "AM" | "PM";
+  durationMinutes: CalendarMeetingDurationMinutes;
+  timeZone: string;
   clientName: string;
   location: string;
   notes: string;
   attendeeEmails: string;
 };
 
+function durationFromRange(startsAt: string, endsAt: string): CalendarMeetingDurationMinutes {
+  const minutes = Math.max(
+    15,
+    Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000),
+  );
+  const match = CALENDAR_MEETING_DURATIONS_MINUTES.find((value) => value === minutes);
+  return match ?? 60;
+}
+
 function eventToDraft(event: CalendarEvent): EventDraft {
   const attendeeMatch = event.notes?.match(/Attendees:\s*(.+)$/im);
+  const start = fromTwentyFourHourTime(toTimeInputValue(event.startsAt));
   return {
     id: event.id,
     title: event.title,
     eventType: event.eventType,
     date: toDateInputValue(event.startsAt),
-    startTime: toTimeInputValue(event.startsAt),
-    endTime: toTimeInputValue(event.endsAt),
+    startHour12: start.hour12,
+    startMinute: start.minute,
+    startMeridiem: start.meridiem,
+    durationMinutes: durationFromRange(event.startsAt, event.endsAt),
+    timeZone: extractTimezoneFromNotes(event.notes) ?? DEFAULT_CALENDAR_TIMEZONE,
     clientName: event.clientName ?? "",
     location: event.location ?? "",
-    notes: (event.notes ?? "").replace(/\n?Attendees:\s*.+$/im, "").trim(),
+    notes: stripTimezoneFromNotes(
+      (event.notes ?? "").replace(/\n?Attendees:\s*.+$/im, "").trim(),
+    ),
     attendeeEmails: attendeeMatch?.[1]?.trim() ?? "",
   };
 }
 
 function blankDraft(date: Date): EventDraft {
   const blank = createBlankEventInput(date);
+  const start = fromTwentyFourHourTime(toTimeInputValue(blank.startsAt));
   return {
     id: null,
     title: "",
     eventType: blank.eventType,
     date: toDateInputValue(blank.startsAt),
-    startTime: toTimeInputValue(blank.startsAt),
-    endTime: toTimeInputValue(blank.endsAt),
+    startHour12: start.hour12,
+    startMinute: start.minute,
+    startMeridiem: start.meridiem,
+    durationMinutes: 60,
+    timeZone:
+      typeof Intl !== "undefined"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_CALENDAR_TIMEZONE
+        : DEFAULT_CALENDAR_TIMEZONE,
     clientName: "",
     location: "",
     notes: "",
@@ -438,15 +474,25 @@ export default function CalendarWorkspace({
     setBusy(true);
     setError(null);
 
+    const startTime = toTwentyFourHourTime(
+      draft.startHour12,
+      draft.startMinute,
+      draft.startMeridiem,
+    );
+    const startsAt = combineDateTimeInTimezone(draft.date, startTime, draft.timeZone);
+    const endsAt = addMinutesToIso(startsAt, draft.durationMinutes);
+
     const payload = {
       title: draft.title.trim(),
       eventType: draft.eventType,
-      startsAt: combineDateAndTime(draft.date, draft.startTime),
-      endsAt: combineDateAndTime(draft.date, draft.endTime),
+      startsAt,
+      endsAt,
       clientName: draft.clientName,
       location: draft.location,
       notes: draft.notes,
       attendeeEmails: draft.attendeeEmails,
+      timeZone: draft.timeZone,
+      generateMeetingUrl: true,
     };
 
     try {
@@ -454,11 +500,31 @@ export default function CalendarWorkspace({
         const response = await fetch(`/api/calendar/events/${draft.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            title: payload.title,
+            eventType: payload.eventType,
+            startsAt: payload.startsAt,
+            endsAt: payload.endsAt,
+            clientName: payload.clientName,
+            location: payload.location,
+            notes: payload.notes,
+            attendeeEmails: payload.attendeeEmails,
+            timeZone: payload.timeZone,
+          }),
         });
-        const data = await readApiJson<{ event?: CalendarEvent; error?: string }>(response);
+        const data = await readApiJson<{
+          event?: CalendarEvent;
+          error?: string;
+          invites?: { sent?: number; failed?: string[] };
+        }>(response);
         if (!response.ok || !data.event) throw new Error(data.error ?? "Failed to save event");
         setEvents((current) => current.map((item) => (item.id === data.event!.id ? data.event! : item)));
+        setDraft(eventToDraft(data.event));
+        if (data.invites?.failed && data.invites.failed.length > 0) {
+          setError(`Meeting saved. Invite failed for: ${data.invites.failed.join(", ")}`);
+        } else if ((data.invites?.sent ?? 0) > 0) {
+          setError(null);
+        }
       } else {
         const response = await fetch("/api/calendar/events", {
           method: "POST",
@@ -468,18 +534,22 @@ export default function CalendarWorkspace({
         const data = await readApiJson<{
           event?: CalendarEvent;
           error?: string;
-          invites?: { sent?: number; failed?: string[] };
+          invites?: { sent?: number; failed?: string[]; meetingUrl?: string; errors?: Record<string, string> };
         }>(response);
         if (!response.ok || !data.event) throw new Error(data.error ?? "Failed to create event");
         setEvents((current) => [...current, data.event!].sort(
           (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
         ));
         setDraft(eventToDraft(data.event));
-        if (data.invites && (data.invites.sent ?? 0) > 0) {
-          setError(null);
-        }
         if (data.invites?.failed && data.invites.failed.length > 0) {
-          setError(`Meeting saved. Invite failed for: ${data.invites.failed.join(", ")}`);
+          const detail = data.invites.errors
+            ? Object.entries(data.invites.errors)
+                .map(([email, message]) => `${email}: ${message}`)
+                .join("; ")
+            : data.invites.failed.join(", ");
+          setError(`Meeting saved. Invite failed for: ${detail}`);
+        } else if ((data.invites?.sent ?? 0) > 0) {
+          setError(null);
         }
       }
     } catch (saveError) {
@@ -829,8 +899,25 @@ export default function CalendarWorkspace({
                 </select>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-3 sm:col-span-1">
+              <div>
+                <FieldLabel>Timezone</FieldLabel>
+                <select
+                  value={draft.timeZone}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, timeZone: event.target.value }))
+                  }
+                  className={inputClassName()}
+                >
+                  {CALENDAR_TIMEZONES.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="col-span-2 sm:col-span-1">
                   <FieldLabel>Date</FieldLabel>
                   <input
                     type="date"
@@ -840,27 +927,79 @@ export default function CalendarWorkspace({
                   />
                 </div>
                 <div>
-                  <FieldLabel>Start</FieldLabel>
-                  <input
-                    type="time"
-                    value={draft.startTime}
+                  <FieldLabel>Hour</FieldLabel>
+                  <select
+                    value={draft.startHour12}
                     onChange={(event) =>
-                      setDraft((current) => ({ ...current, startTime: event.target.value }))
+                      setDraft((current) => ({
+                        ...current,
+                        startHour12: Number(event.target.value),
+                      }))
                     }
                     className={inputClassName()}
-                  />
+                  >
+                    {Array.from({ length: 12 }, (_, index) => index + 1).map((hour) => (
+                      <option key={hour} value={hour}>
+                        {hour}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <FieldLabel>End</FieldLabel>
-                  <input
-                    type="time"
-                    value={draft.endTime}
+                  <FieldLabel>Minute</FieldLabel>
+                  <select
+                    value={draft.startMinute}
                     onChange={(event) =>
-                      setDraft((current) => ({ ...current, endTime: event.target.value }))
+                      setDraft((current) => ({
+                        ...current,
+                        startMinute: Number(event.target.value),
+                      }))
                     }
                     className={inputClassName()}
-                  />
+                  >
+                    {[0, 15, 30, 45].map((minute) => (
+                      <option key={minute} value={minute}>
+                        {String(minute).padStart(2, "0")}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                <div>
+                  <FieldLabel>AM / PM</FieldLabel>
+                  <select
+                    value={draft.startMeridiem}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        startMeridiem: event.target.value as "AM" | "PM",
+                      }))
+                    }
+                    className={inputClassName()}
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <FieldLabel>Duration</FieldLabel>
+                <select
+                  value={draft.durationMinutes}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      durationMinutes: Number(event.target.value) as CalendarMeetingDurationMinutes,
+                    }))
+                  }
+                  className={inputClassName()}
+                >
+                  {CALENDAR_MEETING_DURATIONS_MINUTES.map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {minutes} minutes
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {draft.eventType === "onsite" && (
@@ -894,7 +1033,8 @@ export default function CalendarWorkspace({
                   className={inputClassName()}
                 />
                 <p className="mt-1 text-[10px] text-white/40">
-                  Invitation emails include title, organiser, date/time, description, and a join link.
+                  Saving sends invitation emails with meeting details, join URL, and an ICS calendar
+                  attachment.
                 </p>
               </div>
 
@@ -905,9 +1045,21 @@ export default function CalendarWorkspace({
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, location: event.target.value }))
                   }
-                  placeholder="Address, site, or meeting link"
-                  className={inputClassName()}
+                  placeholder={
+                    draft.id
+                      ? "Meeting URL is set automatically"
+                      : "A unique meeting URL is generated on save"
+                  }
+                  readOnly={!draft.id || /^https?:\/\/[^/]+\/meet\/video\//i.test(draft.location)}
+                  className={cn(
+                    inputClassName(),
+                    (!draft.id || /^https?:\/\/[^/]+\/meet\/video\//i.test(draft.location)) &&
+                      "cursor-default text-sky-200/90",
+                  )}
                 />
+                <p className="mt-1 text-[10px] text-white/40">
+                  New meetings automatically receive a unique Unit311 meeting URL in Location.
+                </p>
               </div>
 
               <div>

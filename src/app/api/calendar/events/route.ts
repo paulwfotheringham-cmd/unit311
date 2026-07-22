@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import type { CalendarEventType } from "@/lib/calendar-data";
-import { createCalendarEvent, listCalendarEvents } from "@/lib/internal-calendar-service";
 import {
   appendAttendeesToNotes,
+  buildCalendarMeetingUrl,
   normalizeAttendeeEmails,
   sendCalendarMeetingInvites,
 } from "@/lib/calendar-invite-email";
+import { appendTimezoneToNotes } from "@/lib/calendar-meeting-time";
+import { createCalendarEvent, listCalendarEvents } from "@/lib/internal-calendar-service";
 import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requireCurrentWorkspace } from "@/lib/workspace-context";
@@ -52,6 +54,8 @@ export async function POST(request: NextRequest) {
       location?: string;
       notes?: string;
       attendeeEmails?: string | string[];
+      timeZone?: string;
+      generateMeetingUrl?: boolean;
     };
 
     if (!body.title?.trim()) {
@@ -65,7 +69,12 @@ export async function POST(request: NextRequest) {
     }
 
     const attendeeEmails = normalizeAttendeeEmails(body.attendeeEmails);
-    const notes = appendAttendeesToNotes(body.notes, attendeeEmails);
+    const timeZone = body.timeZone?.trim() || "Europe/London";
+    let notes = appendAttendeesToNotes(body.notes, attendeeEmails);
+    notes = appendTimezoneToNotes(notes, timeZone);
+
+    const shouldGenerateMeetingUrl = body.generateMeetingUrl !== false;
+    const locationHint = body.location?.trim() || null;
 
     const event = await createCalendarEvent(
       {
@@ -74,21 +83,35 @@ export async function POST(request: NextRequest) {
         startsAt: body.startsAt,
         endsAt: body.endsAt,
         clientName: body.clientName,
-        location: body.location,
+        location: locationHint ?? undefined,
         notes: notes ?? undefined,
       },
       { workspaceId: workspace.id },
     );
 
+    let finalEvent = event;
+    if (shouldGenerateMeetingUrl) {
+      const canonicalUrl = buildCalendarMeetingUrl(event.id);
+      if (event.location !== canonicalUrl) {
+        const { updateCalendarEvent } = await import("@/lib/internal-calendar-service");
+        finalEvent = await updateCalendarEvent(
+          event.id,
+          { location: canonicalUrl },
+          { workspaceId: workspace.id },
+        );
+      }
+    }
+
     const invites = await sendCalendarMeetingInvites({
-      event,
+      event: finalEvent,
       attendeeEmails,
       organiserName: session.displayName || session.username || null,
-      organiserEmail: null,
+      organiserEmail: "info@unit311central.com",
       workspaceId: workspace.id,
+      timeZone,
     });
 
-    return NextResponse.json({ event, invites });
+    return NextResponse.json({ event: finalEvent, invites });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create calendar event";
     const status =

@@ -16,13 +16,24 @@ import {
   CircleDollarSign,
   FolderKanban,
   Gauge,
+  LayoutGrid,
+  Plus,
+  RotateCcw,
   Sparkles,
+  X,
 } from "lucide-react";
 
 import { formatMoney } from "@/lib/accounting/chart-of-accounts";
 import type { FinancialOverviewSnapshot } from "@/lib/accounting/types";
 import type { CalendarEvent } from "@/lib/calendar-data";
 import type { ManagedClient } from "@/lib/client-management-data";
+import {
+  COMMAND_CENTRE_HOME_TILE_CATALOG,
+  DEFAULT_COMMAND_CENTRE_HOME_LAYOUT,
+  loadCommandCentreHomeLayout,
+  saveCommandCentreHomeLayout,
+  type CommandCentreHomeTileId,
+} from "@/lib/command-centre-home-tiles";
 import type { CrmLead } from "@/lib/crm-data";
 import {
   buildBusinessHealthIssues,
@@ -382,7 +393,7 @@ function Tile({
   return (
     <section
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-2xl",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-2xl",
         "bg-gradient-to-br from-[#1a2740] via-[#152033] to-[#101a2c]",
         "shadow-[0_12px_40px_-20px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]",
         "ring-1 ring-white/[0.08]",
@@ -446,11 +457,26 @@ function Tile({
 }
 
 /**
- * Executive Command Centre — fixed 3×2 equal tiles, single viewport, no scroll.
- * Tabs change only on user click (no auto-rotation).
+ * Executive Command Centre — configurable equal tiles with customise controls.
  */
-export default function InternalDashboardHome(_props?: { showCustomize?: boolean }) {
+export default function InternalDashboardHome(props?: { showCustomize?: boolean }) {
+  const showCustomize = props?.showCustomize !== false;
   const [bundle, setBundle] = useState<HomeBundle | null>(null);
+  const [layout, setLayout] = useState<CommandCentreHomeTileId[]>([
+    ...DEFAULT_COMMAND_CENTRE_HOME_LAYOUT,
+  ]);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [layoutHydrated, setLayoutHydrated] = useState(false);
+
+  useEffect(() => {
+    setLayout(loadCommandCentreHomeLayout());
+    setLayoutHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!layoutHydrated) return;
+    saveCommandCentreHomeLayout(layout);
+  }, [layout, layoutHydrated]);
 
   const load = useCallback(async () => {
     try {
@@ -739,16 +765,147 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
   const purple = ACCENT.purple.spark;
   const cyan = ACCENT.cyan.spark;
 
+  const hiddenTiles = COMMAND_CENTRE_HOME_TILE_CATALOG.filter(
+    (tile) => !layout.includes(tile.id),
+  );
+
+  function moveTile(id: CommandCentreHomeTileId, direction: -1 | 1) {
+    setLayout((current) => {
+      const index = current.indexOf(id);
+      if (index < 0) return current;
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(nextIndex, 0, item);
+      return next;
+    });
+  }
+
+  function hideTile(id: CommandCentreHomeTileId) {
+    setLayout((current) => current.filter((tileId) => tileId !== id));
+  }
+
+  function showTile(id: CommandCentreHomeTileId) {
+    setLayout((current) => (current.includes(id) ? current : [...current, id]));
+  }
+
+  function tileVisible(id: CommandCentreHomeTileId) {
+    return layout.includes(id);
+  }
+
+  function tileOrder(id: CommandCentreHomeTileId) {
+    const index = layout.indexOf(id);
+    return index < 0 ? 99 : index;
+  }
+
   return (
     <div
       data-ai-target="home-tiles"
       aria-label="Executive command centre"
       className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden"
     >
+      {showCustomize ? (
+        <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 px-0.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Executive command centre
+          </p>
+          <button
+            type="button"
+            data-ai-target="home-customize"
+            onClick={() => setCustomizeOpen((open) => !open)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors",
+              customizeOpen
+                ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
+                : "border-white/10 bg-white/[0.03] text-white/70 hover:border-white/20 hover:text-white",
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Customise tiles
+          </button>
+        </div>
+      ) : null}
+
+      {showCustomize && customizeOpen ? (
+        <div className="mb-2 shrink-0 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {layout.map((id, index) => {
+              const tile = COMMAND_CENTRE_HOME_TILE_CATALOG.find((entry) => entry.id === id);
+              if (!tile) return null;
+              return (
+                <div
+                  key={id}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-[#0b1524]/80 px-2 py-1 text-[11px] text-white/80"
+                >
+                  <span>{tile.title}</span>
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => moveTile(id, -1)}
+                    className="rounded px-1 text-white/50 hover:text-white disabled:opacity-30"
+                    aria-label={`Move ${tile.title} earlier`}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === layout.length - 1}
+                    onClick={() => moveTile(id, 1)}
+                    className="rounded px-1 text-white/50 hover:text-white disabled:opacity-30"
+                    aria-label={`Move ${tile.title} later`}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hideTile(id)}
+                    className="rounded p-0.5 text-rose-200/80 hover:bg-rose-500/15"
+                    aria-label={`Hide ${tile.title}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+            {hiddenTiles.map((tile) => (
+              <button
+                key={tile.id}
+                type="button"
+                onClick={() => showTile(tile.id)}
+                className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-200"
+              >
+                <Plus className="h-3 w-3" />
+                {tile.title}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setLayout([...DEFAULT_COMMAND_CENTRE_HOME_LAYOUT])}
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/55 hover:text-white"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Restore defaults
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div
-        className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 overflow-hidden sm:gap-2.5 xl:grid-cols-3 xl:grid-rows-2"
+        className={cn(
+          "grid min-h-0 flex-1 gap-2 overflow-hidden sm:gap-2.5",
+          layout.length <= 1
+            ? "grid-cols-1 grid-rows-1"
+            : layout.length === 2
+              ? "grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1"
+              : layout.length <= 4
+                ? "grid-cols-2 grid-rows-2"
+                : "grid-cols-2 grid-rows-3 xl:grid-cols-3 xl:grid-rows-2",
+        )}
       >
         {/* 1 — Executive Brief */}
+        {tileVisible("executive-brief") ? (
+        <div style={{ order: tileOrder("executive-brief") }} className="min-h-0 min-w-0">
         <Tile title="Executive Brief" icon={Sparkles} accent="sky" href={HREFS.calendar}>
           {() => (
             <div className="flex h-full flex-col gap-2.5">
@@ -814,8 +971,12 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
             </div>
           )}
         </Tile>
+        </div>
+        ) : null}
 
         {/* 2 — Financial */}
+        {tileVisible("financial") ? (
+        <div style={{ order: tileOrder("financial") }} className="min-h-0 min-w-0">
         <Tile
           title="Financial"
           icon={CircleDollarSign}
@@ -959,8 +1120,12 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
             </>
           )}
         </Tile>
+        </div>
+        ) : null}
 
         {/* 3 — Commercial */}
+        {tileVisible("commercial") ? (
+        <div style={{ order: tileOrder("commercial") }} className="min-h-0 min-w-0">
         <Tile
           title="Commercial"
           icon={Briefcase}
@@ -1042,8 +1207,12 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
             </>
           )}
         </Tile>
+        </div>
+        ) : null}
 
         {/* 4 — Projects & Delivery */}
+        {tileVisible("projects") ? (
+        <div style={{ order: tileOrder("projects") }} className="min-h-0 min-w-0">
         <Tile
           title="Projects & Delivery"
           icon={FolderKanban}
@@ -1123,8 +1292,12 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
             </>
           )}
         </Tile>
+        </div>
+        ) : null}
 
         {/* 5 — Operations */}
+        {tileVisible("operations") ? (
+        <div style={{ order: tileOrder("operations") }} className="min-h-0 min-w-0">
         <Tile
           title="Operations"
           icon={Gauge}
@@ -1190,8 +1363,12 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
             </>
           )}
         </Tile>
+        </div>
+        ) : null}
 
         {/* 6 — Risks */}
+        {tileVisible("risks") ? (
+        <div style={{ order: tileOrder("risks") }} className="min-h-0 min-w-0">
         <Tile title="Risks" icon={AlertTriangle} accent="rose" href={HREFS.financials}>
           {() => (
             <div className="flex h-full flex-col gap-2.5">
@@ -1281,6 +1458,8 @@ export default function InternalDashboardHome(_props?: { showCustomize?: boolean
             </div>
           )}
         </Tile>
+        </div>
+        ) : null}
       </div>
     </div>
   );

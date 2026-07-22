@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import type { CalendarEventType } from "@/lib/calendar-data";
-import { deleteCalendarEvent, updateCalendarEvent } from "@/lib/internal-calendar-service";
+import {
+  appendAttendeesToNotes,
+  normalizeAttendeeEmails,
+  sendCalendarMeetingInvites,
+} from "@/lib/calendar-invite-email";
+import { appendTimezoneToNotes, extractTimezoneFromNotes } from "@/lib/calendar-meeting-time";
+import { deleteCalendarEvent, getCalendarEvent, updateCalendarEvent } from "@/lib/internal-calendar-service";
 import { requirePlatformSession } from "@/lib/platform-session";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requireCurrentWorkspace } from "@/lib/workspace-context";
@@ -16,7 +22,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    await requirePlatformSession();
+    const session = await requirePlatformSession();
     const workspace = await requireCurrentWorkspace();
     const { id } = await context.params;
     const body = (await request.json()) as {
@@ -27,14 +33,62 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       clientName?: string;
       location?: string;
       notes?: string;
+      attendeeEmails?: string | string[];
+      timeZone?: string;
+      sendInvites?: boolean;
     };
 
     if (body.startsAt && body.endsAt && new Date(body.endsAt) <= new Date(body.startsAt)) {
       return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
     }
 
-    const event = await updateCalendarEvent(id, body, { workspaceId: workspace.id });
-    return NextResponse.json({ event });
+    const existing = await getCalendarEvent(id, { workspaceId: workspace.id });
+    if (!existing) {
+      return NextResponse.json({ error: "Calendar event not found" }, { status: 404 });
+    }
+
+    const attendeeEmails =
+      body.attendeeEmails !== undefined
+        ? normalizeAttendeeEmails(body.attendeeEmails)
+        : normalizeAttendeeEmails(
+            existing.notes?.match(/Attendees:\s*(.+)$/im)?.[1],
+          );
+    const timeZone =
+      body.timeZone?.trim() ||
+      extractTimezoneFromNotes(existing.notes) ||
+      "Europe/London";
+
+    let notes = body.notes !== undefined ? body.notes : existing.notes;
+    notes = appendAttendeesToNotes(notes, attendeeEmails);
+    notes = appendTimezoneToNotes(notes, timeZone);
+
+    const event = await updateCalendarEvent(
+      id,
+      {
+        title: body.title,
+        eventType: body.eventType,
+        startsAt: body.startsAt,
+        endsAt: body.endsAt,
+        clientName: body.clientName,
+        location: body.location,
+        notes: notes ?? undefined,
+      },
+      { workspaceId: workspace.id },
+    );
+
+    let invites: { sent: number; failed: string[]; meetingUrl: string } | undefined;
+    if (body.sendInvites !== false && attendeeEmails.length > 0) {
+      invites = await sendCalendarMeetingInvites({
+        event,
+        attendeeEmails,
+        organiserName: session.displayName || session.username || null,
+        organiserEmail: "info@unit311central.com",
+        workspaceId: workspace.id,
+        timeZone,
+      });
+    }
+
+    return NextResponse.json({ event, invites });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update calendar event";
     const status =

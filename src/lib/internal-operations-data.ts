@@ -606,7 +606,7 @@ export const internalViewTitles: Record<
 > = {
   home: { title: "Dashboard", subtitle: "Home" },
   clients: { title: "Client Directory", subtitle: "Clients" },
-  "clients-dashboard": { title: "Clients Dashboard", subtitle: "Clients" },
+  "clients-dashboard": { title: "Clients", subtitle: "Clients" },
   crm: { title: "CRM Pipeline", subtitle: "CRM" },
   "crm-meetings": {
     title: "Discovery & Demo Sessions",
@@ -722,6 +722,10 @@ export function getInternalNavBreadcrumb(
       if (trail) {
         const crumbs =
           section.label != null ? [section.label, ...trail] : [...trail];
+        // Drop generic "Dashboard" leaf so module pages read as Section / Module.
+        if (crumbs[crumbs.length - 1] === "Dashboard" && crumbs.length > 1) {
+          crumbs.pop();
+        }
         if (crumbs[crumbs.length - 1] !== pageTitle) {
           crumbs.push(pageTitle);
         }
