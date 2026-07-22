@@ -166,7 +166,7 @@ export default function SurveyOperationsShell({
           data-ai-target="page-header"
           className="safe-area-px relative z-10 shrink-0 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-md max-md:backdrop-blur-none sm:px-4 md:px-5 lg:px-8 lg:backdrop-blur-xl"
         >
-          <div className="flex h-14 items-center justify-between gap-3 lg:h-16">
+          <div className="flex h-14 shrink-0 items-center justify-between gap-3 lg:h-14 xl:h-16">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <button
                 type="button"
@@ -233,10 +233,11 @@ export default function SurveyOperationsShell({
         <div
           data-ai-target="page-main"
           className={cn(
-            "safe-area-pb safe-area-px relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden px-2 py-2 sm:px-3 sm:py-3 md:px-4",
+            "safe-area-pb relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
             isHomeView
-              ? "overflow-hidden"
-              : "overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]",
+              ? // Desktop home fills the viewport (no page scroller). Mobile/tablet can scroll stacked tiles.
+                "overflow-y-auto overscroll-y-contain px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-3 lg:overflow-hidden lg:px-3 lg:py-2 xl:px-4 [-webkit-overflow-scrolling:touch]"
+              : "overflow-y-auto overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]",
           )}
         >
           {children}

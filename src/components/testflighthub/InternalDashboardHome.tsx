@@ -397,25 +397,27 @@ function Tile({
         "bg-gradient-to-br from-[#223352] via-[#1c2a42] to-[#162338]",
         "shadow-[0_12px_40px_-20px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]",
         "ring-1 ring-white/[0.08]",
+        // Mobile stacked tiles need a readable minimum; desktop cells fill the grid.
+        "min-h-[16rem] sm:min-h-[15rem] lg:min-h-0",
       )}
     >
       <header
         className={cn(
-          "flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-3.5",
+          "cc-tile-header flex shrink-0 items-center justify-between gap-2 border-b px-2.5 py-2 sm:px-3",
           tone.headerBorder,
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
-              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
+              "cc-tile-icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 sm:h-8 sm:w-8",
               tone.iconWrap,
               tone.icon,
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </span>
-          <h2 className="truncate text-sm font-semibold tracking-tight text-white sm:text-[15px]">
+          <h2 className="cc-tile-title truncate text-[13px] font-semibold tracking-tight text-white sm:text-sm">
             {title}
           </h2>
         </div>
@@ -430,14 +432,14 @@ function Tile({
       </header>
 
       {tabs && tabs.length > 1 ? (
-        <div className="flex shrink-0 gap-1 border-b border-white/[0.05] px-2.5 py-1.5">
+        <div className="cc-tile-tabs flex shrink-0 gap-1 border-b border-white/[0.05] px-2 py-1 sm:px-2.5 sm:py-1.5">
           {tabs.map((tab, tabIndex) => (
             <button
               key={tab}
               type="button"
               onClick={() => setIndex(tabIndex)}
               className={cn(
-                "rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors",
+                "rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] transition-colors sm:px-2 sm:py-1 sm:text-[10px]",
                 tabIndex === index
                   ? tone.tabActive
                   : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200",
@@ -449,7 +451,7 @@ function Tile({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-hidden px-3 py-2.5 sm:px-3.5">
+      <div className="cc-tile-body min-h-0 flex-1 overflow-hidden px-2.5 py-2 sm:px-3 sm:py-2.5">
         {children(index)}
       </div>
     </section>
@@ -803,10 +805,10 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
     <div
       data-ai-target="home-tiles"
       aria-label="Executive command centre"
-      className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden"
+      className="flex h-auto min-h-0 w-full min-w-0 flex-col lg:h-full lg:overflow-hidden"
     >
       {showCustomize ? (
-        <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 px-0.5">
+        <div className="cc-home-customize mb-1.5 flex shrink-0 flex-wrap items-center justify-between gap-2 px-0.5 sm:mb-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
             Executive command centre
           </p>
@@ -815,7 +817,7 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
             data-ai-target="home-customize"
             onClick={() => setCustomizeOpen((open) => !open)}
             className={cn(
-              "inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors",
+              "inline-flex items-center gap-2 rounded-xl border px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-3 sm:py-1.5 sm:text-xs",
               customizeOpen
                 ? "border-sky-400/40 bg-sky-500/15 text-sky-200"
                 : "border-white/10 bg-white/[0.03] text-white/70 hover:border-white/20 hover:text-white",
@@ -893,19 +895,24 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
 
       <div
         className={cn(
-          "grid min-h-0 flex-1 gap-2 overflow-hidden sm:gap-2.5",
+          "grid min-h-0 w-full gap-2 sm:gap-2.5",
+          // Mobile / tablet: natural height, page scrolls — every tile fully visible.
+          "grid-cols-1 auto-rows-[minmax(15.5rem,auto)]",
+          "sm:grid-cols-2 sm:auto-rows-[minmax(14.5rem,auto)]",
+          // Desktop: fill remaining viewport with equal cells (no page scroller).
+          // minmax(0,1fr) is required so row tracks can shrink below content size.
           layout.length <= 1
-            ? "grid-cols-1 grid-rows-1"
+            ? "lg:flex-1 lg:grid-cols-1 lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden"
             : layout.length === 2
-              ? "grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1"
+              ? "lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden"
               : layout.length <= 4
-                ? "grid-cols-2 grid-rows-2"
-                : "grid-cols-2 grid-rows-3 xl:grid-cols-3 xl:grid-rows-2",
+                ? "lg:flex-1 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] lg:overflow-hidden"
+                : "lg:flex-1 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] lg:overflow-hidden",
         )}
       >
         {/* 1 — Executive Brief */}
         {tileVisible("executive-brief") ? (
-        <div style={{ order: tileOrder("executive-brief") }} className="min-h-0 min-w-0">
+        <div style={{ order: tileOrder("executive-brief") }} className="min-h-0 min-w-0 lg:h-full">
         <Tile title="Executive Brief" icon={Sparkles} accent="sky" href={HREFS.calendar}>
           {() => (
             <div className="flex h-full flex-col gap-2.5">
@@ -976,7 +983,7 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
 
         {/* 2 — Financial */}
         {tileVisible("financial") ? (
-        <div style={{ order: tileOrder("financial") }} className="min-h-0 min-w-0">
+        <div style={{ order: tileOrder("financial") }} className="min-h-0 min-w-0 lg:h-full">
         <Tile
           title="Financial"
           icon={CircleDollarSign}
@@ -1125,7 +1132,7 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
 
         {/* 3 — Commercial */}
         {tileVisible("commercial") ? (
-        <div style={{ order: tileOrder("commercial") }} className="min-h-0 min-w-0">
+        <div style={{ order: tileOrder("commercial") }} className="min-h-0 min-w-0 lg:h-full">
         <Tile
           title="Commercial"
           icon={Briefcase}
@@ -1212,7 +1219,7 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
 
         {/* 4 — Projects & Delivery */}
         {tileVisible("projects") ? (
-        <div style={{ order: tileOrder("projects") }} className="min-h-0 min-w-0">
+        <div style={{ order: tileOrder("projects") }} className="min-h-0 min-w-0 lg:h-full">
         <Tile
           title="Projects & Delivery"
           icon={FolderKanban}
@@ -1301,7 +1308,7 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
 
         {/* 5 — Operations */}
         {tileVisible("operations") ? (
-        <div style={{ order: tileOrder("operations") }} className="min-h-0 min-w-0">
+        <div style={{ order: tileOrder("operations") }} className="min-h-0 min-w-0 lg:h-full">
         <Tile
           title="Operations"
           icon={Gauge}
@@ -1372,7 +1379,7 @@ export default function InternalDashboardHome(props?: { showCustomize?: boolean 
 
         {/* 6 — Risks */}
         {tileVisible("risks") ? (
-        <div style={{ order: tileOrder("risks") }} className="min-h-0 min-w-0">
+        <div style={{ order: tileOrder("risks") }} className="min-h-0 min-w-0 lg:h-full">
         <Tile title="Risks" icon={AlertTriangle} accent="rose" href={HREFS.financials}>
           {() => (
             <div className="flex h-full flex-col gap-2.5">

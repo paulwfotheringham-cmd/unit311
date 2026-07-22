@@ -516,14 +516,31 @@ export default function InternalOperationsDashboard({
       <div
         className={
           activeView === "home" || activeView === "settings" || activeView === "billing"
-            ? "relative mx-auto w-full min-w-0 px-1 py-1 sm:px-2 md:px-3 lg:px-4 lg:py-2 xl:max-w-[100rem]"
-            : "relative mx-auto w-full min-w-0 max-w-7xl px-1 py-2 sm:px-2 md:px-4 lg:px-6 lg:py-4 xl:max-w-[90rem]"
+            ? activeView === "home"
+              ? "relative mx-auto flex h-full min-h-0 w-full min-w-0 flex-1 flex-col px-0 py-0 sm:px-0.5 md:px-1 lg:px-2 xl:max-w-[100rem]"
+              : "relative mx-auto w-full min-w-0 px-1 py-1 sm:px-2 md:px-3 lg:px-4 lg:py-2 xl:max-w-[100rem]"
+            : "relative mx-auto w-full min-w-0 max-w-7xl px-1 py-2 sm:px-2 md:px-3 lg:px-5 lg:py-3 xl:max-w-[90rem] xl:px-6 xl:py-4"
         }
       >
-        <div className={activeView === "home" ? "relative min-w-0" : "relative min-w-0 space-y-4 sm:space-y-6"}>
+        <div
+          className={
+            activeView === "home"
+              ? "relative flex h-full min-h-0 min-w-0 flex-1 flex-col"
+              : "relative min-w-0 space-y-4 sm:space-y-6"
+          }
+        >
           {activeView !== "home" && <NavImplementationNotice view={activeView} />}
           {isWarm("home") && (
-            <WorkspacePane view="home" activeView={activeView} keepMounted={isWarm("home")}>
+            <WorkspacePane
+              view="home"
+              activeView={activeView}
+              keepMounted={isWarm("home")}
+              className={
+                activeView === "home"
+                  ? "flex h-full min-h-0 flex-1 flex-col"
+                  : undefined
+              }
+            >
               <InternalDashboardHome showCustomize />
             </WorkspacePane>
           )}

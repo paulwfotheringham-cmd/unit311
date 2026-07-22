@@ -113,6 +113,44 @@ svg {
   touch-action: manipulation;
 }
 
+/* Hide scrollbars while keeping scroll (sidebar, overlays). */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Command Centre density: compress chrome on short laptop viewports. */
+@media (max-height: 860px) {
+  .cc-tile-header {
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+  }
+  .cc-tile-tabs {
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+  }
+  .cc-tile-body {
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+  }
+  .cc-tile-title {
+    font-size: 0.8125rem !important;
+  }
+  .cc-tile-icon {
+    height: 1.65rem !important;
+    width: 1.65rem !important;
+  }
+}
+
+@media (max-height: 740px) {
+  .cc-home-customize {
+    display: none !important;
+  }
+}
+
 .logistics-live-tooltip {
   background: rgba(7, 17, 31, 0.92) !important;
   border: 1px solid rgba(56, 189, 248, 0.35) !important;

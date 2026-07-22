@@ -551,7 +551,7 @@ export default function SurveyOperationsSidebar({
         )}
       >
         {mode === "internal" ? (
-          <div className="space-y-3 lg:space-y-2.5">
+          <div className="space-y-2 lg:space-y-1.5">
             {internalNavSections.map((section) => renderInternalSection(section))}
           </div>
         ) : (
