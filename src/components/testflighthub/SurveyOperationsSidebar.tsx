@@ -120,25 +120,39 @@ const iconMap = {
 
 const childNavItemClass = (active: boolean) =>
   cn(
-    "flex w-full min-h-11 items-center rounded-lg py-2.5 pl-8 pr-2.5 text-left text-[11px] leading-tight transition-colors touch-manipulation lg:min-h-0 lg:py-[0.3rem] lg:text-[10.5px]",
+    "group/nav flex w-full min-h-11 items-center rounded-xl py-2.5 pl-8 pr-2.5 text-left text-[11.5px] font-medium leading-snug tracking-[-0.01em] transition-all duration-200 ease-out touch-manipulation lg:min-h-0 lg:rounded-[10px] lg:py-[0.42rem] lg:text-[11px]",
     active
-      ? "bg-[#0D1B2A] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-      : "text-white/45 hover:bg-[#0D1B2A]/60 hover:text-white/75",
+      ? "bg-white/[0.07] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_1px_rgba(125,211,252,0.14),0_0_22px_rgba(56,189,248,0.1)]"
+      : "text-white/48 hover:bg-white/[0.045] hover:text-white/82",
   );
 
 const navItemClass = (active: boolean, compact = false) =>
   cn(
-    "flex w-full items-center rounded-lg text-left leading-tight transition-colors touch-manipulation",
+    "group/nav flex w-full items-center rounded-xl text-left font-medium leading-snug tracking-[-0.01em] transition-all duration-200 ease-out touch-manipulation",
     compact
-      ? "min-h-11 gap-2 px-2.5 py-2.5 text-[11.5px] lg:min-h-0 lg:py-[0.3rem] lg:text-[11px]"
-      : "min-h-11 gap-2.5 px-3 py-2.5 text-[13px] leading-snug sm:px-3.5 sm:py-2.5 sm:text-sm lg:min-h-0",
+      ? "min-h-11 gap-2.5 px-2.5 py-2.5 text-[12px] lg:min-h-0 lg:rounded-[10px] lg:py-[0.42rem] lg:text-[11.5px]"
+      : "min-h-11 gap-2.5 px-3 py-2.5 text-[13px] sm:px-3.5 sm:py-3 sm:text-[13.5px] lg:min-h-0 lg:rounded-[10px] lg:py-2",
     active
-      ? "bg-[#0D1B2A] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-      : "text-white/50 hover:bg-[#0D1B2A]/60 hover:text-white/80",
+      ? "bg-white/[0.07] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_1px_rgba(125,211,252,0.14),0_0_22px_rgba(56,189,248,0.1)]"
+      : "text-white/55 hover:bg-white/[0.045] hover:text-white/88",
   );
 
 const sectionHeaderClass =
-  "mb-1 px-2.5 pt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-400/90 lg:mb-1.5 lg:text-[9.5px]";
+  "mb-2 px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/32 lg:mb-2.5 lg:pt-1.5 lg:text-[9.5px] lg:tracking-[0.18em]";
+
+const navIconClass = (compact = false) =>
+  cn(
+    "shrink-0 text-current opacity-70 transition-opacity duration-200 group-hover/nav:opacity-90",
+    compact ? "h-[15px] w-[15px] lg:h-3.5 lg:w-3.5" : "h-4 w-4 sm:h-[17px] sm:w-[17px]",
+  );
+
+const navCollapseClass = (expanded: boolean) =>
+  cn(
+    "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+    expanded
+      ? "grid-rows-[1fr] opacity-100"
+      : "pointer-events-none grid-rows-[0fr] opacity-0",
+  );
 
 type SurveyOperationsSidebarProps = {
   mobileOpen?: boolean;
@@ -236,12 +250,7 @@ export default function SurveyOperationsSidebar({
     const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard;
     const content = (
       <>
-        <Icon
-          className={cn(
-            "shrink-0",
-            compact ? "h-3.5 w-3.5 lg:h-[15px] lg:w-[15px]" : "h-4 w-4 sm:h-[18px] sm:w-[18px]",
-          )}
-        />
+        <Icon className={navIconClass(compact)} strokeWidth={1.75} />
         <span className="flex-1 truncate">{item.label}</span>
       </>
     );
@@ -314,15 +323,23 @@ export default function SurveyOperationsSidebar({
             className={cn(childNavItemClass(active), "justify-between")}
           >
             <span className="truncate">{childNavLabel(child)}</span>
-            <Chevron className="h-3 w-3 shrink-0 text-white/35" />
-          </button>
-          {expanded ? (
-            <div className="ml-2 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
-              {child.children?.map((nestedChild) =>
-                renderInternalChildItem(nestedChild, expandKey, true),
+            <Chevron
+              className={cn(
+                "h-3 w-3 shrink-0 text-white/28 transition-transform duration-200",
+                expanded && "text-white/45",
               )}
+              strokeWidth={1.75}
+            />
+          </button>
+          <div className={navCollapseClass(expanded)} aria-hidden={!expanded}>
+            <div className="min-h-0 overflow-hidden">
+              <div className="ml-1.5 mt-1 space-y-1 pl-2">
+                {child.children?.map((nestedChild) =>
+                  renderInternalChildItem(nestedChild, expandKey, true),
+                )}
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       );
     }
@@ -409,7 +426,7 @@ export default function SurveyOperationsSidebar({
             onFocus={() => onPrefetchView?.(item.view as InternalOperationsView)}
             className={childNavItemClass(linkActive)}
           >
-            <Icon className="mr-1.5 h-3 w-3 shrink-0 opacity-70" />
+            <Icon className="mr-2 h-3.5 w-3.5 shrink-0 opacity-65" strokeWidth={1.75} />
             <span className="truncate">{item.label}</span>
           </button>
         );
@@ -423,7 +440,7 @@ export default function SurveyOperationsSidebar({
           onClick={onClose}
           className={childNavItemClass(linkActive)}
         >
-          <Icon className="mr-1.5 h-3 w-3 shrink-0 opacity-70" />
+          <Icon className="mr-2 h-3.5 w-3.5 shrink-0 opacity-65" strokeWidth={1.75} />
           <span className="truncate">{item.label}</span>
         </Link>
       );
@@ -446,17 +463,23 @@ export default function SurveyOperationsSidebar({
             }
             className={navItemClass(active, true)}
           >
-            <Icon className="h-3.5 w-3.5 shrink-0 lg:h-[15px] lg:w-[15px]" />
+            <Icon className={navIconClass(true)} strokeWidth={1.75} />
             <span className="flex-1 truncate text-left">{item.label}</span>
-            <Chevron className="h-3.5 w-3.5 shrink-0 text-white/35" />
-          </button>
-          {expanded ? (
-            <div className="mt-0.5 space-y-0.5">
-              {item.children?.map((child) =>
-                renderInternalChildItem(child, item.label),
+            <Chevron
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 text-white/28 transition-transform duration-200",
+                expanded && "text-white/45",
               )}
+              strokeWidth={1.75}
+            />
+          </button>
+          <div className={navCollapseClass(expanded)} aria-hidden={!expanded}>
+            <div className="min-h-0 overflow-hidden">
+              <div className="mt-1 space-y-1">
+                {item.children?.map((child) => renderInternalChildItem(child, item.label))}
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       );
     }
@@ -487,9 +510,9 @@ export default function SurveyOperationsSidebar({
 
   function renderInternalSection(section: (typeof internalNavSections)[number]) {
     return (
-      <div key={section.label ?? "home"}>
+      <div key={section.label ?? "home"} className="pb-1">
         {section.label ? <p className={sectionHeaderClass}>{section.label}</p> : null}
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {section.items.map((item) => renderInternalNavItemBlock(item))}
         </div>
       </div>
@@ -511,51 +534,55 @@ export default function SurveyOperationsSidebar({
       role={mobileOpen ? "dialog" : undefined}
       aria-label={mobileOpen ? "Navigation menu" : undefined}
       className={cn(
-        "safe-area-px fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh w-[min(300px,92vw)] flex-col overflow-hidden border-r border-white/[0.08] bg-[#07111F] pt-[env(safe-area-inset-top)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:h-full lg:max-h-full lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:pt-0 xl:w-[252px]",
+        "safe-area-px fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh w-[min(300px,92vw)] flex-col overflow-hidden border-r border-white/[0.06] bg-[#07111F] pt-[env(safe-area-inset-top)] transition-transform duration-300 ease-out lg:static lg:z-auto lg:h-full lg:max-h-full lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:pt-0 xl:w-[252px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       )}
     >
       <div
         className={cn(
-          "flex shrink-0 items-center justify-between border-b border-white/[0.08]",
+          "flex shrink-0 items-center justify-between",
           isInternalCompact
-            ? "px-2.5 pb-2 pt-2 lg:px-3"
-            : "px-3 pb-4 pt-2.5 lg:px-3.5 lg:pb-5 lg:pt-3",
+            ? "px-3 pb-3 pt-3 lg:px-3.5 lg:pb-3.5 lg:pt-3.5"
+            : "px-3 pb-4 pt-3 lg:px-3.5 lg:pb-5 lg:pt-4",
         )}
       >
         {mode === "internal" ? (
           <div className="flex min-w-0 flex-1 items-center justify-start">
-            <Link href={logoHref} aria-label="Unit311 Central home" className="inline-flex shrink-0">
+            <Link
+              href={logoHref}
+              aria-label="Unit311 Central home"
+              className="inline-flex shrink-0 rounded-lg px-0.5 py-0.5 transition-opacity duration-200 hover:opacity-90"
+            >
               <Unit311CentralWordmark variant="sidebar" />
             </Link>
           </div>
         ) : (
-          <div className="min-w-0 flex-1 rounded-lg bg-white px-2.5 py-1.5">
+          <div className="min-w-0 flex-1 rounded-xl bg-white px-2.5 py-1.5 shadow-[0_1px_0_rgba(255,255,255,0.4)]">
             <Logo height={30} href={logoHref} className="block w-full max-w-none" />
           </div>
         )}
         <button
           type="button"
-          className="ml-2 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 lg:hidden"
+          className="ml-2 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.06] text-white/55 transition-colors duration-200 hover:bg-white/[0.04] hover:text-white/80 lg:hidden"
           aria-label="Close menu"
           onClick={onClose}
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" strokeWidth={1.75} />
         </button>
       </div>
 
       <nav
         className={cn(
-          "sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-2.5",
-          isInternalCompact ? "pt-2 lg:pt-2.5" : "pt-3 lg:px-3 lg:pt-4",
+          "sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-3",
+          isInternalCompact ? "pt-1 lg:pt-1.5" : "pt-2 lg:pt-3",
         )}
       >
         {mode === "internal" ? (
-          <div className="space-y-2 lg:space-y-1.5">
+          <div className="space-y-3 lg:space-y-3.5">
             {internalNavSections.map((section) => renderInternalSection(section))}
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {surveyNavItems.map((item) => {
               const active = isSurveyNavItemActive(
                 pathname,

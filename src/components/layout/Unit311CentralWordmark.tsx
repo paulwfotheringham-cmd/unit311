@@ -33,10 +33,10 @@ const VARIANTS: Record<
     line: "w-3.5 sm:w-4",
   },
   sidebar: {
-    root: "h-10 w-full max-w-[11.5rem]",
-    primary: "text-[1.15rem] leading-none tracking-[-0.03em]",
-    secondary: "text-[0.55rem] leading-none",
-    line: "w-3",
+    root: "h-9 w-full max-w-[11.25rem]",
+    primary: "text-[1.05rem] leading-none tracking-[-0.035em]",
+    secondary: "text-[0.5rem] leading-none",
+    line: "w-2.5",
   },
 };
 
