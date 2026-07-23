@@ -9,6 +9,8 @@ export default function HomeExecutiveDemoVideo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasLeftViewportRef = useRef(true);
+  const shouldPlayRef = useRef(false);
+  const awaitingGestureRef = useRef(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -24,16 +26,66 @@ export default function HomeExecutiveDemoVideo() {
       }
     };
 
-    const playFromStart = async () => {
-      resetVideo();
+    const enableSound = () => {
       video.muted = false;
       video.defaultMuted = false;
       video.volume = 1;
+      video.removeAttribute("muted");
+    };
+
+    const detachGestureUnlock = () => {
+      awaitingGestureRef.current = false;
+      window.removeEventListener("pointerdown", unlockSound, true);
+      window.removeEventListener("keydown", unlockSound, true);
+      window.removeEventListener("touchstart", unlockSound, true);
+      container.removeEventListener("pointerdown", unlockSound, true);
+    };
+
+    const unlockSound = () => {
+      if (!shouldPlayRef.current) {
+        detachGestureUnlock();
+        return;
+      }
+
+      enableSound();
+      void video.play().catch(() => {});
+      detachGestureUnlock();
+    };
+
+    const attachGestureUnlock = () => {
+      if (awaitingGestureRef.current) return;
+      awaitingGestureRef.current = true;
+      window.addEventListener("pointerdown", unlockSound, true);
+      window.addEventListener("keydown", unlockSound, true);
+      window.addEventListener("touchstart", unlockSound, { capture: true, passive: true });
+      container.addEventListener("pointerdown", unlockSound, true);
+    };
+
+    const playFromStart = async () => {
+      shouldPlayRef.current = true;
+      resetVideo();
+      enableSound();
+
+      try {
+        await video.play();
+        if (!video.muted) {
+          detachGestureUnlock();
+          return;
+        }
+      } catch {
+        // Fall through to muted playback + gesture unlock.
+      }
+
+      // Browsers block unmuted autoplay without a prior gesture — keep the
+      // picture playing, then unlock audio on the next user interaction.
+      video.muted = true;
+      video.defaultMuted = true;
       try {
         await video.play();
       } catch {
-        // Browser autoplay policies may still block unmuted playback without a prior gesture.
+        // Still blocked; gesture unlock will retry.
       }
+      attachGestureUnlock();
     };
 
     const observer = new IntersectionObserver(
@@ -50,6 +102,8 @@ export default function HomeExecutiveDemoVideo() {
 
         if (!entry.isIntersecting || entry.intersectionRatio < 0.2) {
           hasLeftViewportRef.current = true;
+          shouldPlayRef.current = false;
+          detachGestureUnlock();
           resetVideo();
         }
       },
@@ -57,7 +111,10 @@ export default function HomeExecutiveDemoVideo() {
     );
 
     observer.observe(container);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      detachGestureUnlock();
+    };
   }, []);
 
   return (
@@ -66,15 +123,15 @@ export default function HomeExecutiveDemoVideo() {
         <div className="overflow-hidden rounded-[18px] border border-white/[0.1] bg-black/20 shadow-[0_20px_48px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.06)] sm:rounded-[20px]">
           <video
             ref={videoRef}
-            className="exec-demo-video block h-auto w-full"
+            className="exec-demo-video block h-auto w-full cursor-pointer"
             src={EXEC_VIDEO_SRC}
-            preload="metadata"
+            preload="auto"
             playsInline
             disablePictureInPicture
             disableRemotePlayback
             controls={false}
             controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-            tabIndex={-1}
+            tabIndex={0}
             aria-label="Unit311 Central platform demonstration"
           />
         </div>

@@ -1027,7 +1027,6 @@ svg {
   display: block;
   width: 100%;
   height: auto;
-  pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
 }
