@@ -54,6 +54,7 @@ export const HomeExecutiveAssistantPanel = lazyWorkspace(() => import("./HomeExe
 export const ExecutiveAssistantWorkspace = lazyWorkspace(() => import("./ExecutiveAssistantWorkspace"));
 export const ProfileWorkspace = lazyWorkspace(() => import("./ProfileWorkspace"));
 export const AppearanceSettingsWorkspace = lazyWorkspace(() => import("./AppearanceSettingsWorkspace"));
+export const ProductivityDashboardWorkspace = lazyWorkspace(() => import("./ProductivityDashboardWorkspace"));
 export const QmsTrainingWorkspace = lazyWorkspace(() => import("./QmsTrainingWorkspace"));
 export const QualityManagementWorkspace = lazyWorkspace(() => import("./QualityManagementWorkspace"));
 export const DocumentControlWorkspace = lazyWorkspace(() => import("./DocumentControlWorkspace"));

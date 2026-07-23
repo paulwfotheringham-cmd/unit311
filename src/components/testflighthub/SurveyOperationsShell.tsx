@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import PlatformFloatingAiAssistant from "./PlatformFloatingAiAssistant";
+import PlatformThemeProvider from "./PlatformThemeProvider";
 import SurveyOperationsSidebar from "./SurveyOperationsSidebar";
 import { WorkspaceBreadcrumb } from "./workspace-chrome";
 import { prefetchViewOnIntent } from "@/lib/workspace-prefetch";
@@ -134,11 +135,15 @@ export default function SurveyOperationsShell({
       : null;
 
   const shell = (
-    <div className="flex h-full min-h-0 w-full min-w-0">
+    <div
+      className="flex h-full min-h-0 w-full min-w-0"
+      style={{ background: "var(--platform-background, #050B16)" }}
+    >
       {mobileNavOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-40 touch-manipulation bg-[#07111F]/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 touch-manipulation backdrop-blur-sm lg:hidden"
+          style={{ background: "color-mix(in srgb, var(--platform-surface, #08111F) 80%, transparent)" }}
           aria-label="Close navigation menu"
           onClick={() => setMobileNavOpen(false)}
         />
@@ -154,23 +159,35 @@ export default function SurveyOperationsShell({
         onPrefetchView={(view) => prefetchViewOnIntent(view)}
       />
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#0b1220]">
+      <div
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+        style={{ background: "var(--platform-surface-elevated, #0B1524)" }}
+      >
         {mode === "internal" ? (
           <div
-            className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.07),_transparent_55%),linear-gradient(180deg,#0b1220_0%,#020617_100%)]"
+            className="pointer-events-none absolute inset-0 z-0"
+            style={{
+              background:
+                "radial-gradient(ellipse at top, color-mix(in srgb, var(--platform-accent, #2F80ED) 12%, transparent), transparent 55%), linear-gradient(180deg, var(--platform-surface-elevated, #0B1524) 0%, var(--platform-background, #050B16) 100%)",
+            }}
             aria-hidden
           />
         ) : null}
 
         <header
           data-ai-target="page-header"
-          className="safe-area-px relative z-10 shrink-0 border-b border-white/[0.08] bg-[#07111F]/80 px-2 backdrop-blur-md max-md:backdrop-blur-none sm:px-4 md:px-5 lg:px-8 lg:backdrop-blur-xl"
+          className="safe-area-px relative z-10 shrink-0 border-b px-2 backdrop-blur-md max-md:backdrop-blur-none sm:px-4 md:px-5 lg:px-8 lg:backdrop-blur-xl"
+          style={{
+            borderColor: "color-mix(in srgb, var(--platform-card-border, #243347) 70%, transparent)",
+            background: "color-mix(in srgb, var(--platform-surface, #08111F) 82%, transparent)",
+          }}
         >
           <div className="flex h-14 shrink-0 items-center justify-between gap-3 lg:h-14 xl:h-16">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/[0.08] text-white/60 lg:hidden"
+                className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border text-white/60 lg:hidden"
+                style={{ borderColor: "var(--platform-card-border, #243347)" }}
                 aria-label="Open navigation menu"
                 onClick={() => setMobileNavOpen(true)}
               >
@@ -180,7 +197,10 @@ export default function SurveyOperationsShell({
                 {breadcrumbCrumbs && breadcrumbCrumbs.length > 1 ? (
                   <WorkspaceBreadcrumb crumbs={breadcrumbCrumbs} />
                 ) : (
-                  <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
+                  <p
+                    className="truncate text-[10px] font-semibold uppercase tracking-[0.16em]"
+                    style={{ color: "var(--platform-accent, #60a5fa)" }}
+                  >
                     {resolvedSubtitle}
                   </p>
                 )}
@@ -209,7 +229,12 @@ export default function SurveyOperationsShell({
                     aria-label="Open AI Executive Assistant"
                     aria-expanded={assistantOpen}
                     onClick={() => setAssistantOpen(true)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 px-2.5 text-[11px] font-semibold text-sky-100 transition-colors hover:border-sky-400/45 hover:bg-sky-500/20"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-semibold transition-colors"
+                    style={{
+                      borderColor: "color-mix(in srgb, var(--platform-accent, #2F80ED) 40%, transparent)",
+                      background: "color-mix(in srgb, var(--platform-accent, #2F80ED) 14%, transparent)",
+                      color: "color-mix(in srgb, var(--platform-accent, #2F80ED) 85%, white)",
+                    }}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     Assistant
@@ -324,9 +349,11 @@ export default function SurveyOperationsShell({
 
   if (mode === "internal" && showPlatformAi) {
     return (
-      <GuidedLearningProvider activeView={guidedViewId}>{shell}</GuidedLearningProvider>
+      <PlatformThemeProvider>
+        <GuidedLearningProvider activeView={guidedViewId}>{shell}</GuidedLearningProvider>
+      </PlatformThemeProvider>
     );
   }
 
-  return shell;
+  return <PlatformThemeProvider>{shell}</PlatformThemeProvider>;
 }

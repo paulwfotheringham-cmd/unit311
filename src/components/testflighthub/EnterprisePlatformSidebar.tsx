@@ -180,7 +180,11 @@ export default function EnterprisePlatformSidebar({
       setTheme(getSidebarTheme(detail));
     };
     window.addEventListener("unit311-sidebar-theme", onTheme);
-    return () => window.removeEventListener("unit311-sidebar-theme", onTheme);
+    window.addEventListener("unit311-platform-theme", onTheme);
+    return () => {
+      window.removeEventListener("unit311-sidebar-theme", onTheme);
+      window.removeEventListener("unit311-platform-theme", onTheme);
+    };
   }, []);
 
   useEffect(() => {
@@ -421,7 +425,17 @@ export default function EnterprisePlatformSidebar({
         <button
           type="button"
           aria-expanded={isOpen}
-          onClick={() => toggleExpanded(workspaceKey)}
+          onClick={() => {
+            const willOpen = !(hydrated && expanded[workspaceKey]);
+            toggleExpanded(workspaceKey);
+            // Business Productivity landing: open its Dashboard (never File Explorer).
+            if (willOpen && section.label === "Business Productivity") {
+              const dashboard = section.items.find(
+                (item) => item.label === "Dashboard" && item.view,
+              );
+              if (dashboard?.view) navigate(dashboard.view);
+            }
+          }}
           className="group flex w-full items-center gap-1.5 text-left"
           style={{ height: WORKSPACE_HEADER_H }}
         >

@@ -64,6 +64,7 @@ export type InternalOperationsView =
   | "files-internal"
   | "files-external"
   | "files-client"
+  | "productivity-dashboard"
   | "unit311-details"
   | "module-go-live"
   | "users"
@@ -203,6 +204,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "files-internal",
   "files-external",
   "files-client",
+  "productivity-dashboard",
   "unit311-details",
   "module-go-live",
   "users",
@@ -314,7 +316,7 @@ export function legacyCorporateViewToTab(
 export function normalizeInternalOperationsView(value: string | null): InternalOperationsView {
   if (value === "live-projects") return "projects";
   if (value === "sector-mining") return "sector";
-  if (value === "files") return "files-internal";
+  if (value === "files") return "productivity-dashboard";
   if (value === "debtors") return "accounts-receivable";
   if (value === "creditors") return "accounts-payable";
   if (value === "opex") return "financials";
@@ -482,7 +484,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
     icon: "MessageSquare",
     color: "#00B8D9",
     items: [
-      { label: "Dashboard", icon: "LayoutDashboard", view: "files" as const },
+      { label: "Dashboard", icon: "LayoutDashboard", view: "productivity-dashboard" as const },
       {
         label: "File Explorer",
         icon: "FolderOpen",
@@ -670,6 +672,7 @@ export const internalViewTitles: Record<
   calendar: { title: "Calendar", subtitle: "Business Productivity" },
   "info-email": { title: "Email", subtitle: "Business Productivity" },
   files: { title: "Dashboard", subtitle: "Business Productivity" },
+  "productivity-dashboard": { title: "Dashboard", subtitle: "Business Productivity" },
   "files-internal": { title: "Internal Files", subtitle: "File Explorer" },
   "unit311-details": { title: "Dashboard", subtitle: "Unit311 Details" },
   "module-go-live": {

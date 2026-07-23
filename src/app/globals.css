@@ -12,6 +12,18 @@
   --border-strong: rgba(148, 163, 184, 0.2);
   --glow: rgba(37, 99, 235, 0.15);
 
+  /* Platform appearance theme tokens (overridden at runtime by Appearance) */
+  --platform-background: #050B16;
+  --platform-surface: #08111F;
+  --platform-surface-elevated: #0B1524;
+  --platform-sidebar: #08111F;
+  --platform-card: #121C2D;
+  --platform-border: #17283E;
+  --platform-card-border: #243347;
+  --platform-accent: #2F80ED;
+  --platform-accent-hover: #2563EB;
+  --platform-button: #1F4FBF;
+
   /* Unit311 Central enterprise tokens (Executive AI / Command Centre) */
   --u311-accent: #38bdf8;
   --u311-surface: rgba(11, 21, 36, 0.8);

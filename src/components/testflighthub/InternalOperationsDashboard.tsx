@@ -102,6 +102,7 @@ import {
   PlatformBillingWorkspace,
   PotentialClientsWorkspace,
   ProcurementWorkspace,
+  ProductivityDashboardWorkspace,
   ProfileWorkspace,
   ProjectsWorkspace,
   QmsTrainingWorkspace,
@@ -787,12 +788,7 @@ export default function InternalOperationsDashboard({
 
           {activeView === "files-client" && <ClientFilesExplorerWorkspace />}
 
-          {activeView === "files" && (
-            <FileRepositoryWorkspace
-              scope="internal"
-              initialFolderId={searchParams.get("folderId")}
-            />
-          )}
+          {activeView === "productivity-dashboard" && <ProductivityDashboardWorkspace />}
 
           {activeView === "support" && <SupportWorkspace />}
 
