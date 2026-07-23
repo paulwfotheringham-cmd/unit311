@@ -14,7 +14,9 @@ import {
   Loader2,
   Mic,
   MicOff,
+  MonitorUp,
   PhoneOff,
+  ScreenShareOff,
   Send,
   Video,
   VideoOff,
@@ -92,6 +94,7 @@ export default function ExecutiveCallRoom({
   const [leftCall, setLeftCall] = useState(false);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [sharingScreen, setSharingScreen] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [chatDraft, setChatDraft] = useState("");
@@ -100,6 +103,8 @@ export default function ExecutiveCallRoom({
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const hostLobbyStartedRef = useRef(false);
@@ -149,8 +154,13 @@ export default function ExecutiveCallRoom({
 
   const stopMedia = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    screenStreamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    cameraStreamRef.current = null;
+    screenStreamRef.current = null;
     setLocalStream(null);
+    setSharingScreen(false);
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
     }
@@ -184,6 +194,7 @@ export default function ExecutiveCallRoom({
     try {
       stopMedia();
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      cameraStreamRef.current = stream;
       streamRef.current = stream;
       setLocalStream(stream);
       stream.getVideoTracks().forEach((track) => {
@@ -238,6 +249,7 @@ export default function ExecutiveCallRoom({
   }, [remoteStream]);
 
   const toggleVideo = useCallback(() => {
+    if (sharingScreen) return;
     setVideoEnabled((current) => {
       const next = !current;
       streamRef.current?.getVideoTracks().forEach((track) => {
@@ -245,7 +257,7 @@ export default function ExecutiveCallRoom({
       });
       return next;
     });
-  }, []);
+  }, [sharingScreen]);
 
   const toggleAudio = useCallback(() => {
     setAudioEnabled((current) => {
@@ -256,6 +268,49 @@ export default function ExecutiveCallRoom({
       return next;
     });
   }, []);
+
+  const stopScreenShare = useCallback(() => {
+    screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+    screenStreamRef.current = null;
+    const camera = cameraStreamRef.current;
+    if (camera) {
+      streamRef.current = camera;
+      setLocalStream(camera);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = camera;
+        void localVideoRef.current.play().catch(() => undefined);
+      }
+    }
+    setSharingScreen(false);
+  }, []);
+
+  const startScreenShare = useCallback(async () => {
+    setMediaError(null);
+    try {
+      const display = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      const screenTrack = display.getVideoTracks()[0];
+      if (!screenTrack) throw new Error("No screen track");
+
+      screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = display;
+
+      const audioTracks = (cameraStreamRef.current ?? streamRef.current)?.getAudioTracks() ?? [];
+      const outbound = new MediaStream([screenTrack, ...audioTracks]);
+      streamRef.current = outbound;
+      setLocalStream(outbound);
+      setSharingScreen(true);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = outbound;
+        void localVideoRef.current.play().catch(() => undefined);
+      }
+      screenTrack.onended = () => stopScreenShare();
+    } catch {
+      setMediaError("Unable to share screen. Check browser permissions and try again.");
+    }
+  }, [stopScreenShare]);
 
   useEffect(() => () => stopMedia(), [stopMedia]);
 
@@ -656,9 +711,10 @@ export default function ExecutiveCallRoom({
                 <button
                   type="button"
                   onClick={toggleVideo}
+                  disabled={sharingScreen}
                   title={videoEnabled ? "Turn camera off" : "Turn camera on"}
                   className={cn(
-                    "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors",
+                    "inline-flex h-11 w-11 items-center justify-center rounded-full border transition-colors disabled:opacity-40",
                     mediaControlClass(videoEnabled),
                   )}
                 >
@@ -674,6 +730,20 @@ export default function ExecutiveCallRoom({
                   )}
                 >
                   {audioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void (sharingScreen ? stopScreenShare() : startScreenShare())}
+                  title={sharingScreen ? "Stop sharing screen" : "Share screen"}
+                  className={cn(
+                    "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors",
+                    sharingScreen
+                      ? "border-amber-400/40 bg-amber-500/20 text-amber-100"
+                      : "border-white/20 bg-white/10 text-white hover:bg-white/15",
+                  )}
+                >
+                  {sharingScreen ? <ScreenShareOff className="h-4 w-4" /> : <MonitorUp className="h-4 w-4" />}
+                  {sharingScreen ? "Stop share" : "Share"}
                 </button>
                 <button
                   type="button"

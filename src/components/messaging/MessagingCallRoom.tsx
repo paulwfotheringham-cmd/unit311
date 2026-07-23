@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import { useExecutiveCallWebRtc } from "@/hooks/useExecutiveCallWebRtc";
 import type { MessagingCallSessionPayload } from "@/lib/messaging-call-service";
 import { cn } from "@/lib/utils";
-import { Loader2, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import { Loader2, Mic, MicOff, MonitorUp, PhoneOff, ScreenShareOff, Video, VideoOff } from "lucide-react";
 
 type MessagingCallRoomProps = {
   sessionId: string;
@@ -48,12 +48,15 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
   const [leftCall, setLeftCall] = useState(false);
   const [videoEnabled, setVideoEnabled] = useState(expectedMode === "video");
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [sharingScreen, setSharingScreen] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const mediaStartedRef = useRef(false);
 
@@ -95,8 +98,13 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
 
   const stopMedia = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    screenStreamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    cameraStreamRef.current = null;
+    screenStreamRef.current = null;
     setLocalStream(null);
+    setSharingScreen(false);
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
@@ -121,6 +129,7 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
         video: isVoice ? false : true,
         audio: true,
       });
+      cameraStreamRef.current = stream;
       streamRef.current = stream;
       setLocalStream(stream);
       stream.getVideoTracks().forEach((track) => {
@@ -178,7 +187,7 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
   }, [isVoice, remoteStream]);
 
   const toggleVideo = useCallback(() => {
-    if (isVoice) return;
+    if (isVoice || sharingScreen) return;
     setVideoEnabled((current) => {
       const next = !current;
       streamRef.current?.getVideoTracks().forEach((track) => {
@@ -186,7 +195,7 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
       });
       return next;
     });
-  }, [isVoice]);
+  }, [isVoice, sharingScreen]);
 
   const toggleAudio = useCallback(() => {
     setAudioEnabled((current) => {
@@ -197,6 +206,50 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
       return next;
     });
   }, []);
+
+  const stopScreenShare = useCallback(() => {
+    screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+    screenStreamRef.current = null;
+    const camera = cameraStreamRef.current;
+    if (camera) {
+      streamRef.current = camera;
+      setLocalStream(camera);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = camera;
+        void localVideoRef.current.play().catch(() => undefined);
+      }
+    }
+    setSharingScreen(false);
+  }, []);
+
+  const startScreenShare = useCallback(async () => {
+    if (isVoice) return;
+    setMediaError(null);
+    try {
+      const display = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      const screenTrack = display.getVideoTracks()[0];
+      if (!screenTrack) throw new Error("No screen track");
+
+      screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = display;
+
+      const audioTracks = (cameraStreamRef.current ?? streamRef.current)?.getAudioTracks() ?? [];
+      const outbound = new MediaStream([screenTrack, ...audioTracks]);
+      streamRef.current = outbound;
+      setLocalStream(outbound);
+      setSharingScreen(true);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = outbound;
+        void localVideoRef.current.play().catch(() => undefined);
+      }
+      screenTrack.onended = () => stopScreenShare();
+    } catch {
+      setMediaError("Unable to share screen. Check browser permissions and try again.");
+    }
+  }, [isVoice, stopScreenShare]);
 
   useEffect(() => () => stopMedia(), [stopMedia]);
 
@@ -370,10 +423,26 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
               <button
                 type="button"
                 onClick={toggleVideo}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5"
+                disabled={sharingScreen}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 disabled:opacity-40"
                 aria-label={videoEnabled ? "Stop camera" : "Start camera"}
               >
                 {videoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              </button>
+            )}
+            {!isVoice && (
+              <button
+                type="button"
+                onClick={() => void (sharingScreen ? stopScreenShare() : startScreenShare())}
+                className={cn(
+                  "inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm",
+                  sharingScreen
+                    ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                    : "border-white/15 bg-white/5",
+                )}
+              >
+                {sharingScreen ? <ScreenShareOff className="h-4 w-4" /> : <MonitorUp className="h-4 w-4" />}
+                {sharingScreen ? "Stop share" : "Share"}
               </button>
             )}
             <button
