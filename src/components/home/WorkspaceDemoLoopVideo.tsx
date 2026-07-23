@@ -14,6 +14,8 @@ type WorkspaceDemoLoopVideoProps = {
   preload?: "auto" | "metadata" | "none";
   controls?: boolean;
   loop?: boolean;
+  /** Override default 16/11 frame (e.g. aspect-video for 16:9 commercials). */
+  frameClassName?: string;
 };
 
 export default function WorkspaceDemoLoopVideo({
@@ -23,6 +25,7 @@ export default function WorkspaceDemoLoopVideo({
   preload = "metadata",
   controls = false,
   loop = true,
+  frameClassName = "aspect-[16/11] sm:aspect-[16/10]",
 }: WorkspaceDemoLoopVideoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -86,12 +89,12 @@ export default function WorkspaceDemoLoopVideo({
       video.removeEventListener("timeupdate", handleTimeUpdate);
       observer.disconnect();
     };
-  }, [loop, prefersReducedMotion]);
+  }, [loop, prefersReducedMotion, src]);
 
   return (
     <div
       ref={containerRef}
-      className={`relative aspect-[16/11] w-full overflow-hidden rounded-xl bg-[#0b1220] sm:aspect-[16/10] sm:rounded-2xl ${className}`}
+      className={`relative w-full overflow-hidden rounded-xl bg-[#0b1220] sm:rounded-2xl ${frameClassName} ${className}`}
     >
       {prefersReducedMotion && poster != null ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -102,8 +105,10 @@ export default function WorkspaceDemoLoopVideo({
         />
       ) : (
         <video
+          key={src}
           ref={videoRef}
-          className="h-full w-full object-cover object-top"
+          className="h-full w-full object-cover object-center"
+          src={src}
           autoPlay
           muted
           loop={loop}
@@ -113,9 +118,7 @@ export default function WorkspaceDemoLoopVideo({
           preload={preload}
           {...(poster != null ? { poster } : {})}
           aria-label="Unit311 Central workspace demo"
-        >
-          <source src={src} type="video/mp4" />
-        </video>
+        />
       )}
     </div>
   );

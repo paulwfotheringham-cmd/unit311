@@ -75,6 +75,7 @@ function OverviewVideoModal({ open, onClose }: { open: boolean; onClose: () => v
             preload="auto"
             controls
             loop={false}
+            frameClassName="aspect-video"
           />
         </div>
       </div>

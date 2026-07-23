@@ -71,6 +71,8 @@ export default function HomeOfferPlatform() {
                   className="w-full"
                   src="/videos/FINAL.mp4"
                   poster={null}
+                  frameClassName="aspect-video"
+                  preload="auto"
                 />
               </div>
             </div>
