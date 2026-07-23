@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const EXEC_VIDEO_SRC = "/videos/exec.mp4";
+const EXEC_VIDEO_SRC = "/videos/FINAL.mp4";
 const VISIBLE_RATIO = 0.55;
 
 export default function HomeExecutiveDemoVideo() {
@@ -75,7 +75,7 @@ export default function HomeExecutiveDemoVideo() {
             controls={false}
             controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
             tabIndex={-1}
-            aria-label="Executive AI demonstration"
+            aria-label="Unit311 Central platform demonstration"
           />
         </div>
       </div>
