@@ -109,7 +109,6 @@ const NESTED_TEXT = "text-[#D7DEE8]";
 /** Near-instant expand — never delay the user. */
 const EXPAND_MS = 110;
 
-const PIN_HEIGHT = 41;
 const WORKSPACE_HEADER_H = 36;
 const CARD_PAD_X = 8;
 const CARD_GAP = 10;
@@ -371,24 +370,36 @@ export default function EnterprisePlatformSidebar({
     if (!item.view) return null;
 
     return (
-      <button
+      <div
         key={item.label}
-        type="button"
-        aria-current={active ? "page" : undefined}
-        onClick={() => navigate(item.view!)}
-        onPointerEnter={() => onPrefetchView?.(item.view!)}
-        onFocus={() => onPrefetchView?.(item.view!)}
-        className={cn(
-          "group flex w-full items-center gap-1.5 rounded-[10px] px-2.5 text-left text-[12px] font-medium leading-none tracking-normal text-white transition-colors duration-75",
-          active
-            ? "bg-[#1E5FE6]"
-            : "bg-[#2C6EF2] hover:bg-[#3D7AF5]",
-        )}
-        style={{ height: PIN_HEIGHT }}
+        className="rounded-[10px] border"
+        style={{
+          ...(active
+            ? { background: "#1F4FBF", borderColor: "#1F4FBF" }
+            : cardShellStyle(theme)),
+          height: WORKSPACE_HEADER_H,
+          paddingLeft: CARD_PAD_X,
+          paddingRight: 6,
+        }}
       >
-        <Icon className="h-3.5 w-3.5 shrink-0 text-white" strokeWidth={1.5} />
-        <span className="min-w-0 flex-1 whitespace-nowrap text-white">{item.label}</span>
-      </button>
+        <button
+          type="button"
+          aria-current={active ? "page" : undefined}
+          onClick={() => navigate(item.view!)}
+          onPointerEnter={() => onPrefetchView?.(item.view!)}
+          onFocus={() => onPrefetchView?.(item.view!)}
+          className={cn(
+            "group flex h-full w-full items-center gap-1.5 text-left text-[12px] font-medium leading-none tracking-normal transition-colors duration-75",
+            active ? "text-white" : "text-white/88 hover:text-white",
+          )}
+        >
+          <Icon
+            className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white" : SUBMENU_ICON)}
+            strokeWidth={1.5}
+          />
+          <span className="min-w-0 flex-1 whitespace-nowrap">{item.label}</span>
+        </button>
+      </div>
     );
   }
 
@@ -505,7 +516,10 @@ export default function EnterprisePlatformSidebar({
         borderRight: `1px solid ${theme.border}`,
       }}
     >
-      <div className="flex shrink-0 items-center justify-between px-5 pb-3 pt-5">
+      <div
+        className="relative flex shrink-0 items-center justify-center px-5 pt-5"
+        style={{ paddingBottom: 20 }}
+      >
         <Link
           href={basePath}
           aria-label="Unit311 Central home"
@@ -515,7 +529,7 @@ export default function EnterprisePlatformSidebar({
         </Link>
         <button
           type="button"
-          className="ml-2 flex h-8 w-8 shrink-0 touch-manipulation items-center justify-center rounded-[7px] border text-white/55 transition-colors duration-75 hover:text-white lg:hidden"
+          className="absolute top-1/2 right-5 flex h-8 w-8 -translate-y-1/2 shrink-0 touch-manipulation items-center justify-center rounded-[7px] border text-white/55 transition-colors duration-75 hover:text-white lg:hidden"
           style={{ borderColor: theme.cardBorder }}
           aria-label="Close menu"
           onClick={onClose}
