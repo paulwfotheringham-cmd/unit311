@@ -529,7 +529,7 @@ export default function HomeWorkspaceExplorer() {
 
   return (
     <div
-      className="relative mt-12 sm:mt-16 lg:mt-20"
+      className="relative mt-10 sm:mt-11 lg:mt-12"
       onKeyDown={(event) => {
         if (event.key === "Escape" && openId) {
           setOpenId(null);

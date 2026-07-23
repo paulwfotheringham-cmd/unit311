@@ -61,12 +61,9 @@ export default function HomeExecutiveDemoVideo() {
   }, []);
 
   return (
-    <div className="mt-16 w-full sm:mt-20 lg:mt-24 xl:mt-28">
-      <div
-        ref={containerRef}
-        className="mx-auto w-full max-w-[1180px]"
-      >
-        <div className="overflow-hidden rounded-[18px] border border-white/[0.1] bg-black/20 shadow-[0_24px_60px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.06)] sm:rounded-[20px]">
+    <div className="mt-9 w-full sm:mt-10">
+      <div ref={containerRef} className="mx-auto w-full max-w-[960px]">
+        <div className="overflow-hidden rounded-[18px] border border-white/[0.1] bg-black/20 shadow-[0_20px_48px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.06)] sm:rounded-[20px]">
           <video
             ref={videoRef}
             className="exec-demo-video block h-auto w-full"
