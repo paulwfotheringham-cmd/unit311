@@ -11,7 +11,7 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Industries We Serve",
   description:
-    "Unit311 supports oil & gas, renewable energy, construction, infrastructure, hospitality and marine sectors with tailored aerial intelligence programs.",
+    "See how Unit311 supports oil and gas, renewable energy, construction, infrastructure, hospitality, and marine teams with tailored operational and aerial intelligence programs.",
   path: "/industries",
 });
 
@@ -52,7 +52,7 @@ export default function IndustriesPage() {
                 <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-border">
                   <Image
                     src={section.image}
-                    alt={section.title}
+                    alt={`${section.title} operations and aerial intelligence`}
                     fill
                     className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 50vw"

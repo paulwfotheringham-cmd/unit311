@@ -100,6 +100,7 @@ import {
   PayrollWorkspace,
   PlatformBillingWorkspace,
   PotentialClientsWorkspace,
+  ProcurementWorkspace,
   ProfileWorkspace,
   ProjectsWorkspace,
   QmsTrainingWorkspace,
@@ -593,6 +594,12 @@ export default function InternalOperationsDashboard({
           {activeView === "inventory-management" && (
             <WorkspaceErrorBoundary title="Inventory">
               <InventoryManagementWorkspace />
+            </WorkspaceErrorBoundary>
+          )}
+
+          {activeView === "procurement" && (
+            <WorkspaceErrorBoundary title="Procurement">
+              <ProcurementWorkspace />
             </WorkspaceErrorBoundary>
           )}
 

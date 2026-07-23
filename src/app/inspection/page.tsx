@@ -11,7 +11,7 @@ import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Drone Inspection Services",
   description:
-    "Professional drone inspection for infrastructure, pipelines, solar assets and industrial facilities. High-resolution capture with actionable reporting across Spain.",
+    "Book professional Unit311 drone inspection for infrastructure, pipelines, solar assets, and industrial facilities — high-resolution capture with actionable operational reporting.",
   path: "/inspection",
 });
 

@@ -11,7 +11,7 @@ import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Commercial Aerial Imaging",
   description:
-    "Premium commercial drone cinematography for luxury hotels, resorts, yachts, real estate and brand campaigns. Spain and international production.",
+    "Commission premium Unit311 commercial aerial imaging and cinematography for hotels, resorts, yachts, real estate, and brand campaigns.",
   path: "/commercial-imaging",
 });
 

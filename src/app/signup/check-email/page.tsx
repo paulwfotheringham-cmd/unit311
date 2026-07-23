@@ -4,7 +4,7 @@ import Link from "next/link";
 import Logo from "@/components/layout/Logo";
 import MarketingPageShell from "@/components/layout/MarketingPageShell";
 import { CENTRAL_SITE_URL } from "@/lib/app-domains";
-import { createPageMetadata } from "@/lib/metadata";
+import { createNoIndexMetadata } from "@/lib/metadata";
 import { CONTACT } from "@/lib/site";
 import {
   marketingBtnSecondary,
@@ -16,7 +16,7 @@ import {
   MARKETING_CONTENT_CLASS,
 } from "@/lib/marketing-ui";
 
-export const metadata: Metadata = createPageMetadata({
+export const metadata: Metadata = createNoIndexMetadata({
   title: "Check your email",
   description: "Verify your email address before continuing Unit311 Central onboarding.",
   path: "/signup/check-email",

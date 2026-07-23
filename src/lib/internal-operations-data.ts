@@ -44,6 +44,7 @@ export type InternalOperationsView =
   | "competitors"
   | "assets"
   | "inventory-management"
+  | "procurement"
   | "fleet"
   | "testing"
   | "projects"
@@ -181,6 +182,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "competitors",
   "assets",
   "inventory-management",
+  "procurement",
   "fleet",
   "testing",
   "projects",
@@ -248,6 +250,7 @@ export const ENGINEERING_NAV_VIEWS = [
 export const ASSETS_NAV_VIEWS = [
   "assets",
   "inventory-management",
+  "procurement",
   "logistics",
 ] as const satisfies readonly InternalOperationsView[];
 
@@ -474,6 +477,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
     items: [
       { label: "Assets", icon: "Package", view: "assets" as const },
       { label: "Inventory", icon: "Layers", view: "inventory-management" as const },
+      { label: "Procurement", icon: "ShoppingCart", view: "procurement" as const },
       { label: "Logistics", icon: "Truck", view: "logistics" as const },
     ],
   },
@@ -650,6 +654,7 @@ export const internalViewTitles: Record<
   competitors: { title: "Competitors", subtitle: "Strategy" },
   assets: { title: "Assets", subtitle: "Assets, Inventory & Logistics" },
   "inventory-management": { title: "Inventory", subtitle: "Assets, Inventory & Logistics" },
+  procurement: { title: "Procurement", subtitle: "Assets, Inventory & Logistics" },
   fleet: { title: "Fleet", subtitle: "Internal Operations" },
   testing: { title: "Flight Simulator Testing", subtitle: "Tools" },
   projects: { title: "Projects", subtitle: "Projects" },

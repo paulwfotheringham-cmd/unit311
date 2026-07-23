@@ -1,15 +1,46 @@
 import type { Metadata } from "next";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./site";
+import {
+  SEO_KEYWORDS,
+  SITE_DESCRIPTION,
+  SITE_HOME_TITLE,
+  SITE_NAME,
+  SITE_OG_IMAGE_URL,
+  SITE_URL,
+} from "./site";
 
 type PageMeta = {
   title: string;
   description: string;
   path: string;
+  /** When set, used as the full document title (no "| Unit311" suffix). */
+  absoluteTitle?: string;
+  index?: boolean;
+  follow?: boolean;
 };
 
-export function createPageMetadata({ title, description, path }: PageMeta): Metadata {
-  const url = `${SITE_URL}${path}`;
-  const fullTitle = path === "/" ? `${SITE_NAME} | Accelerate Your Business` : `${title} | ${SITE_NAME}`;
+function absoluteUrl(path: string) {
+  if (path === "" || path === "/") return `${SITE_URL}/`;
+  return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function createPageMetadata({
+  title,
+  description,
+  path,
+  absoluteTitle,
+  index = true,
+  follow = true,
+}: PageMeta): Metadata {
+  const url = absoluteUrl(path);
+  const fullTitle = absoluteTitle ?? (path === "/" ? SITE_HOME_TITLE : `${title} | ${SITE_NAME}`);
+  const ogImages = [
+    {
+      url: SITE_OG_IMAGE_URL,
+      width: 1200,
+      height: 630,
+      alt: `${SITE_NAME} business operations platform`,
+    },
+  ];
 
   return {
     title: fullTitle,
@@ -18,13 +49,7 @@ export function createPageMetadata({ title, description, path }: PageMeta): Meta
     alternates: {
       canonical: url,
     },
-    keywords: [
-      "Unit311",
-      "accelerate your business",
-      "business operations platform",
-      "company setup",
-      "founder workspace",
-    ],
+    keywords: [...SEO_KEYWORDS],
     openGraph: {
       type: "website",
       locale: "en_GB",
@@ -32,21 +57,40 @@ export function createPageMetadata({ title, description, path }: PageMeta): Meta
       siteName: SITE_NAME,
       title: fullTitle,
       description,
+      images: ogImages,
     },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
       description,
+      images: [SITE_OG_IMAGE_URL],
     },
     robots: {
-      index: true,
-      follow: true,
+      index,
+      follow,
     },
   };
+}
+
+export function createNoIndexMetadata({
+  title,
+  description,
+  path,
+  absoluteTitle,
+}: Omit<PageMeta, "index" | "follow">): Metadata {
+  return createPageMetadata({
+    title,
+    description,
+    path,
+    absoluteTitle,
+    index: false,
+    follow: false,
+  });
 }
 
 export const homeMetadata = createPageMetadata({
   title: SITE_NAME,
   description: SITE_DESCRIPTION,
   path: "/",
+  absoluteTitle: SITE_HOME_TITLE,
 });

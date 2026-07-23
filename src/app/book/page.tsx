@@ -5,9 +5,9 @@ import MarketingPageShell from "@/components/layout/MarketingPageShell";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Book a free intro and demo session",
+  title: "Book a Free Demo",
   description:
-    "Schedule a free intro and demo session with Unit311 Central. Choose a weekday slot in your timezone and receive confirmation by email.",
+    "Book a free Unit311 intro and demo session. See how growing companies consolidate business applications, connect specialist systems, and give every employee instant access to reports and insights.",
   path: "/book",
 });
 

@@ -355,7 +355,13 @@ export default function GeospatialDashboard({ className }: GeospatialDashboardPr
               >
                 <Shell className="relative cursor-default overflow-hidden p-0">
                   <div className="relative min-h-[220px] sm:min-h-[260px]">
-                    <Image src={SITE_IMAGE} alt="" fill className="object-cover" sizes="(max-width:1280px) 100vw, 60vw" />
+                    <Image
+                      src={SITE_IMAGE}
+                      alt="Annotated site orthomosaic showing warehouse zones and haul routes"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width:1280px) 100vw, 60vw"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/50 via-transparent to-[#020617]/15" />
                     {SITE_ZONES.map((zone) => (
                       <HoverTile

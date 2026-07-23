@@ -4,7 +4,7 @@ import ExecutiveCallRoom from "@/components/executivecall/ExecutiveCallRoom";
 import { getFounderSessionBookingBySlug } from "@/lib/founder-booking/service";
 import { formatDateTimeInTimezone, getFounderBookingTimezone } from "@/lib/founder-booking/timezones";
 import { formatLondonDateTime } from "@/lib/founder-booking/slots";
-import { createPageMetadata } from "@/lib/metadata";
+import { createNoIndexMetadata } from "@/lib/metadata";
 
 type ExecutiveCallPageProps = {
   params: Promise<{ slug: string }>;
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: ExecutiveCallPageProps) {
   const { slug } = await params;
   const booking = await getFounderSessionBookingBySlug(slug).catch(() => null);
 
-  return createPageMetadata({
+  return createNoIndexMetadata({
     title: booking
       ? `Executive call — ${booking.organization}`
       : "Executive call",

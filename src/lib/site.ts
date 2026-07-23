@@ -1,23 +1,20 @@
-const DEFAULT_SITE_URL = "https://unit311.vercel.app";
-
 export const CENTRAL_SITE_URL = "https://unit311central.com";
 export const CENTRAL_SITE_NAME = "Unit311 Central";
 
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : DEFAULT_SITE_URL);
+/** Canonical public site URL for SEO (metadata, sitemap, robots, JSON-LD). */
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? CENTRAL_SITE_URL;
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Unit311";
 export const SITE_EMAIL_DOMAIN = "unit311central.com";
-export const SITE_LOGO_PATH = process.env.NEXT_PUBLIC_SITE_LOGO_PATH ?? "/images/unit311central.webp";
+export const SITE_LOGO_PATH = process.env.NEXT_PUBLIC_SITE_LOGO_PATH ?? "/images/unit311central.svg";
+export const SITE_OG_IMAGE_PATH =
+  process.env.NEXT_PUBLIC_SITE_OG_IMAGE_PATH ?? "/images/unit311central-hero.png";
 export const SITE_LOGO_URL = `${SITE_URL}${SITE_LOGO_PATH}`;
+export const SITE_OG_IMAGE_URL = `${SITE_URL}${SITE_OG_IMAGE_PATH}`;
 export const SITE_TAGLINE = "The centralised platform to accelerate and run your business.";
 export const SITE_DESCRIPTION =
-  "Unit311 gives every new business the essentials in one place — client management, CRM, projects, financials, HR, inventory and logistics, data repository, email, messaging, and social media.";
+  "Run your day-to-day business on a single intelligent platform. Consolidate business applications, connect the specialist systems you already use, and give every employee instant access to information, reports and business insights.";
+export const SITE_HOME_TITLE = "Business Operations Software for Growing Companies | Unit311";
 export const SITE_HERO_LINE = "Connect your business into a single operational platform";
 
 export const CONTACT = {
@@ -36,10 +33,10 @@ export const NAV_LINKS = [
 ] as const;
 
 export const SEO_KEYWORDS = [
-  "accelerate your business",
+  "business operations software",
   "business operations platform",
-  "company setup",
-  "founder workspace",
-  "Unit311",
+  "growing companies software",
   "centralised business management",
+  "company operations platform",
+  "Unit311",
 ] as const;

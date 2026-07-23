@@ -9,9 +9,9 @@ import { resolveCrmSignupInvite } from "@/lib/crm-signup-invite";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Sign Up",
+  title: "Sign Up for Unit311",
   description:
-    "Request access to Unit311Central — the intelligent business operating platform for CRM, finance, HR, projects, and executive intelligence.",
+    "Create your Unit311 account and start consolidating CRM, finance, HR, projects, messaging, and executive reporting in one business operations platform.",
   path: "/signup",
 });
 

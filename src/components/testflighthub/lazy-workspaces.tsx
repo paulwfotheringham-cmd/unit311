@@ -17,6 +17,7 @@ function lazyWorkspace(
 
 export const AssetManagementWorkspace = lazyWorkspace(() => import("./AssetManagementWorkspace"));
 export const InventoryManagementWorkspace = lazyWorkspace(() => import("./InventoryManagementWorkspace"));
+export const ProcurementWorkspace = lazyWorkspace(() => import("./ProcurementWorkspace"));
 export const BoardPackCustomizerWorkspace = lazyWorkspace(() => import("./BoardPackCustomizerWorkspace"));
 export const ClientManagementWorkspace = lazyWorkspace(() => import("./ClientManagementWorkspace"));
 export const ClientsDashboardWorkspace = lazyWorkspace(() => import("./ClientsDashboardWorkspace"));

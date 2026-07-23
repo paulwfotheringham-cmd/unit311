@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Grants Operations Dashboard | Unit311",
   description:
     "Unit311 grants operations workspace — clients, projects, finance, files, logistics, and more.",
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

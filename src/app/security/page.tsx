@@ -8,7 +8,7 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Platform Security",
   description:
-    "Learn how Unit311 Central protects your organisation with encryption, role-based access, and isolated workspaces.",
+    "Discover how Unit311 Central secures business operations with encryption, role-based access control, audit-friendly workflows, and isolated client workspaces.",
   path: "/security",
 });
 

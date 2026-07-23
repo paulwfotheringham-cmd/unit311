@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import WorkspaceOnboardingWizard from "@/components/workspace-onboarding/WorkspaceOnboardingWizard";
 import { ensureWorkspaceOnboardingCompletedColumn } from "@/lib/internal-db-migrations";
+import { createNoIndexMetadata } from "@/lib/metadata";
 import {
   getWorkspaceOnboardingState,
   isWorkspaceOnboardingPrototypeSlug,
@@ -9,6 +10,12 @@ import {
 } from "@/lib/workspace-customer-onboarding-service";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = createNoIndexMetadata({
+  title: "Workspace onboarding",
+  description: "Private Unit311 workspace onboarding wizard.",
+  path: "/onboarding",
+});
 
 type PageProps = {
   params: Promise<{ slug: string }>;

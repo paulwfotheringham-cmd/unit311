@@ -10,7 +10,11 @@ import {
   parseClientPlatformSubdomainSafe,
 } from "@/lib/app-domains";
 import { homeMetadata } from "@/lib/metadata";
-import { organizationJsonLd, webSiteJsonLd } from "@/lib/structured-data";
+import {
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/structured-data";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -50,7 +54,9 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="flex min-h-full flex-col overflow-x-clip bg-background font-sans text-foreground antialiased">
-        <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
+        <JsonLd
+          data={[organizationJsonLd(), webSiteJsonLd(), softwareApplicationJsonLd()]}
+        />
         {hideMarketingChrome ? null : <Navbar />}
         <main className="flex-1">{children}</main>
         {hideMarketingChrome ? null : <FooterGate />}

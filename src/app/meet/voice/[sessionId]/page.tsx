@@ -2,8 +2,15 @@ import Link from "next/link";
 import { Phone } from "lucide-react";
 
 import MessagingCallRoom from "@/components/messaging/MessagingCallRoom";
+import { createNoIndexMetadata } from "@/lib/metadata";
 import { getMessagingCallRoom } from "@/lib/messaging-call-service";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+
+export const metadata = createNoIndexMetadata({
+  title: "Voice meeting",
+  description: "Private Unit311 Central voice meeting room.",
+  path: "/meet/voice",
+});
 
 type MeetVoicePageProps = {
   params: Promise<{ sessionId: string }>;

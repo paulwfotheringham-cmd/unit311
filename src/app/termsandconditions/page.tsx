@@ -8,7 +8,8 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Terms of Service",
-  description: "Terms of Service for Unit311 Central and related services.",
+  description:
+    "Review the Unit311 Central Terms of Service that govern account access, subscriptions, acceptable use, and your rights when using the platform.",
   path: "/termsandconditions",
 });
 

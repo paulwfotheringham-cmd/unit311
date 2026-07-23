@@ -4,11 +4,11 @@ import AboutPageContent from "@/components/about/AboutPageContent";
 import JsonLd from "@/components/JsonLd";
 import { createPageMetadata } from "@/lib/metadata";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
-import { SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "About",
-  description: SITE_DESCRIPTION,
+  title: "About Unit311",
+  description:
+    "Learn about Unit311, the business operations software built to help growing companies consolidate applications, connect specialist systems, and run day-to-day work from one intelligent platform.",
   path: "/about",
 });
 

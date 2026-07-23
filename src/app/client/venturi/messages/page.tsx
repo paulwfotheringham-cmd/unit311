@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
+
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import ClientMessagingWorkspace from "@/components/messaging/ClientMessagingWorkspace";
+import { createNoIndexMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = createNoIndexMetadata({
+  title: "Venturi messages",
+  description: "Private Venturi client messaging workspace.",
+  path: "/client/venturi/messages",
+});
 
 export default function VenturiMessagesPage() {
   return (

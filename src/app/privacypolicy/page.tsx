@@ -9,7 +9,8 @@ import { breadcrumbJsonLd } from "@/lib/structured-data";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Privacy Policy",
-  description: "Privacy policy for Unit311 Central website, platform, and communications.",
+  description:
+    "Read the Unit311 Central privacy policy covering how we collect, use, store, and protect personal data across our website, platform, and communications.",
   path: "/privacypolicy",
 });
 

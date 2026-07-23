@@ -11,7 +11,7 @@ import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/structured-data";
 export const metadata: Metadata = createPageMetadata({
   title: "Drone Surveying & Mapping",
   description:
-    "Precision drone surveying, orthomosaic generation, topographic surveys and progress monitoring for engineering and construction teams in Spain.",
+    "Deliver precision Unit311 drone surveying, orthomosaics, topographic surveys, and progress monitoring for engineering and construction teams.",
   path: "/surveying",
 });
 
