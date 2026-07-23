@@ -70,7 +70,7 @@ function OverviewVideoModal({ open, onClose }: { open: boolean; onClose: () => v
         <div className="p-3 sm:p-5">
           <WorkspaceDemoLoopVideo
             className="w-full"
-            src="/videos/overview.mp4"
+            src="/videos/FINAL.mp4"
             poster={null}
             preload="auto"
             controls

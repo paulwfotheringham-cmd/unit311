@@ -65,11 +65,11 @@ export default function HomeOfferPlatform() {
           <HomeSectionTitle>Unit311 Central Workspace</HomeSectionTitle>
 
           <div className="mt-8 w-full sm:mt-10">
-            <div className="mx-auto w-full max-w-full sm:max-w-[92%] lg:max-w-[1200px]">
+            <div className="mx-auto w-full max-w-[85%] sm:max-w-[78%] lg:max-w-[1020px]">
               <div className="overflow-hidden rounded-2xl border border-white/12 bg-gradient-to-b from-white/[0.14] to-white/[0.06] p-2 shadow-[0_28px_90px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-4 lg:rounded-[32px]">
                 <WorkspaceDemoLoopVideo
                   className="w-full"
-                  src="/videos/overview.mp4"
+                  src="/videos/FINAL.mp4"
                   poster={null}
                 />
               </div>
