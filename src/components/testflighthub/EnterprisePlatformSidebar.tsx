@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -106,6 +106,11 @@ const iconMap = {
 const SUBMENU_ICON = "text-[#8B9BB0]";
 const NESTED_TEXT = "text-[#D7DEE8]";
 
+/** Workspace / pin card vertical padding (~20% under former 18px). */
+const CARD_PAD_Y = 14;
+const CARD_PAD_X = 14;
+const PIN_CARD_HEIGHT = 54;
+
 type EnterprisePlatformSidebarProps = {
   mobileOpen?: boolean;
   onClose?: () => void;
@@ -118,6 +123,13 @@ type EnterprisePlatformSidebarProps = {
 function resolveIcon(name?: string) {
   if (!name) return LayoutDashboard;
   return iconMap[name as keyof typeof iconMap] ?? LayoutDashboard;
+}
+
+function cardShellStyle(theme: SidebarThemeTokens): CSSProperties {
+  return {
+    background: theme.card,
+    borderColor: theme.cardBorder,
+  };
 }
 
 export default function EnterprisePlatformSidebar({
@@ -143,8 +155,6 @@ export default function EnterprisePlatformSidebar({
   });
 
   useEffect(() => {
-    // First login: empty storage → all workspace cards collapsed.
-    // Later sessions: restore exact expand/collapse preferences (no auto-expand).
     const saved = readSidebarExpandedState();
     startTransition(() => {
       setExpanded(saved);
@@ -199,22 +209,25 @@ export default function EnterprisePlatformSidebar({
     const nested = opts.depth > 0;
     const Icon = resolveIcon(opts.icon);
     const className = cn(
-      "flex w-full items-center rounded-[10px] text-left transition-colors duration-200",
+      "flex w-full items-center rounded-[10px] text-left transition-colors duration-150",
       nested
-        ? cn("min-h-[35px] gap-0 py-1.5 pl-11 pr-3 text-[13px] font-[450] leading-[1.4]", NESTED_TEXT)
-        : "min-h-10 gap-3 py-2 pl-2.5 pr-3 text-[14px] font-medium leading-[1.4] text-white",
+        ? cn(
+            "min-h-[32px] gap-0 py-1.5 pl-11 pr-2.5 text-[12px] font-normal leading-[1.5]",
+            NESTED_TEXT,
+          )
+        : "min-h-[36px] gap-2.5 py-1.5 pl-2 pr-2.5 text-[13px] font-medium leading-[1.45] text-white/95",
       active
         ? "text-white"
         : nested
-          ? "hover:bg-white/[0.03] hover:text-white"
-          : "hover:bg-white/[0.04] hover:text-white",
+          ? "hover:bg-white/[0.025] hover:text-white"
+          : "hover:bg-white/[0.03] hover:text-white",
     );
     const style = active ? { background: "#1F4FBF", color: "#FFFFFF" } : undefined;
 
     const content = (
       <>
         {!nested && opts.icon ? (
-          <Icon className={cn("h-[18px] w-[18px] shrink-0", SUBMENU_ICON)} strokeWidth={1.75} />
+          <Icon className={cn("h-4 w-4 shrink-0", SUBMENU_ICON)} strokeWidth={1.6} />
         ) : null}
         <span className="min-w-0 flex-1 whitespace-normal break-words">{label}</span>
       </>
@@ -291,24 +304,26 @@ export default function EnterprisePlatformSidebar({
           aria-expanded={isOpen}
           onClick={() => toggleExpanded(key)}
           className={cn(
-            "flex w-full items-center gap-3 rounded-[10px] py-2.5 pr-2 text-left transition-colors duration-200 hover:bg-white/[0.04]",
-            depth > 0 ? "min-h-[35px] pl-11" : "min-h-10 pl-2.5",
+            "flex w-full items-center gap-2.5 rounded-[10px] pr-2 text-left transition-colors duration-150 hover:bg-white/[0.03]",
+            depth > 0
+              ? "min-h-[32px] py-1.5 pl-11"
+              : "min-h-[36px] py-1.5 pl-2",
           )}
         >
           {depth === 0 && itemIcon ? (
-            <Icon className={cn("h-[18px] w-[18px] shrink-0", SUBMENU_ICON)} strokeWidth={1.75} />
+            <Icon className={cn("h-4 w-4 shrink-0", SUBMENU_ICON)} strokeWidth={1.6} />
           ) : null}
           <span
             className={cn(
-              "min-w-0 flex-1 whitespace-normal break-words text-left leading-[1.4]",
+              "min-w-0 flex-1 whitespace-normal break-words text-left",
               depth > 0
-                ? cn("text-[13px] font-[450]", NESTED_TEXT)
-                : "text-[14px] font-medium text-white",
+                ? cn("text-[12px] font-normal leading-[1.5]", NESTED_TEXT)
+                : "text-[13px] font-medium leading-[1.45] text-white/95",
             )}
           >
             {item.label}
           </span>
-          <Chevron className="h-3.5 w-3.5 shrink-0 text-white/70" strokeWidth={1.75} />
+          <Chevron className="h-3.5 w-3.5 shrink-0 text-white/70" strokeWidth={1.6} />
         </button>
         <div
           className={cn(
@@ -318,9 +333,8 @@ export default function EnterprisePlatformSidebar({
           aria-hidden={!isOpen}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="mt-0.5 space-y-0.5">
-              {item.children?.map((child) => renderGroup(child, key, depth + 1))}
-            </div>
+            {/* Hierarchy from spacing only — no bordered / highlighted group chrome */}
+            <div className="mt-1 space-y-1">{item.children?.map((child) => renderGroup(child, key, depth + 1))}</div>
           </div>
         </div>
       </div>
@@ -330,34 +344,42 @@ export default function EnterprisePlatformSidebar({
   function renderPinItem(item: InternalNavItem) {
     const active = isInternalNavItemActive(pathname, item, activeView, basePath, searchParams);
     const Icon = resolveIcon(item.icon);
-    const className = cn(
-      "flex w-full items-center gap-3 rounded-[10px] px-3 py-3 text-left text-[14px] font-medium uppercase tracking-[0.08em] transition-colors duration-200",
-      active ? "text-white" : "text-white/80 hover:bg-white/[0.04] hover:text-white",
-    );
-    const style = active ? { background: "#1F4FBF" } : undefined;
+    const isLongLabel = item.label.length > 12;
 
-    if (item.view) {
-      return (
+    if (!item.view) return null;
+
+    return (
+      <div
+        key={item.label}
+        className="flex items-center rounded-[14px] border"
+        style={{
+          ...cardShellStyle(theme),
+          height: PIN_CARD_HEIGHT,
+          paddingLeft: 8,
+          paddingRight: 8,
+        }}
+      >
         <button
-          key={item.label}
           type="button"
           aria-current={active ? "page" : undefined}
           onClick={() => navigate(item.view!)}
           onPointerEnter={() => onPrefetchView?.(item.view!)}
           onFocus={() => onPrefetchView?.(item.view!)}
-          className={className}
-          style={style}
+          className={cn(
+            "flex h-10 w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left font-medium leading-none tracking-normal transition-colors duration-150",
+            isLongLabel ? "text-[12.5px]" : "text-[13px]",
+            active ? "text-white" : "text-white/90 hover:bg-white/[0.03] hover:text-white",
+          )}
+          style={active ? { background: "#1F4FBF" } : undefined}
         >
           <Icon
-            className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : SUBMENU_ICON)}
-            strokeWidth={1.75}
+            className={cn("h-4 w-4 shrink-0", active ? "text-white" : SUBMENU_ICON)}
+            strokeWidth={1.6}
           />
-          <span className="min-w-0 flex-1 whitespace-normal">{item.label}</span>
+          <span className="min-w-0 flex-1 whitespace-nowrap">{item.label}</span>
         </button>
-      );
-    }
-
-    return null;
+      </div>
+    );
   }
 
   function renderWorkspace(section: InternalNavSection) {
@@ -372,23 +394,23 @@ export default function EnterprisePlatformSidebar({
         key={workspaceKey}
         className="rounded-[14px] border"
         style={{
-          background: theme.card,
-          borderColor: theme.cardBorder,
-          boxShadow: "0 1px 0 rgba(255,255,255,0.02)",
-          padding: "18px",
+          ...cardShellStyle(theme),
+          paddingTop: CARD_PAD_Y,
+          paddingBottom: isOpen ? CARD_PAD_Y : CARD_PAD_Y,
+          paddingLeft: CARD_PAD_X,
+          paddingRight: CARD_PAD_X,
         }}
       >
         <button
           type="button"
           aria-expanded={isOpen}
           onClick={() => toggleExpanded(workspaceKey)}
-          className="flex w-full items-center gap-3 text-left"
-          style={{ marginTop: 0 }}
+          className="flex w-full items-center gap-2.5 text-left"
         >
           <Icon
             className="h-[18px] w-[18px] shrink-0"
             style={{ color, opacity: 0.9 }}
-            strokeWidth={1.75}
+            strokeWidth={1.6}
           />
           <span
             className="min-w-0 flex-1 text-[11px] font-semibold uppercase leading-snug tracking-[0.12em]"
@@ -396,7 +418,7 @@ export default function EnterprisePlatformSidebar({
           >
             {section.label}
           </span>
-          <Chevron className="h-3.5 w-3.5 shrink-0 text-white/70" strokeWidth={1.75} />
+          <Chevron className="h-3.5 w-3.5 shrink-0 text-white/70" strokeWidth={1.6} />
         </button>
 
         <div
@@ -407,8 +429,8 @@ export default function EnterprisePlatformSidebar({
           aria-hidden={!isOpen}
         >
           <div className="min-h-0 overflow-hidden">
-            {/* Exactly 8px blank whitespace below workspace title */}
-            <div className="mt-2 space-y-0.5">
+            {/* Exactly 8px whitespace below workspace title */}
+            <div className="mt-2 space-y-1">
               {section.items.map((item) => {
                 if (item.children?.length) {
                   return renderGroup(item, workspaceKey, 0);
@@ -469,17 +491,14 @@ export default function EnterprisePlatformSidebar({
           aria-label="Close menu"
           onClick={onClose}
         >
-          <X className="h-4 w-4" strokeWidth={1.75} />
+          <X className="h-4 w-4" strokeWidth={1.6} />
         </button>
       </div>
 
       <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <div className="space-y-1.5">
+        {/* Unified card stack: pins + workspaces share 16px gap */}
+        <div className="flex flex-col gap-4">
           {pinSections.map((section) => section.items.map((item) => renderPinItem(item)))}
-        </div>
-
-        {/* ~18px breathing room into the first workspace card / between cards via gap */}
-        <div className="mt-[18px] flex flex-col gap-4">
           {workspaceSections.map((section) => renderWorkspace(section))}
         </div>
       </nav>
