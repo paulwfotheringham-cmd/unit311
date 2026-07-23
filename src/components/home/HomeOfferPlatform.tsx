@@ -45,7 +45,22 @@ export default function HomeOfferPlatform() {
           Explore everything Unit311 Central has to offer
         </HomeSectionTitle>
 
-        <div className="mx-auto mt-5 w-full sm:mt-6">
+        <div className="mx-auto mt-10 max-w-[900px] text-center sm:mt-12">
+          <h2 className="text-balance text-[1.35rem] font-semibold leading-snug tracking-[-0.025em] text-white sm:text-[1.55rem] md:text-[1.75rem] md:leading-[1.25]">
+            Built by people who&apos;ve done it before.
+          </h2>
+          <p className="mx-auto mt-4 max-w-[860px] text-balance text-sm leading-relaxed text-white/58 sm:mt-5 sm:text-[15px] md:text-[17px] md:leading-relaxed">
+            Unit311 Central is developed by senior technology executives and architects, each bringing
+            more than 25 years of experience designing, building and delivering technology solutions
+            across global enterprises, launching successful venture-backed startups, and helping growing
+            SMEs solve complex business challenges.
+          </p>
+          <p className="mx-auto mt-4 max-w-[860px] text-balance text-sm leading-relaxed text-white/58 sm:mt-5 sm:text-[15px] md:text-[17px] md:leading-relaxed">
+            That experience is reflected throughout every part of Unit311 Central.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-10 w-full sm:mt-12">
           <p className="mx-auto max-w-[900px] text-balance text-center text-[15px] font-medium leading-relaxed text-white/72 sm:text-[16px] md:text-[18px] md:leading-relaxed">
             Unit311 Central brings together every major business function into a single intelligent
             platform.
