@@ -106,10 +106,12 @@ const iconMap = {
 const SUBMENU_ICON = "text-[#8B9BB0]";
 const NESTED_TEXT = "text-[#D7DEE8]";
 
-/** Workspace / pin card vertical padding (~20% under former 18px). */
-const CARD_PAD_Y = 14;
-const CARD_PAD_X = 14;
-const PIN_CARD_HEIGHT = 54;
+/** Snappy expand/collapse — engineered, not elastic. */
+const EXPAND_MS = 130;
+
+const PIN_HEIGHT = 44;
+const CARD_PAD_X = 10;
+const CARD_GAP = 12;
 
 type EnterprisePlatformSidebarProps = {
   mobileOpen?: boolean;
@@ -130,6 +132,13 @@ function cardShellStyle(theme: SidebarThemeTokens): CSSProperties {
     background: theme.card,
     borderColor: theme.cardBorder,
   };
+}
+
+function expandPanelClass(isOpen: boolean) {
+  return cn(
+    "grid transition-[grid-template-rows,opacity] ease-out",
+    isOpen ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0",
+  );
 }
 
 export default function EnterprisePlatformSidebar({
@@ -209,25 +218,25 @@ export default function EnterprisePlatformSidebar({
     const nested = opts.depth > 0;
     const Icon = resolveIcon(opts.icon);
     const className = cn(
-      "flex w-full items-center rounded-[10px] text-left transition-colors duration-150",
+      "flex w-full items-center rounded-[8px] text-left transition-colors duration-100",
       nested
         ? cn(
-            "min-h-[32px] gap-0 py-1.5 pl-11 pr-2.5 text-[12px] font-normal leading-[1.5]",
+            "min-h-[28px] gap-0 py-[3px] pl-8 pr-1.5 text-[11.5px] font-normal leading-[1.3]",
             NESTED_TEXT,
           )
-        : "min-h-[36px] gap-2.5 py-1.5 pl-2 pr-2.5 text-[13px] font-medium leading-[1.45] text-white/95",
+        : "min-h-[30px] gap-2 py-[3px] pl-1.5 pr-1.5 text-[12.5px] font-medium leading-[1.3] text-white/90",
       active
         ? "text-white"
         : nested
-          ? "hover:bg-white/[0.025] hover:text-white"
-          : "hover:bg-white/[0.03] hover:text-white",
+          ? "hover:bg-white/[0.03] hover:text-white"
+          : "hover:bg-white/[0.035] hover:text-white",
     );
     const style = active ? { background: "#1F4FBF", color: "#FFFFFF" } : undefined;
 
     const content = (
       <>
         {!nested && opts.icon ? (
-          <Icon className={cn("h-4 w-4 shrink-0", SUBMENU_ICON)} strokeWidth={1.6} />
+          <Icon className={cn("h-[15px] w-[15px] shrink-0", SUBMENU_ICON)} strokeWidth={1.5} />
         ) : null}
         <span className="min-w-0 flex-1 whitespace-normal break-words">{label}</span>
       </>
@@ -304,37 +313,34 @@ export default function EnterprisePlatformSidebar({
           aria-expanded={isOpen}
           onClick={() => toggleExpanded(key)}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-[10px] pr-2 text-left transition-colors duration-150 hover:bg-white/[0.03]",
-            depth > 0
-              ? "min-h-[32px] py-1.5 pl-11"
-              : "min-h-[36px] py-1.5 pl-2",
+            "flex w-full items-center gap-2 rounded-[8px] pr-1 text-left transition-colors duration-100 hover:bg-white/[0.035]",
+            depth > 0 ? "min-h-[28px] py-[3px] pl-8" : "min-h-[30px] py-[3px] pl-1.5",
           )}
         >
           {depth === 0 && itemIcon ? (
-            <Icon className={cn("h-4 w-4 shrink-0", SUBMENU_ICON)} strokeWidth={1.6} />
+            <Icon className={cn("h-[15px] w-[15px] shrink-0", SUBMENU_ICON)} strokeWidth={1.5} />
           ) : null}
           <span
             className={cn(
               "min-w-0 flex-1 whitespace-normal break-words text-left",
               depth > 0
-                ? cn("text-[12px] font-normal leading-[1.5]", NESTED_TEXT)
-                : "text-[13px] font-medium leading-[1.45] text-white/95",
+                ? cn("text-[11.5px] font-normal leading-[1.3]", NESTED_TEXT)
+                : "text-[12.5px] font-medium leading-[1.3] text-white/90",
             )}
           >
             {item.label}
           </span>
-          <Chevron className="h-3.5 w-3.5 shrink-0 text-white/70" strokeWidth={1.6} />
+          <Chevron className="h-3 w-3 shrink-0 text-white/55" strokeWidth={1.5} />
         </button>
         <div
-          className={cn(
-            "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
-            isOpen ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0",
-          )}
+          className={expandPanelClass(isOpen)}
+          style={{ transitionDuration: `${EXPAND_MS}ms` }}
           aria-hidden={!isOpen}
         >
           <div className="min-h-0 overflow-hidden">
-            {/* Hierarchy from spacing only — no bordered / highlighted group chrome */}
-            <div className="mt-1 space-y-1">{item.children?.map((child) => renderGroup(child, key, depth + 1))}</div>
+            <div className="mt-0.5 space-y-px">
+              {item.children?.map((child) => renderGroup(child, key, depth + 1))}
+            </div>
           </div>
         </div>
       </div>
@@ -344,19 +350,18 @@ export default function EnterprisePlatformSidebar({
   function renderPinItem(item: InternalNavItem) {
     const active = isInternalNavItemActive(pathname, item, activeView, basePath, searchParams);
     const Icon = resolveIcon(item.icon);
-    const isLongLabel = item.label.length > 12;
 
     if (!item.view) return null;
 
     return (
       <div
         key={item.label}
-        className="flex items-center rounded-[14px] border"
+        className="flex items-center rounded-[12px] border"
         style={{
           ...cardShellStyle(theme),
-          height: PIN_CARD_HEIGHT,
-          paddingLeft: 8,
-          paddingRight: 8,
+          height: PIN_HEIGHT,
+          paddingLeft: 4,
+          paddingRight: 4,
         }}
       >
         <button
@@ -366,15 +371,14 @@ export default function EnterprisePlatformSidebar({
           onPointerEnter={() => onPrefetchView?.(item.view!)}
           onFocus={() => onPrefetchView?.(item.view!)}
           className={cn(
-            "flex h-10 w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left font-medium leading-none tracking-normal transition-colors duration-150",
-            isLongLabel ? "text-[12.5px]" : "text-[13px]",
-            active ? "text-white" : "text-white/90 hover:bg-white/[0.03] hover:text-white",
+            "flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-[12.5px] font-medium leading-none tracking-normal transition-colors duration-100",
+            active ? "text-white" : "text-white/90 hover:bg-white/[0.035] hover:text-white",
           )}
           style={active ? { background: "#1F4FBF" } : undefined}
         >
           <Icon
-            className={cn("h-4 w-4 shrink-0", active ? "text-white" : SUBMENU_ICON)}
-            strokeWidth={1.6}
+            className={cn("h-[15px] w-[15px] shrink-0", active ? "text-white" : SUBMENU_ICON)}
+            strokeWidth={1.5}
           />
           <span className="min-w-0 flex-1 whitespace-nowrap">{item.label}</span>
         </button>
@@ -392,45 +396,41 @@ export default function EnterprisePlatformSidebar({
     return (
       <div
         key={workspaceKey}
-        className="rounded-[14px] border"
+        className="rounded-[12px] border"
         style={{
           ...cardShellStyle(theme),
-          paddingTop: CARD_PAD_Y,
-          paddingBottom: isOpen ? CARD_PAD_Y : CARD_PAD_Y,
           paddingLeft: CARD_PAD_X,
-          paddingRight: CARD_PAD_X,
+          paddingRight: 8,
+          paddingBottom: isOpen ? 6 : 0,
         }}
       >
         <button
           type="button"
           aria-expanded={isOpen}
           onClick={() => toggleExpanded(workspaceKey)}
-          className="flex w-full items-center gap-2.5 text-left"
+          className="flex h-[40px] w-full items-center gap-2 text-left"
         >
           <Icon
-            className="h-[18px] w-[18px] shrink-0"
-            style={{ color, opacity: 0.9 }}
-            strokeWidth={1.6}
+            className="h-4 w-4 shrink-0"
+            style={{ color, opacity: 0.85 }}
+            strokeWidth={1.5}
           />
           <span
-            className="min-w-0 flex-1 text-[11px] font-semibold uppercase leading-snug tracking-[0.12em]"
-            style={{ color, opacity: 0.9 }}
+            className="min-w-0 flex-1 text-[11px] font-semibold uppercase leading-none tracking-[0.12em]"
+            style={{ color, opacity: 0.85 }}
           >
             {section.label}
           </span>
-          <Chevron className="h-3.5 w-3.5 shrink-0 text-white/70" strokeWidth={1.6} />
+          <Chevron className="h-3 w-3 shrink-0 text-white/50" strokeWidth={1.5} />
         </button>
 
         <div
-          className={cn(
-            "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
-            isOpen ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0",
-          )}
+          className={expandPanelClass(isOpen)}
+          style={{ transitionDuration: `${EXPAND_MS}ms` }}
           aria-hidden={!isOpen}
         >
           <div className="min-h-0 overflow-hidden">
-            {/* Exactly 8px whitespace below workspace title */}
-            <div className="mt-2 space-y-1">
+            <div className="mt-0.5 space-y-px pb-0.5">
               {section.items.map((item) => {
                 if (item.children?.length) {
                   return renderGroup(item, workspaceKey, 0);
@@ -476,28 +476,27 @@ export default function EnterprisePlatformSidebar({
         borderRight: `1px solid ${theme.border}`,
       }}
     >
-      <div className="flex shrink-0 items-center justify-between px-6 pb-5 pt-6">
+      <div className="flex shrink-0 items-center justify-between px-5 pb-3.5 pt-5">
         <Link
           href={basePath}
           aria-label="Unit311 Central home"
-          className="inline-flex shrink-0 transition-opacity duration-200 hover:opacity-90"
+          className="inline-flex shrink-0 transition-opacity duration-150 hover:opacity-90"
         >
           <Unit311CentralWordmark variant="sidebar" />
         </Link>
         <button
           type="button"
-          className="ml-2 flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-[10px] border text-white/55 transition-colors duration-200 hover:text-white lg:hidden"
+          className="ml-2 flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-[8px] border text-white/55 transition-colors duration-100 hover:text-white lg:hidden"
           style={{ borderColor: theme.cardBorder }}
           aria-label="Close menu"
           onClick={onClose}
         >
-          <X className="h-4 w-4" strokeWidth={1.6} />
+          <X className="h-3.5 w-3.5" strokeWidth={1.5} />
         </button>
       </div>
 
-      <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        {/* Unified card stack: pins + workspaces share 16px gap */}
-        <div className="flex flex-col gap-4">
+      <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="flex flex-col" style={{ gap: CARD_GAP }}>
           {pinSections.map((section) => section.items.map((item) => renderPinItem(item)))}
           {workspaceSections.map((section) => renderWorkspace(section))}
         </div>
