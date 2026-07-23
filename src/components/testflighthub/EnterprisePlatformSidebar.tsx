@@ -371,35 +371,24 @@ export default function EnterprisePlatformSidebar({
     if (!item.view) return null;
 
     return (
-      <div
+      <button
         key={item.label}
-        className="flex items-center rounded-[10px] border"
-        style={{
-          ...cardShellStyle(theme),
-          height: PIN_HEIGHT,
-          paddingLeft: 3,
-          paddingRight: 3,
-        }}
+        type="button"
+        aria-current={active ? "page" : undefined}
+        onClick={() => navigate(item.view!)}
+        onPointerEnter={() => onPrefetchView?.(item.view!)}
+        onFocus={() => onPrefetchView?.(item.view!)}
+        className={cn(
+          "group flex w-full items-center gap-1.5 rounded-[10px] px-2.5 text-left text-[12px] font-medium leading-none tracking-normal text-white transition-colors duration-75",
+          active
+            ? "bg-[#1E5FE6]"
+            : "bg-[#2C6EF2] hover:bg-[#3D7AF5]",
+        )}
+        style={{ height: PIN_HEIGHT }}
       >
-        <button
-          type="button"
-          aria-current={active ? "page" : undefined}
-          onClick={() => navigate(item.view!)}
-          onPointerEnter={() => onPrefetchView?.(item.view!)}
-          onFocus={() => onPrefetchView?.(item.view!)}
-          className={cn(
-            "flex h-8 w-full items-center gap-1.5 rounded-[7px] px-1.5 text-left text-[12px] font-medium leading-none tracking-normal transition-colors duration-75",
-            active ? "text-white" : "text-white/88 hover:bg-white/[0.04] hover:text-white",
-          )}
-          style={active ? { background: "#1F4FBF" } : undefined}
-        >
-          <Icon
-            className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white" : SUBMENU_ICON)}
-            strokeWidth={1.5}
-          />
-          <span className="min-w-0 flex-1 whitespace-nowrap">{item.label}</span>
-        </button>
-      </div>
+        <Icon className="h-3.5 w-3.5 shrink-0 text-white" strokeWidth={1.5} />
+        <span className="min-w-0 flex-1 whitespace-nowrap text-white">{item.label}</span>
+      </button>
     );
   }
 
@@ -413,7 +402,7 @@ export default function EnterprisePlatformSidebar({
     return (
       <div
         key={workspaceKey}
-        className="rounded-[10px] border"
+        className="relative rounded-[10px] border"
         style={{
           ...cardShellStyle(theme),
           paddingLeft: CARD_PAD_X,
@@ -421,6 +410,17 @@ export default function EnterprisePlatformSidebar({
           paddingBottom: isOpen ? 4 : 0,
         }}
       >
+        {/* Subtle left accent — workspace identity without coloured title text */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 rounded-[2px]"
+          style={{
+            width: 2,
+            height: "70%",
+            background: color,
+            opacity: 0.85,
+          }}
+        />
         {/* Compact section header — not a large control */}
         <button
           type="button"
@@ -444,10 +444,7 @@ export default function EnterprisePlatformSidebar({
             style={{ color, opacity: 0.82 }}
             strokeWidth={1.5}
           />
-          <span
-            className="min-w-0 flex-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em]"
-            style={{ color, opacity: 0.82 }}
-          >
+          <span className="min-w-0 flex-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-white">
             {section.label}
           </span>
           <Chevron
