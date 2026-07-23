@@ -407,47 +407,57 @@ function ExpandedPanel({
       aria-labelledby={workspace ? `${panelId}-${workspace.id}` : undefined}
       aria-hidden={!workspace}
       className={[
-        "workspace-panel relative overflow-hidden rounded-[28px] border border-white/[0.1] p-6 sm:rounded-[32px] sm:p-8 lg:p-10",
-        workspace ? "opacity-100" : "pointer-events-none opacity-0",
+        "workspace-panel relative overflow-hidden border border-white/[0.1] p-5 sm:p-7 lg:p-8",
+        "rounded-b-[22px] rounded-t-none sm:rounded-b-[26px] lg:rounded-b-[28px]",
+        workspace ? "" : "pointer-events-none",
       ].join(" ")}
+      style={
+        workspace
+          ? ({ "--tile-accent": workspace.accent } as CSSProperties)
+          : undefined
+      }
     >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.1] via-white/[0.03] to-transparent" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/35 to-transparent"
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.02] to-transparent" aria-hidden />
       <div
         className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full blur-3xl"
-        style={{ background: workspace ? workspace.accent : "transparent", opacity: 0.18 }}
+        style={{ background: workspace ? workspace.accent : "transparent", opacity: 0.16 }}
         aria-hidden
       />
 
       {workspace && Icon ? (
         <div className="relative">
-          <div className="flex items-start gap-4 sm:gap-5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-16 sm:w-16">
-              <Icon className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={1.5} aria-hidden />
+          <div className="flex items-start gap-3.5 sm:gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-12 sm:w-12 sm:rounded-[18px]">
+              <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
             </span>
             <div className="min-w-0 pt-0.5">
-              <h3 className="text-[1.35rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.65rem] lg:text-[1.85rem]">
+              <h3 className="text-[1.2rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.4rem] lg:text-[1.55rem]">
                 {workspace.title}
               </h3>
-              <p className="mt-2.5 max-w-3xl text-[14px] leading-relaxed text-white/58 sm:mt-3 sm:text-[16px] sm:leading-relaxed lg:text-[17px]">
+              <p className="mt-1.5 max-w-3xl text-[13.5px] leading-relaxed text-white/58 sm:mt-2 sm:text-[15px] sm:leading-relaxed lg:text-[16px]">
                 {workspace.description}
               </p>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2.5 sm:mt-8 sm:gap-3">
+          <div className="mt-5 flex flex-wrap gap-2 sm:mt-6 sm:gap-2.5">
             {workspace.capabilities.map((capability) => (
               <CapabilityChip key={capability.label} {...capability} />
             ))}
           </div>
 
           {workspace.footnote ? (
-            <p className="mt-6 max-w-4xl text-[13px] leading-relaxed text-white/45 sm:mt-7 sm:text-[14px]">
+            <p className="mt-5 max-w-4xl text-[12.5px] leading-relaxed text-white/45 sm:mt-6 sm:text-[13.5px]">
               {workspace.footnote}
             </p>
           ) : null}
         </div>
       ) : (
-        <div className="h-28" aria-hidden />
+        <div className="h-20" aria-hidden />
       )}
     </div>
   );
@@ -476,8 +486,8 @@ function WorkspaceTile({
       id={`${panelId}-${workspace.id}`}
       onClick={onToggle}
       className={[
-        "workspace-tile group relative flex min-h-[232px] flex-col overflow-hidden rounded-[28px] text-left sm:min-h-[248px] sm:rounded-[30px]",
-        "md:min-h-[268px] lg:min-h-[280px] lg:rounded-[28px] xl:min-h-[300px] xl:rounded-[24px] 2xl:min-h-[328px] 2xl:rounded-[28px]",
+        "workspace-tile group relative flex min-h-[154px] flex-col overflow-hidden rounded-[20px] text-left sm:min-h-[164px] sm:rounded-[22px]",
+        "md:min-h-[176px] lg:min-h-[184px] lg:rounded-[20px] xl:min-h-[198px] xl:rounded-[18px] 2xl:min-h-[216px] 2xl:rounded-[20px]",
         "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050816]",
         isOpen ? "is-open" : "",
       ].join(" ")}
@@ -494,25 +504,23 @@ function WorkspaceTile({
         <Atmosphere visual={workspace.visual} />
       </span>
 
-      <span className="relative z-[1] grid h-full grid-rows-[auto_auto_1fr] p-6 sm:p-7 md:p-7 lg:p-8 xl:p-4 2xl:p-5">
-        <span className="workspace-tile-icon flex h-16 w-16 items-center justify-center rounded-[22px] sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-[24px] md:h-[4.75rem] md:w-[4.75rem] lg:h-20 lg:w-20 lg:rounded-[26px] xl:h-14 xl:w-14 xl:rounded-[18px] 2xl:h-16 2xl:w-16 2xl:rounded-[22px]">
+      <span className="relative z-[1] flex h-full flex-col gap-2.5 p-4 sm:gap-2.5 sm:p-5 md:p-5 lg:gap-3 lg:p-5 xl:gap-2.5 xl:p-3.5 2xl:gap-3 2xl:p-4">
+        <span className="workspace-tile-icon flex h-[3.6rem] w-[3.6rem] items-center justify-center rounded-[16px] sm:h-16 sm:w-16 sm:rounded-[18px] md:h-[4.15rem] md:w-[4.15rem] lg:h-[4.4rem] lg:w-[4.4rem] lg:rounded-[20px] xl:h-12 xl:w-12 xl:rounded-[14px] 2xl:h-14 2xl:w-14 2xl:rounded-[16px]">
           <Icon
-            className="h-8 w-8 text-white sm:h-9 sm:w-9 md:h-10 md:w-10 lg:h-10 lg:w-10 xl:h-7 xl:w-7 2xl:h-8 2xl:w-8"
-            strokeWidth={1.35}
+            className="h-7 w-7 text-white sm:h-8 sm:w-8 md:h-9 md:w-9 lg:h-9 lg:w-9 xl:h-6 xl:w-6 2xl:h-7 2xl:w-7"
+            strokeWidth={1.4}
             aria-hidden
           />
         </span>
 
-        <span className="mt-5 grid grid-rows-[2.6rem_auto] gap-1.5 sm:mt-5 sm:grid-rows-[2.8rem_auto] sm:gap-2 md:mt-5 md:grid-rows-[3.4rem_2.2rem] md:gap-2 lg:mt-6 lg:grid-rows-[3.6rem_2.3rem] xl:mt-5 xl:grid-rows-[4.05rem_2.4rem] xl:gap-1.5 2xl:mt-5 2xl:grid-rows-[4.5rem_2.6rem] 2xl:gap-2">
-          <span className="self-start line-clamp-2 text-[1.2rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white sm:text-[1.28rem] md:line-clamp-2 md:text-[1.32rem] lg:text-[1.35rem] xl:line-clamp-3 xl:text-[15px] xl:leading-[1.35] 2xl:text-[16.5px] 2xl:leading-[1.35]">
+        <span className="flex min-h-0 flex-col gap-1 sm:gap-1 md:gap-1.5">
+          <span className="line-clamp-2 text-[1.05rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white sm:text-[1.12rem] md:text-[1.15rem] lg:text-[1.18rem] xl:line-clamp-3 xl:text-[13.5px] xl:leading-[1.3] 2xl:text-[15px] 2xl:leading-[1.3]">
             {workspace.title}
           </span>
-          <span className="self-start line-clamp-2 text-[13px] font-medium leading-snug tracking-[0.01em] text-white/40 sm:text-[13.5px] md:text-[13.5px] lg:text-[14px] xl:text-[11.5px] xl:leading-[1.35] 2xl:text-[12.5px]">
+          <span className="line-clamp-2 text-[12px] font-medium leading-snug tracking-[0.01em] text-white/40 sm:text-[12.5px] md:text-[12.5px] lg:text-[13px] xl:text-[10.5px] xl:leading-[1.3] 2xl:text-[11.5px]">
             {workspace.descriptor}
           </span>
         </span>
-
-        <span aria-hidden className="min-h-0" />
       </span>
     </button>
   );
@@ -529,7 +537,7 @@ export default function HomeWorkspaceExplorer() {
 
   return (
     <div
-      className="relative mt-10 sm:mt-11 lg:mt-12"
+      className="workspace-explorer relative mt-10 sm:mt-11 lg:mt-12"
       onKeyDown={(event) => {
         if (event.key === "Escape" && openId) {
           setOpenId(null);
@@ -548,7 +556,10 @@ export default function HomeWorkspaceExplorer() {
       <div
         role="tablist"
         aria-label="Unit311 Central workspaces"
-        className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 md:gap-5 lg:gap-5 xl:grid-cols-9 xl:gap-3 2xl:gap-3.5"
+        className={[
+          "relative grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5 md:grid-cols-3 md:gap-3.5 lg:gap-3.5 xl:grid-cols-9 xl:gap-2.5 2xl:gap-3",
+          openWorkspace ? "workspace-explorer-open" : "",
+        ].join(" ")}
       >
         {WORKSPACES.map((workspace) => (
           <WorkspaceTile
@@ -563,8 +574,8 @@ export default function HomeWorkspaceExplorer() {
 
       <div
         className={[
-          "grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          openWorkspace ? "mt-5 grid-rows-[1fr] sm:mt-6 lg:mt-7" : "mt-0 grid-rows-[0fr]",
+          "grid transition-[grid-template-rows] duration-150 ease-out",
+          openWorkspace ? "mt-0 grid-rows-[1fr]" : "mt-0 grid-rows-[0fr]",
         ].join(" ")}
       >
         <div className="min-h-0 overflow-hidden">
