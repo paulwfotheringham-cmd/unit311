@@ -1,5 +1,6 @@
 import HomeSectionTitle from "./HomeSectionTitle";
 import HomeWorkspaceExplorer from "./HomeWorkspaceExplorer";
+import HomeExecutiveDemoVideo from "./HomeExecutiveDemoVideo";
 import WorkspaceDemoLoopVideo from "./WorkspaceDemoLoopVideo";
 
 export default function HomeOfferPlatform() {
@@ -57,7 +58,9 @@ export default function HomeOfferPlatform() {
 
         <HomeWorkspaceExplorer />
 
-        <div id="platform" className="mt-12 scroll-mt-24 sm:mt-16 sm:scroll-mt-28 md:mt-20 lg:mt-24">
+        <HomeExecutiveDemoVideo />
+
+        <div id="platform" className="mt-16 scroll-mt-24 sm:mt-20 sm:scroll-mt-28 md:mt-24 lg:mt-28">
           <HomeSectionTitle>Unit311 Central Workspace</HomeSectionTitle>
 
           <div className="mt-8 w-full sm:mt-10">

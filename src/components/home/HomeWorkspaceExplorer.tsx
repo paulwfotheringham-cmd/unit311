@@ -494,8 +494,8 @@ function WorkspaceTile({
         <Atmosphere visual={workspace.visual} />
       </span>
 
-      <span className="relative z-[1] flex h-full flex-col p-6 sm:p-7 md:p-7 lg:p-8 xl:p-4 2xl:p-5">
-        <span className="workspace-tile-icon mb-auto flex h-16 w-16 items-center justify-center rounded-[22px] sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-[24px] md:h-[4.75rem] md:w-[4.75rem] lg:h-20 lg:w-20 lg:rounded-[26px] xl:h-14 xl:w-14 xl:rounded-[18px] 2xl:h-16 2xl:w-16 2xl:rounded-[22px]">
+      <span className="relative z-[1] grid h-full grid-rows-[auto_auto_1fr] p-6 sm:p-7 md:p-7 lg:p-8 xl:p-4 2xl:p-5">
+        <span className="workspace-tile-icon flex h-16 w-16 items-center justify-center rounded-[22px] sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-[24px] md:h-[4.75rem] md:w-[4.75rem] lg:h-20 lg:w-20 lg:rounded-[26px] xl:h-14 xl:w-14 xl:rounded-[18px] 2xl:h-16 2xl:w-16 2xl:rounded-[22px]">
           <Icon
             className="h-8 w-8 text-white sm:h-9 sm:w-9 md:h-10 md:w-10 lg:h-10 lg:w-10 xl:h-7 xl:w-7 2xl:h-8 2xl:w-8"
             strokeWidth={1.35}
@@ -503,14 +503,16 @@ function WorkspaceTile({
           />
         </span>
 
-        <span className="mt-10 block sm:mt-12 lg:mt-14 xl:mt-auto xl:pt-6">
-          <span className="block text-[1.2rem] font-semibold leading-[1.18] tracking-[-0.03em] text-white sm:text-[1.28rem] md:text-[1.32rem] lg:text-[1.4rem] xl:text-[15px] 2xl:text-[16.5px]">
+        <span className="mt-5 grid grid-rows-[2.6rem_auto] gap-1.5 sm:mt-5 sm:grid-rows-[2.8rem_auto] sm:gap-2 md:mt-5 md:grid-rows-[3.4rem_2.2rem] md:gap-2 lg:mt-6 lg:grid-rows-[3.6rem_2.3rem] xl:mt-5 xl:grid-rows-[4.05rem_2.4rem] xl:gap-1.5 2xl:mt-5 2xl:grid-rows-[4.5rem_2.6rem] 2xl:gap-2">
+          <span className="self-start line-clamp-2 text-[1.2rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white sm:text-[1.28rem] md:line-clamp-2 md:text-[1.32rem] lg:text-[1.35rem] xl:line-clamp-3 xl:text-[15px] xl:leading-[1.35] 2xl:text-[16.5px] 2xl:leading-[1.35]">
             {workspace.title}
           </span>
-          <span className="mt-2 block text-[13px] font-medium leading-snug tracking-[0.01em] text-white/40 sm:text-[13.5px] lg:text-[14px] xl:mt-1.5 xl:text-[11.5px] 2xl:text-[12.5px]">
+          <span className="self-start line-clamp-2 text-[13px] font-medium leading-snug tracking-[0.01em] text-white/40 sm:text-[13.5px] md:text-[13.5px] lg:text-[14px] xl:text-[11.5px] xl:leading-[1.35] 2xl:text-[12.5px]">
             {workspace.descriptor}
           </span>
         </span>
+
+        <span aria-hidden className="min-h-0" />
       </span>
     </button>
   );

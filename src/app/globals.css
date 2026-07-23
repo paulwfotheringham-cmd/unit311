@@ -1023,6 +1023,27 @@ svg {
   transition: opacity 320ms ease;
 }
 
+.exec-demo-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.exec-demo-video::-webkit-media-controls {
+  display: none !important;
+}
+
+.exec-demo-video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+.exec-demo-video::-webkit-media-controls-panel {
+  display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .workspace-tile,
   .workspace-tile-icon,
