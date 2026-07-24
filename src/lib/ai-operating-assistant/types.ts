@@ -99,12 +99,17 @@ export type AssistantChatRequest = {
 };
 
 export type AssistantStreamEvent =
-  | { type: "meta"; conversationId: string; title: string }
+  | { type: "meta"; conversationId: string; title: string; correlationId?: string }
   | { type: "delta"; text: string }
   | { type: "tool_call"; name: string; arguments: unknown }
   | { type: "tool_result"; name: string; result: unknown }
-  | { type: "done"; message: AssistantChatMessage; conversationId: string }
-  | { type: "error"; error: string; retryable?: boolean };
+  | {
+      type: "done";
+      message: AssistantChatMessage;
+      conversationId: string;
+      correlationId?: string;
+    }
+  | { type: "error"; error: string; stack?: string | null; retryable?: boolean };
 
 export type AssistantToolDefinition = {
   name: string;
