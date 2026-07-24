@@ -7,32 +7,26 @@ import {
   Banknote,
   Boxes,
   Briefcase,
-  CalendarDays,
   Cable,
   ChartColumn,
   ClipboardList,
   Cloud,
   Cpu,
   Database,
-  FileText,
   FolderKanban,
   Gauge,
-  Globe,
   GraduationCap,
   Handshake,
   HardDrive,
   KeyRound,
   LayoutDashboard,
-  Link2,
   Mail,
   MessageSquare,
   Package,
   Plug,
-  Share2,
   ShieldCheck,
   Target,
   Truck,
-  UserCog,
   Users,
   UsersRound,
   Wallet,
@@ -43,6 +37,8 @@ type Capability = {
   detail: string;
   icon: LucideIcon;
 };
+
+type FeaturedCapabilities = [Capability, Capability, Capability, Capability];
 
 type WorkspaceVisual =
   | "central"
@@ -63,70 +59,62 @@ type WorkspaceAccent = {
 type Workspace = {
   id: string;
   title: string;
-  descriptor: string;
+  subtitle: string;
   description: string;
   icon: LucideIcon;
   visual: WorkspaceVisual;
   accent: WorkspaceAccent;
-  capabilities: Capability[];
+  featuredCapabilities: FeaturedCapabilities;
+  additionalCapabilityCount: number;
 };
 
 const WORKSPACES: Workspace[] = [
   {
     id: "business-central",
     title: "Business Central",
-    descriptor: "Executive oversight",
+    subtitle: "Executive oversight",
     description:
       "Executive oversight, strategic planning, AI-powered decision making and enterprise-wide business management.",
     icon: LayoutDashboard,
     visual: "central",
     accent: { rgb: "59, 130, 246", label: "blue" },
-    capabilities: [
+    featuredCapabilities: [
       {
-        label: "Role-Based Executive Dashboard",
+        label: "Executive Dashboard",
         detail: "Live executive KPIs, operational insights and strategic reporting.",
         icon: Gauge,
       },
       {
         label: "Client Management",
-        detail: "Organisation-wide client visibility with relationships and account context.",
+        detail: "Organisation-wide client visibility with relationship context.",
         icon: Users,
       },
       {
-        label: "Sales Pipeline, Discovery & Client Onboarding",
+        label: "Sales & Onboarding",
         detail: "Move opportunities from discovery through structured onboarding.",
         icon: Handshake,
       },
       {
-        label: "Executive Project Dashboard",
+        label: "Project Portfolio",
         detail: "Portfolio health, delivery risk and progress in one executive view.",
         icon: ChartColumn,
       },
-      {
-        label: "Project Management",
-        detail: "Plan, track and govern delivery across internal and external work.",
-        icon: FolderKanban,
-      },
-      {
-        label: "Grant Management",
-        detail: "Track funding programmes, milestones and compliance obligations.",
-        icon: FileText,
-      },
     ],
+    additionalCapabilityCount: 2,
   },
   {
     id: "clients-projects",
     title: "Clients & Projects",
-    descriptor: "Relationships & delivery",
+    subtitle: "Relationships & delivery",
     description:
       "Manage client relationships, pipeline, onboarding and project delivery in one connected workspace.",
     icon: Briefcase,
     visual: "clients",
     accent: { rgb: "20, 184, 166", label: "teal" },
-    capabilities: [
+    featuredCapabilities: [
       {
         label: "Client Directory",
-        detail: "A structured directory of accounts, contacts and commercial history.",
+        detail: "Accounts, contacts and commercial history in one place.",
         icon: Users,
       },
       {
@@ -136,55 +124,36 @@ const WORKSPACES: Workspace[] = [
       },
       {
         label: "Client Onboarding",
-        detail: "Standardise kickoff so every new client starts with the same quality.",
+        detail: "Standardise kickoff so every new client starts consistently.",
         icon: ClipboardList,
       },
       {
-        label: "Internal Projects",
-        detail: "Coordinate internal initiatives with milestones, owners and status.",
+        label: "Project Delivery",
+        detail: "Govern internal and external work with shared visibility.",
         icon: FolderKanban,
       },
-      {
-        label: "External Projects",
-        detail: "Deliver client work with visibility from kickoff through close-out.",
-        icon: Briefcase,
-      },
-      {
-        label: "Quality Management",
-        detail: "Embed quality checks into delivery without slowing the team down.",
-        icon: ShieldCheck,
-      },
     ],
+    additionalCapabilityCount: 2,
   },
   {
     id: "financials",
     title: "Financials",
-    descriptor: "Finance & reporting",
+    subtitle: "Finance & reporting",
     description:
       "Run finance operations, banking connections and reporting from a unified financial command centre.",
     icon: Wallet,
     visual: "finance",
     accent: { rgb: "16, 185, 129", label: "emerald" },
-    capabilities: [
+    featuredCapabilities: [
       {
         label: "Financial Dashboard",
         detail: "Cash, runway and performance signals in a single operating picture.",
         icon: ChartColumn,
       },
       {
-        label: "General Ledger",
-        detail: "Maintain a clean ledger with journal control and account structure.",
-        icon: FileText,
-      },
-      {
-        label: "Accounts Receivable",
-        detail: "Track invoices, collections and customer balances with clarity.",
+        label: "Receivables & Payables",
+        detail: "Track invoices, collections and supplier obligations clearly.",
         icon: Banknote,
-      },
-      {
-        label: "Accounts Payable",
-        detail: "Control supplier obligations, approvals and payment timing.",
-        icon: Wallet,
       },
       {
         label: "Expenses",
@@ -197,17 +166,18 @@ const WORKSPACES: Workspace[] = [
         icon: Activity,
       },
     ],
+    additionalCapabilityCount: 2,
   },
   {
     id: "hr-people",
     title: "HR & People",
-    descriptor: "Workforce management",
+    subtitle: "Workforce management",
     description:
       "Coordinate workforce management across people, leave, performance, payroll and training.",
     icon: UsersRound,
     visual: "people",
     accent: { rgb: "168, 85, 247", label: "purple" },
-    capabilities: [
+    featuredCapabilities: [
       {
         label: "HR Dashboard",
         detail: "See headcount, capacity and people risk before it becomes friction.",
@@ -219,19 +189,9 @@ const WORKSPACES: Workspace[] = [
         icon: Users,
       },
       {
-        label: "Leave",
-        detail: "Balance time-off requests with operational coverage.",
-        icon: CalendarDays,
-      },
-      {
-        label: "Performance",
-        detail: "Track goals, reviews and development conversations.",
+        label: "Leave & Performance",
+        detail: "Balance time-off and track goals, reviews and development.",
         icon: Target,
-      },
-      {
-        label: "Recruitment",
-        detail: "Run hiring pipelines from requisition through offer.",
-        icon: UserCog,
       },
       {
         label: "Training",
@@ -239,20 +199,21 @@ const WORKSPACES: Workspace[] = [
         icon: GraduationCap,
       },
     ],
+    additionalCapabilityCount: 2,
   },
   {
     id: "technology-management",
     title: "Technology Management",
-    descriptor: "Technology estate",
+    subtitle: "Technology estate",
     description:
-      "Manage your organisation's complete technology estate — devices, software, SaaS, telecommunications, infrastructure, cloud, networks, domains, certificates, identity, security and technology assets.",
+      "Manage your organisation's complete technology estate across devices, software, infrastructure, cloud, identity and security.",
     icon: Cpu,
     visual: "technology",
     accent: { rgb: "56, 189, 248", label: "sky" },
-    capabilities: [
+    featuredCapabilities: [
       {
-        label: "Devices & Technology Assets",
-        detail: "Track hardware, assignments, warranties and the physical technology estate.",
+        label: "Devices & Assets",
+        detail: "Track hardware, assignments, warranties and the physical estate.",
         icon: HardDrive,
       },
       {
@@ -261,37 +222,28 @@ const WORKSPACES: Workspace[] = [
         icon: KeyRound,
       },
       {
-        label: "Telecommunications",
-        detail: "Manage mobile lines, carriers, plans and connectivity services.",
-        icon: Cable,
-      },
-      {
         label: "Infrastructure & Cloud",
         detail: "Operate servers, platforms and cloud footprint across providers.",
         icon: Cloud,
       },
       {
-        label: "Networks, Domains & Certificates",
-        detail: "Control DNS, domains, SSL certificates and network topology.",
-        icon: Globe,
-      },
-      {
         label: "Identity & Security",
-        detail: "Coordinate identity, access, compliance posture and security controls.",
+        detail: "Coordinate identity, access, certificates and security controls.",
         icon: ShieldCheck,
       },
     ],
+    additionalCapabilityCount: 8,
   },
   {
     id: "operations",
     title: "Operations",
-    descriptor: "Inventory & logistics",
+    subtitle: "Inventory & logistics",
     description:
       "Run day-to-day operations across assets, inventory, logistics movements and procurement.",
     icon: Package,
     visual: "operations",
     accent: { rgb: "6, 182, 212", label: "cyan" },
-    capabilities: [
+    featuredCapabilities: [
       {
         label: "Asset Register",
         detail: "Know what you own, where it sits and who is accountable.",
@@ -312,42 +264,28 @@ const WORKSPACES: Workspace[] = [
         detail: "Run purchasing with visibility from request to receipt.",
         icon: ClipboardList,
       },
-      {
-        label: "Supplier Coordination",
-        detail: "Keep vendor relationships and fulfilment status visible.",
-        icon: Handshake,
-      },
-      {
-        label: "Operational Flow",
-        detail: "Connect warehouse, field and office movements in one picture.",
-        icon: Activity,
-      },
     ],
+    additionalCapabilityCount: 2,
   },
   {
     id: "productivity",
     title: "Productivity & Collaboration",
-    descriptor: "Communication & knowledge",
+    subtitle: "Communication & knowledge",
     description:
       "Centralise communication, knowledge, calendar and support across your organisation.",
     icon: MessageSquare,
     visual: "productivity",
     accent: { rgb: "99, 102, 241", label: "indigo" },
-    capabilities: [
+    featuredCapabilities: [
       {
-        label: "Information Repository",
+        label: "Knowledge Repository",
         detail: "Keep institutional knowledge searchable and structured.",
         icon: Database,
       },
       {
-        label: "Email",
-        detail: "Operate shared inboxes with context tied to the business.",
+        label: "Email & Calendar",
+        detail: "Operate shared inboxes and schedules in business context.",
         icon: Mail,
-      },
-      {
-        label: "Calendar",
-        detail: "Coordinate schedules, meetings and operational availability.",
-        icon: CalendarDays,
       },
       {
         label: "Communications",
@@ -355,27 +293,23 @@ const WORKSPACES: Workspace[] = [
         icon: MessageSquare,
       },
       {
-        label: "Social",
-        detail: "Publish and monitor social presence from one place.",
-        icon: Share2,
-      },
-      {
-        label: "Support Desk / WhatsApp",
+        label: "Support Desk",
         detail: "Handle support conversations with clear ownership and history.",
         icon: Cable,
       },
     ],
+    additionalCapabilityCount: 2,
   },
   {
     id: "integrations",
     title: "Business Integrations",
-    descriptor: "Connect your existing systems",
+    subtitle: "Connect your existing systems",
     description:
       "Connect Unit311 Central to the specialist systems your business already relies on—integrate rather than replace.",
     icon: Plug,
     visual: "integrations",
     accent: { rgb: "100, 116, 139", label: "blue-grey" },
-    capabilities: [
+    featuredCapabilities: [
       {
         label: "Microsoft 365",
         detail: "Connect identity, documents and collaboration into the workspace.",
@@ -392,21 +326,12 @@ const WORKSPACES: Workspace[] = [
         icon: Target,
       },
       {
-        label: "Delivery Tools",
-        detail: "Link project and delivery tools into operating workflows.",
-        icon: FolderKanban,
-      },
-      {
-        label: "REST APIs",
+        label: "APIs & Integrations",
         detail: "Extend Unit311 Central through secure, composable interfaces.",
-        icon: Link2,
-      },
-      {
-        label: "Custom Integrations",
-        detail: "Wire specialist systems into one coherent operating layer.",
         icon: Plug,
       },
     ],
+    additionalCapabilityCount: 2,
   },
 ];
 
@@ -617,10 +542,9 @@ function TileAtmosphere({ visual }: { visual: WorkspaceVisual }) {
 
 function WorkspaceOverviewPanel({ workspace }: { workspace: Workspace }) {
   const Icon = workspace.icon;
-  const featured = workspace.capabilities.slice(0, 6);
 
   return (
-    <div className="relative min-h-[22rem] sm:min-h-[24rem] lg:min-h-[22rem]">
+    <div className="relative h-[22rem] sm:h-[23.5rem] lg:h-[22rem]">
       <div
         className="workspace-panel-atmosphere pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] lg:block"
         aria-hidden
@@ -628,41 +552,41 @@ function WorkspaceOverviewPanel({ workspace }: { workspace: Workspace }) {
         <PanelAtmosphere visual={workspace.visual} />
       </div>
 
-      <div className="relative z-[1] space-y-6 sm:space-y-8 lg:max-w-[62%] lg:space-y-9 xl:max-w-[58%]">
+      <div className="relative z-[1] flex h-full flex-col lg:max-w-[62%] xl:max-w-[58%]">
         <div className="flex items-start gap-3.5 sm:gap-5">
           <span className="workspace-hero-icon shrink-0">
             <Icon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" strokeWidth={1.45} aria-hidden />
           </span>
           <div className="min-w-0 pt-0.5 sm:pt-1">
-            <h3 className="text-[1.35rem] font-semibold tracking-[-0.035em] text-white sm:text-[1.65rem] lg:text-[2rem]">
+            <h3 className="truncate text-[1.35rem] font-semibold tracking-[-0.035em] text-white sm:text-[1.65rem] lg:text-[2rem]">
               {workspace.title}
             </h3>
-            <p className="workspace-panel-kicker mt-1.5 text-[13px] font-semibold tracking-[0.01em] sm:text-[14px]">
-              {workspace.descriptor}
+            <p className="workspace-panel-kicker mt-1.5 truncate text-[13px] font-semibold tracking-[0.01em] sm:text-[14px]">
+              {workspace.subtitle}
             </p>
-            <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-white/68 sm:mt-5 sm:text-[16px] sm:leading-relaxed">
+            <p className="mt-3 line-clamp-2 max-w-2xl text-[14px] leading-relaxed text-white/68 sm:mt-4 sm:text-[15px] sm:leading-relaxed">
               {workspace.description}
             </p>
           </div>
         </div>
 
-        <section>
+        <section className="mt-5 flex min-h-0 flex-1 flex-col sm:mt-6">
           <h4 className="workspace-panel-section-label text-[11px] font-semibold uppercase tracking-[0.14em]">
             Key capabilities
           </h4>
-          <ul className="mt-3 grid gap-2.5 sm:mt-4 sm:grid-cols-2 sm:gap-3">
-            {featured.map((capability) => {
+          <ul className="mt-3 grid min-h-0 flex-1 grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3" style={{ gridTemplateRows: "repeat(2, minmax(0, 1fr))" }}>
+            {workspace.featuredCapabilities.map((capability) => {
               const CapIcon = capability.icon;
               return (
-                <li key={capability.label} className="workspace-feature-card">
+                <li key={capability.label} className="workspace-feature-card !items-start">
                   <span className="workspace-feature-icon">
                     <CapIcon className="h-4 w-4" strokeWidth={1.55} aria-hidden />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-[13px] font-semibold leading-snug text-white/90 sm:text-[14px]">
+                    <span className="line-clamp-1 block text-[13px] font-semibold leading-snug text-white/90 sm:text-[14px]">
                       {capability.label}
                     </span>
-                    <span className="mt-1 block text-[12px] leading-relaxed text-white/48 sm:text-[13px]">
+                    <span className="mt-1 line-clamp-2 block text-[12px] leading-relaxed text-white/48 sm:text-[13px]">
                       {capability.detail}
                     </span>
                   </span>
@@ -670,6 +594,11 @@ function WorkspaceOverviewPanel({ workspace }: { workspace: Workspace }) {
               );
             })}
           </ul>
+          <p className="mt-3 h-4 text-[12px] leading-none text-white/42 sm:text-[13px]">
+            {workspace.additionalCapabilityCount > 0
+              ? `Plus ${workspace.additionalCapabilityCount} additional capabilities...`
+              : "\u00a0"}
+          </p>
         </section>
       </div>
     </div>
@@ -762,7 +691,7 @@ function WorkspaceTile({
             {workspace.title}
           </span>
           <span className="line-clamp-2 text-[12px] font-medium leading-snug tracking-[0.01em] text-white/40 sm:text-[12px] md:text-[12.5px] xl:text-[11px] xl:leading-[1.3] 2xl:text-[11.5px]">
-            {workspace.descriptor}
+            {workspace.subtitle}
           </span>
         </span>
       </span>

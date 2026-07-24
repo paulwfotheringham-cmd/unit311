@@ -1329,11 +1329,31 @@ svg {
 }
 
 .workspace-showcase-stage {
-  min-height: 32.5rem;
+  height: 34.5rem;
 }
 
 .workspace-showcase-shot {
-  height: 20.5rem;
+  height: 18.5rem;
+}
+
+.workspace-showcase-capability-grid {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  min-height: 14.5rem;
+}
+
+.workspace-showcase-capability-card {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.85rem 0.95rem;
+}
+
+.workspace-showcase-more {
+  height: 1rem;
 }
 
 .workspace-showcase-fade,
@@ -1352,21 +1372,34 @@ svg {
 
 @media (min-width: 640px) {
   .workspace-showcase-stage {
-    min-height: 34rem;
+    height: 33.5rem;
   }
 
   .workspace-showcase-shot {
-    height: 21.5rem;
+    height: 19.5rem;
+  }
+
+  .workspace-showcase-capability-grid {
+    min-height: 15.5rem;
+  }
+
+  .workspace-showcase-capability-card {
+    padding: 1rem 1.05rem;
   }
 }
 
 @media (min-width: 1024px) {
   .workspace-showcase-stage {
-    min-height: 29.5rem;
+    height: 28.5rem;
   }
 
   .workspace-showcase-shot {
-    height: 22rem;
+    height: 100%;
+    min-height: 22rem;
+  }
+
+  .workspace-showcase-capability-grid {
+    min-height: 0;
   }
 }
 
