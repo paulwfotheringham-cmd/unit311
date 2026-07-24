@@ -629,7 +629,16 @@ export default function InternalOperationsDashboard({
                   : "hidden"
               }
             >
-              <ProjectsWorkspace clients={clients} />
+              <ProjectsWorkspace
+                clients={clients}
+                scope={
+                  activeView === "projects-internal"
+                    ? "internal"
+                    : activeView === "projects-external"
+                      ? "external"
+                      : "all"
+                }
+              />
             </div>
           )}
 

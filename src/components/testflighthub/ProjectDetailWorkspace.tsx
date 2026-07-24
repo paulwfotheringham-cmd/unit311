@@ -9,6 +9,7 @@ import {
   getProjectDetail,
   type ProjectTask,
 } from "@/lib/project-detail-data";
+import { getPortfolioProject } from "@/lib/project-portfolios";
 import { formatProjectDate, type InternalProject } from "@/lib/projects-data";
 import { cn } from "@/lib/utils";
 import {
@@ -57,15 +58,18 @@ export default function ProjectDetailWorkspace({
 }: ProjectDetailWorkspaceProps) {
   const basePath = useInternalOperationsBasePath();
   const detail = useMemo(() => getProjectDetail(project.id), [project.id]);
+  const portfolio = useMemo(() => getPortfolioProject(project.id), [project.id]);
   const [tasks, setTasks] = useState<ProjectTask[]>(() => detail.tasks.map((task) => ({ ...task })));
 
   const client = useMemo(
     () =>
-      clients?.find(
-        (entry) =>
-          entry.id === project.clientId || entry.companyName === project.clientName,
-      ) ?? null,
-    [clients, project.clientId, project.clientName],
+      portfolio?.kind === "internal"
+        ? null
+        : clients?.find(
+            (entry) =>
+              entry.id === project.clientId || entry.companyName === project.clientName,
+          ) ?? null,
+    [clients, portfolio?.kind, project.clientId, project.clientName],
   );
 
   const folderId = detail.folderId ?? client?.filesFolderId ?? null;
@@ -114,13 +118,18 @@ export default function ProjectDetailWorkspace({
             </p>
             <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">{project.name}</h2>
             <p className="mt-1 text-sm text-white/50">
-              {project.clientName}
+              {portfolio?.kind === "internal"
+                ? `Department · ${portfolio.department ?? project.clientName}`
+                : project.clientName}
               {project.site ? ` · ${project.site}` : ""}
             </p>
             <p className="mt-1 text-xs text-white/40">
               Start {formatProjectDate(project.startDate)}
               {project.endDate ? ` · End ${formatProjectDate(project.endDate)}` : ""}
-              {project.operator ? ` · Lead ${project.operator}` : ""}
+              {(portfolio?.projectManager || project.operator)
+                ? ` · PM ${portfolio?.projectManager ?? project.operator}`
+                : ""}
+              {portfolio?.accountManager ? ` · AM ${portfolio.accountManager}` : ""}
             </p>
           </div>
         </div>
@@ -140,6 +149,95 @@ export default function ProjectDetailWorkspace({
           </span>
         )}
       </header>
+
+      {portfolio ? (
+        <section className={panelClassName()}>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
+                {portfolio.kind === "internal" ? "Budget" : "Contract value"}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                {portfolio.contractValueLabel ?? portfolio.budgetLabel}
+              </p>
+            </div>
+            {portfolio.kind === "external" ? (
+              <>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
+                    Delivery status
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {portfolio.deliveryStatus ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
+                    Billing status
+                  </p>
+                  <p className="mt-1 text-sm text-white/80">{portfolio.billingStatus ?? "—"}</p>
+                </div>
+              </>
+            ) : (
+              <div className="sm:col-span-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
+                  Stakeholders
+                </p>
+                <p className="mt-1 text-sm text-white/80">
+                  {(portfolio.stakeholders ?? []).join(" · ") || "—"}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">Progress</p>
+              <p className="mt-1 text-sm font-semibold tabular-nums text-white">
+                {project.progressPct.toFixed(0)}%
+              </p>
+            </div>
+          </div>
+
+          {portfolio.kind === "external" && portfolio.customerContacts?.length ? (
+            <p className="mt-4 text-xs text-white/50">
+              Customer contacts · {portfolio.customerContacts.join(" · ")}
+            </p>
+          ) : null}
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Milestones</h3>
+              <ul className="mt-2 space-y-2">
+                {portfolio.milestones.map((milestone) => (
+                  <li
+                    key={milestone.id}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-[#0b1524]/70 px-3 py-2 text-xs"
+                  >
+                    <span className="text-white/80">{milestone.name}</span>
+                    <span className="shrink-0 text-white/45">
+                      {formatProjectDate(milestone.dueDate)} · {milestone.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Risks</h3>
+              <ul className="mt-2 space-y-2">
+                {portfolio.risks.map((risk) => (
+                  <li
+                    key={risk.id}
+                    className="rounded-xl border border-white/10 bg-[#0b1524]/70 px-3 py-2 text-xs"
+                  >
+                    <p className="text-white/85">{risk.title}</p>
+                    <p className="mt-1 text-white/40">
+                      {risk.severity} · Owner {risk.owner}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className={panelClassName()}>
         <div className="flex flex-wrap items-center justify-between gap-3">

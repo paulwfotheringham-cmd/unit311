@@ -12,6 +12,14 @@ import {
   type InternalProject,
   type ProjectPhase,
 } from "@/lib/projects-data";
+import {
+  getPortfolioProject,
+  getProjectsForScope,
+  isPortfolioProjectId,
+  nextPortfolioMilestone,
+  topPortfolioRisk,
+  type ProjectPortfolioScope,
+} from "@/lib/project-portfolios";
 import { createInitialUsers } from "@/lib/user-management-data";
 import { cn } from "@/lib/utils";
 import { ExternalLink, FolderKanban, Loader2, Plus, Trash2, X } from "lucide-react";
@@ -50,6 +58,8 @@ function inputClassName() {
 
 type ProjectsWorkspaceProps = {
   clients: ManagedClient[];
+  /** Separates Internal vs External portfolios from shared field-ops API data. */
+  scope?: ProjectPortfolioScope;
 };
 
 function ProjectCard({
@@ -58,13 +68,20 @@ function ProjectCard({
   onDelete,
   busy,
   highlight,
+  scope,
 }: {
   project: InternalProject;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   busy: boolean;
   highlight?: boolean;
+  scope: ProjectPortfolioScope;
 }) {
+  const portfolio = getPortfolioProject(project.id);
+  const nextMilestone = portfolio ? nextPortfolioMilestone(portfolio) : null;
+  const topRisk = portfolio ? topPortfolioRisk(portfolio) : null;
+  const isInternal = scope === "internal" || portfolio?.kind === "internal";
+
   return (
     <article
       role="button"
@@ -84,7 +101,13 @@ function ProjectCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-semibold text-white">{project.name}</h3>
-          <p className="mt-1 text-xs text-white/45">{project.clientName}</p>
+          <p className="mt-1 text-xs text-white/45">
+            {isInternal
+              ? portfolio?.department
+                ? `Department · ${portfolio.department}`
+                : project.clientName
+              : project.clientName}
+          </p>
         </div>
         <button
           type="button"
@@ -104,18 +127,58 @@ function ProjectCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-white/45">
         {project.region && <span>{project.region}</span>}
-        {project.operator && (
+        {(portfolio?.projectManager || project.operator) && (
           <>
             {project.region && <span aria-hidden>·</span>}
-            <span>{project.operator}</span>
+            <span>PM {portfolio?.projectManager ?? project.operator}</span>
           </>
         )}
+        {!isInternal && portfolio?.accountManager ? (
+          <>
+            <span aria-hidden>·</span>
+            <span>AM {portfolio.accountManager}</span>
+          </>
+        ) : null}
       </div>
+
+      {portfolio ? (
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+          <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-white/70">
+            {isInternal ? "Budget" : "Contract"}{" "}
+            {portfolio.contractValueLabel ?? portfolio.budgetLabel}
+          </span>
+          {!isInternal && portfolio.deliveryStatus ? (
+            <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-white/70">
+              Delivery · {portfolio.deliveryStatus}
+            </span>
+          ) : null}
+          {!isInternal && portfolio.billingStatus ? (
+            <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-white/55">
+              Billing · {portfolio.billingStatus}
+            </span>
+          ) : null}
+          {isInternal && portfolio.stakeholders?.length ? (
+            <span className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-white/55">
+              Stakeholders · {portfolio.stakeholders.slice(0, 2).join(", ")}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <p className="mt-2 text-xs text-white/50">
         Start {formatProjectDate(project.startDate)}
         {project.endDate ? ` · End ${formatProjectDate(project.endDate)}` : ""}
       </p>
+
+      {nextMilestone ? (
+        <p className="mt-2 text-[11px] text-white/45">
+          Next milestone · {nextMilestone.name} ({formatProjectDate(nextMilestone.dueDate)})
+        </p>
+      ) : null}
+
+      {topRisk ? (
+        <p className="mt-1 text-[11px] text-amber-200/80">Risk · {topRisk.title}</p>
+      ) : null}
 
       {project.phase === "live" && (
         <div className="mt-4">
@@ -151,7 +214,10 @@ function ProjectCard({
   );
 }
 
-export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
+export default function ProjectsWorkspace({
+  clients,
+  scope = "all",
+}: ProjectsWorkspaceProps) {
   const searchParams = useSearchParams();
   const clientFilterId = searchParams.get("clientId");
   const projectFilterId = searchParams.get("projectId");
@@ -159,6 +225,7 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
     () => clients.find((client) => client.id === clientFilterId) ?? null,
     [clients, clientFilterId],
   );
+  const usesPortfolio = scope === "internal" || scope === "external";
 
   const [projects, setProjects] = useState<InternalProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,27 +242,34 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
 
   const liveProjects = useMemo(() => {
     const live = projects.filter((project) => project.phase === "live");
-    if (!filteredClient) return live;
+    if (!filteredClient || scope === "internal") return live;
     return live.filter(
       (project) =>
         project.clientId === filteredClient.id ||
         project.clientName === filteredClient.companyName,
     );
-  }, [filteredClient, projects]);
+  }, [filteredClient, projects, scope]);
 
   const upcomingProjects = useMemo(() => {
     const upcoming = projects.filter((project) => project.phase === "upcoming");
-    if (!filteredClient) return upcoming;
+    if (!filteredClient || scope === "internal") return upcoming;
     return upcoming.filter(
       (project) =>
         project.clientId === filteredClient.id ||
         project.clientName === filteredClient.companyName,
     );
-  }, [filteredClient, projects]);
+  }, [filteredClient, projects, scope]);
 
   const loadProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSelectedProjectId(null);
+
+    if (usesPortfolio) {
+      setProjects(getProjectsForScope(scope));
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/projects", { cache: "no-store" });
@@ -208,7 +282,7 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope, usesPortfolio]);
 
   useEffect(() => {
     startTransition(() => {
@@ -237,7 +311,11 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
   }
 
   async function handleCreateProject() {
-    if (!draft.name.trim() || !draft.clientName.trim()) {
+    if (!draft.name.trim()) {
+      setError("Project name is required");
+      return;
+    }
+    if (scope !== "internal" && !draft.clientName.trim()) {
       setError("Project name and client are required");
       return;
     }
@@ -246,6 +324,33 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
     setError(null);
 
     try {
+      if (usesPortfolio) {
+        const now = new Date().toISOString();
+        const created: InternalProject = {
+          id: `${scope}-${crypto.randomUUID()}`,
+          name: draft.name.trim(),
+          clientId: scope === "internal" ? null : draft.clientId || null,
+          clientName:
+            scope === "internal"
+              ? draft.region.trim() || "Internal programme"
+              : draft.clientName.trim(),
+          site: draft.site.trim() || null,
+          region: draft.region.trim() || null,
+          operator: draft.operator.trim() || null,
+          phase: draft.phase,
+          startDate: draft.startDate || null,
+          endDate: draft.endDate || null,
+          progressPct: draft.phase === "live" ? 5 : 0,
+          notes: draft.notes.trim() || null,
+          createdAt: now,
+          updatedAt: now,
+        };
+        setProjects((current) => [created, ...current]);
+        setDraft(createBlankProjectInput());
+        setShowForm(false);
+        return;
+      }
+
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -283,6 +388,12 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
     setError(null);
 
     try {
+      if (usesPortfolio || isPortfolioProjectId(id)) {
+        setProjects((current) => current.filter((project) => project.id !== id));
+        setSelectedProjectId((current) => (current === id ? null : current));
+        return;
+      }
+
       const response = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       const data = await readApiJson<{ ok?: boolean; error?: string }>(response);
       if (!response.ok) throw new Error(data.error ?? "Failed to delete project");
@@ -294,6 +405,27 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
       setBusy(false);
     }
   }
+
+  const headerCopy =
+    scope === "internal"
+      ? {
+          eyebrow: "Internal programmes",
+          title: "Internal Projects",
+          description:
+            "Projects that run our business — people, finance, technology, security and corporate systems. No client delivery.",
+        }
+      : scope === "external"
+        ? {
+            eyebrow: "Customer delivery",
+            title: "External Projects",
+            description:
+              "Customer implementation and transformation programmes with commercial status, account ownership and delivery risk.",
+          }
+        : {
+            eyebrow: "Field Operations",
+            title: "Projects",
+            description: "Live field work and scheduled mobilisations across client accounts.",
+          };
 
   if (selectedProject) {
     return (
@@ -308,7 +440,7 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
   return (
     <div className="space-y-6">
       <DashboardTopTilesBar
-        storageKey="unit311-projects-dashboard-tiles"
+        storageKey={`unit311-projects-dashboard-tiles-${scope}`}
         catalog={PROJECTS_DASHBOARD_TILES}
         defaultLayout={DEFAULT_PROJECTS_TILE_LAYOUT}
         title="Project key details"
@@ -316,7 +448,7 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
       />
       <ProjectsDashboardStrip projects={projects} clients={clients} />
 
-      {filteredClient && (
+      {filteredClient && scope !== "internal" && (
         <p className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-2 text-sm text-amber-100">
           Showing projects for <span className="font-semibold">{filteredClient.companyName}</span>
         </p>
@@ -325,12 +457,10 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-            Field Operations
+            {headerCopy.eyebrow}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-white">Projects</h2>
-          <p className="mt-2 text-sm text-white/55">
-            Live field work and scheduled mobilisations across client accounts.
-          </p>
+          <h2 className="mt-1 text-lg font-semibold text-white">{headerCopy.title}</h2>
+          <p className="mt-2 text-sm text-white/55">{headerCopy.description}</p>
         </div>
         <button
           type="button"
@@ -358,26 +488,50 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
               <input
                 value={draft.name}
                 onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-                placeholder="Site survey, inspection…"
+                placeholder={
+                  scope === "internal"
+                    ? "Internal programme name…"
+                    : scope === "external"
+                      ? "Customer delivery programme…"
+                      : "Site survey, inspection…"
+                }
                 className={inputClassName()}
               />
             </div>
 
-            <div>
-              <FieldLabel>Client</FieldLabel>
-              <select
-                value={draft.clientId}
-                onChange={(event) => handleClientChange(event.target.value)}
-                className={inputClassName()}
-              >
-                <option value="">Select client…</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.companyName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {scope === "internal" ? (
+              <div>
+                <FieldLabel>Sponsoring department</FieldLabel>
+                <input
+                  value={draft.region}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      region: event.target.value,
+                      clientName: event.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Human Resources"
+                  className={inputClassName()}
+                />
+              </div>
+            ) : (
+              <div>
+                <FieldLabel>Client</FieldLabel>
+                <select
+                  value={draft.clientId}
+                  onChange={(event) => handleClientChange(event.target.value)}
+                  className={inputClassName()}
+                >
+                  <option value="">Select client…</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.companyName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <FieldLabel>Phase</FieldLabel>
@@ -409,18 +563,22 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
               />
             </div>
 
-            <div>
-              <FieldLabel>Region</FieldLabel>
-              <input
-                value={draft.region}
-                onChange={(event) => setDraft((current) => ({ ...current, region: event.target.value }))}
-                placeholder="Region or hub"
-                className={inputClassName()}
-              />
-            </div>
+            {scope !== "internal" ? (
+              <div>
+                <FieldLabel>Region</FieldLabel>
+                <input
+                  value={draft.region}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, region: event.target.value }))
+                  }
+                  placeholder="Region or hub"
+                  className={inputClassName()}
+                />
+              </div>
+            ) : null}
 
             <div>
-              <FieldLabel>Lead operator</FieldLabel>
+              <FieldLabel>Project manager</FieldLabel>
               <select
                 value={draft.operator}
                 onChange={(event) =>
@@ -514,11 +672,13 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    scope={scope}
                     onOpen={setSelectedProjectId}
                     onDelete={handleDeleteProject}
                     busy={busy}
                     highlight={
                       !!filteredClient &&
+                      scope !== "internal" &&
                       (project.clientId === filteredClient.id ||
                         project.clientName === filteredClient.companyName)
                     }
@@ -552,11 +712,13 @@ export default function ProjectsWorkspace({ clients }: ProjectsWorkspaceProps) {
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    scope={scope}
                     onOpen={setSelectedProjectId}
                     onDelete={handleDeleteProject}
                     busy={busy}
                     highlight={
                       !!filteredClient &&
+                      scope !== "internal" &&
                       (project.clientId === filteredClient.id ||
                         project.clientName === filteredClient.companyName)
                     }
