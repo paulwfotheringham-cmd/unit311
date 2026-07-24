@@ -10,7 +10,7 @@ export const EXTERNAL_USER_PORTAL_MODULES = [
   "Documents",
   "Communications",
   "Calendar",
-  "Engineering",
+  "Technology Management",
   "Training",
   "QMS",
 ] as const;

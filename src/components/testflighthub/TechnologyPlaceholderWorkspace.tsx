@@ -77,7 +77,7 @@ const MODULE_COPY: Record<
       "Backups, monitoring, identity, VPN, SSO",
       "Disaster recovery runbooks",
     ],
-    integrations: ["Financials", "Operations", "Engineering (read-only context)", "Service Desk"],
+    integrations: ["Financials", "Operations", "Service Desk"],
   },
   reports: {
     title: "Reports",

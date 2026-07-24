@@ -80,12 +80,12 @@ export const DOMAIN_GO_LIVE_CATALOG: readonly DomainGoLiveCatalogEntry[] = [
   },
   {
     id: "DOM-11",
-    name: "Assets",
+    name: "Operations",
     moduleIds: ["MOD-090", "MOD-091", "MOD-092"],
   },
   {
     id: "DOM-12",
-    name: "Business Productivity",
+    name: "Productivity & Collaboration",
     moduleIds: [
       "MOD-100",
       "MOD-101",
@@ -106,7 +106,7 @@ export const DOMAIN_GO_LIVE_CATALOG: readonly DomainGoLiveCatalogEntry[] = [
   { id: "DOM-14", name: "QMS", moduleIds: ["MOD-130"] },
   {
     id: "DOM-15",
-    name: "Engineering",
+    name: "Technology Management",
     moduleIds: ["MOD-140", "MOD-141"],
   },
   {
@@ -314,5 +314,5 @@ export const DOMAIN_SHARED_IMPLEMENTATION_WARNINGS: Readonly<
   "DOM-06":
     "Projects views still share one implementation until Internal/External behaviour is differentiated.",
   "DOM-15":
-    "Engineering views still share one implementation until Dashboard vs Resource Breakdown differ.",
+    "Technology Management views still share implementations until Devices, Software, and Infrastructure modules diverge.",
 };

@@ -60,8 +60,8 @@ export const MODULE_GO_LIVE_CATALOG: readonly Omit<ModuleGoLiveEntry, "status">[
   { id: "MOD-121", module: "Staff Training" },
   { id: "MOD-122", module: "QMS Training" },
   { id: "MOD-130", module: "Quality Management System" },
-  { id: "MOD-140", module: "Engineering Dashboard" },
-  { id: "MOD-141", module: "Engineer / Resource Breakdown" },
+  { id: "MOD-140", module: "Technology Dashboard" },
+  { id: "MOD-141", module: "Technology Resource Breakdown" },
   { id: "MOD-150", module: "Website Management" },
   { id: "MOD-151", module: "Testing" },
   { id: "MOD-152", module: "Telemetry" },
@@ -110,7 +110,7 @@ const MODULE_GO_LIVE_DEFAULT_STATUS: Readonly<Partial<Record<string, ModuleGoLiv
   "MOD-121": "Ready",
   "MOD-122": "Ready",
   "MOD-130": "Ready",
-  /** MOD-600/610/620 program wave — Engineering, Website Management, External Client Access. */
+  /** MOD-600/610/620 program wave — Technology Management, Website Management, External Client Access. */
   "MOD-140": "Ready",
   "MOD-141": "Ready",
   "MOD-150": "Ready",

@@ -7,28 +7,28 @@ import {
   Banknote,
   Boxes,
   Briefcase,
-  Building2,
   CalendarDays,
   ChartColumn,
-  ClipboardCheck,
   ClipboardList,
+  Cloud,
+  Cpu,
   FolderKanban,
   Gauge,
   GraduationCap,
   Handshake,
+  HardDrive,
+  KeyRound,
   LayoutDashboard,
   Mail,
   MessageSquare,
   Package,
   Plug,
-  Scale,
   ShieldCheck,
   Target,
   Truck,
   Users,
   UsersRound,
   Wallet,
-  Wrench,
 } from "lucide-react";
 
 type Feature = {
@@ -296,92 +296,51 @@ const WORKSPACES: Workspace[] = [
     ),
   },
   {
-    id: "engineering",
-    title: "Engineering",
-    shortTitle: "Engineering",
-    descriptor: "Engineering delivery",
+    id: "technology-management",
+    title: "Technology Management",
+    shortTitle: "Technology",
+    descriptor: "Technology estate",
     description:
-      "Plan capacity, deliver technical projects and protect quality so engineering commitments stay realistic and deliverable.",
-    accentRgb: "249, 115, 22",
-    icon: Wrench,
+      "Manage the organisation's complete technology estate — devices, software, SaaS, telecoms, infrastructure, cloud, networks, domains, certificates, identity, security and technology assets.",
+    accentRgb: "56, 189, 248",
+    icon: Cpu,
     features: [
       {
-        label: "Engineering Dashboard",
-        detail: "Utilisation, delivery risk and priorities in one view.",
-        icon: Gauge,
+        label: "Devices & Assets",
+        detail: "Track hardware, assignments and the physical estate.",
+        icon: HardDrive,
       },
       {
-        label: "Capacity Planning",
-        detail: "Forecast capacity against upcoming commitments.",
-        icon: ChartColumn,
+        label: "Software & SaaS",
+        detail: "Govern licences, subscriptions and renewals.",
+        icon: KeyRound,
       },
       {
-        label: "Engineering Projects",
-        detail: "Govern technical delivery from scope through release.",
-        icon: FolderKanban,
+        label: "Infrastructure & Cloud",
+        detail: "Operate platforms, servers and cloud footprint.",
+        icon: Cloud,
       },
       {
-        label: "Quality & Compliance",
-        detail: "Protect standards with structured quality controls.",
+        label: "Identity & Security",
+        detail: "Coordinate access, domains, certificates and security.",
         icon: ShieldCheck,
       },
     ],
     shot: (
-      <ShotShell title="Engineering · Delivery" accentRgb="249, 115, 22">
-        <KpiRow items={["Utilisation", "Projects", "Risk"]} accentRgb="249, 115, 22" />
+      <ShotShell title="Technology Management · Estate" accentRgb="56, 189, 248">
+        <KpiRow items={["Devices", "Licences", "Alerts"]} accentRgb="56, 189, 248" />
         <ListRows
-          rows={["Platform release", "API hardening", "Capacity plan", "Compliance review"]}
-          accentRgb="249, 115, 22"
+          rows={["Laptop fleet", "SaaS renewals", "SSL certificates", "Identity reviews"]}
+          accentRgb="56, 189, 248"
         />
       </ShotShell>
     ),
   },
   {
-    id: "corporate-operations",
-    title: "Corporate Operations",
-    shortTitle: "Corporate",
-    descriptor: "Governance & compliance",
-    description:
-      "Govern company structure, contracts, licences and advisory relationships from one controlled corporate workspace.",
-    accentRgb: "148, 163, 184",
-    icon: Scale,
-    features: [
-      {
-        label: "Company Information",
-        detail: "Centralise legal entity details and records.",
-        icon: Building2,
-      },
-      {
-        label: "Contracts",
-        detail: "Store and govern agreements with clear ownership.",
-        icon: ClipboardCheck,
-      },
-      {
-        label: "Licences & Assets",
-        detail: "Track software estate and renewal exposure.",
-        icon: Package,
-      },
-      {
-        label: "Compliance",
-        detail: "Coordinate governance obligations and evidence.",
-        icon: ShieldCheck,
-      },
-    ],
-    shot: (
-      <ShotShell title="Corporate Operations · Governance" accentRgb="148, 163, 184">
-        <KpiRow items={["Entities", "Contracts", "Licences"]} accentRgb="148, 163, 184" />
-        <ListRows
-          rows={["Board resolutions", "Vendor contracts", "Licence renewals", "Policy register"]}
-          accentRgb="148, 163, 184"
-        />
-      </ShotShell>
-    ),
-  },
-  {
-    id: "assets-logistics",
-    title: "Assets & Logistics",
+    id: "operations",
+    title: "Operations",
     shortTitle: "Operations",
-    descriptor: "Inventory & procurement",
+    descriptor: "Inventory & logistics",
     description:
       "Track assets, inventory movements and procurement so operations always know what is owned, where it sits and what needs ordering.",
     accentRgb: "6, 182, 212",
@@ -409,7 +368,7 @@ const WORKSPACES: Workspace[] = [
       },
     ],
     shot: (
-      <ShotShell title="Assets & Logistics · Operations" accentRgb="6, 182, 212">
+      <ShotShell title="Operations · Inventory & Logistics" accentRgb="6, 182, 212">
         <KpiRow items={["Assets", "Stock", "Orders"]} accentRgb="6, 182, 212" />
         <ListRows
           rows={["Field kits", "Warehouse transfer", "PO approvals", "Inbound shipments"]}
@@ -528,7 +487,7 @@ export default function AboutWorkspaceShowcase() {
         <div
           role="tablist"
           aria-label="Unit311 Central workspaces"
-          className="workspace-showcase-tabs flex gap-1.5 overflow-x-auto border-b border-white/10 p-2.5 sm:gap-2 sm:p-3 md:grid md:grid-cols-5 lg:grid-cols-9 lg:overflow-visible"
+          className="workspace-showcase-tabs flex gap-1.5 overflow-x-auto border-b border-white/10 p-2.5 sm:gap-2 sm:p-3 md:grid md:grid-cols-4 lg:grid-cols-8 lg:overflow-visible"
         >
           {WORKSPACES.map((workspace) => {
             const Icon = workspace.icon;

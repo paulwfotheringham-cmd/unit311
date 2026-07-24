@@ -20,7 +20,7 @@ export const technologyManagementDashboardConfig: WorkspaceDashboardConfig = {
           workspaceName: "Technology Management",
           eyebrow: "Internal technology estate",
           description:
-            "Operate devices, software, telecommunications and infrastructure across the organisation — distinct from Engineering product delivery.",
+            "Operate devices, software, SaaS, telecommunications, infrastructure, cloud, networks, domains, certificates, identity, security and technology assets across the organisation.",
         },
       ],
     },

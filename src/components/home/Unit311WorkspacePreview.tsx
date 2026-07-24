@@ -87,15 +87,19 @@ const DEMO_NAV_SECTIONS: InternalNavSection[] = [
     ],
   },
   {
-    label: "Inventory Management",
-    items: [{ label: "Assets", icon: "Package", view: "assets" }],
+    label: "Operations",
+    items: [
+      { label: "Assets", icon: "Package", view: "assets" },
+      { label: "Inventory", icon: "Layers", view: "inventory-management" },
+      { label: "Logistics", icon: "Truck", view: "logistics" },
+      { label: "Procurement", icon: "Receipt", view: "procurement" },
+    ],
   },
   {
-    label: "Business Productivity",
+    label: "Productivity & Collaboration",
     items: [
       { label: "Files", icon: "FolderOpen", view: "files-internal" },
       { label: "Calendar", icon: "CalendarDays", view: "calendar" },
-      { label: "Logistics", icon: "Truck", view: "logistics" },
       { label: "Email", icon: "Mail", view: "info-email" },
       { label: "Messaging", icon: "MessageSquare", view: "messaging" },
       { label: "Communications", icon: "Video", view: "communications" },

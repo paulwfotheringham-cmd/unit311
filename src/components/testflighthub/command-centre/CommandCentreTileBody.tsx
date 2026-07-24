@@ -161,6 +161,7 @@ function activityKindClass(kind: string) {
     case "Finance":
       return "text-emerald-300";
     case "Engineering":
+    case "Technology":
       return "text-cyan-300";
     case "Training":
       return "text-amber-300";
@@ -223,7 +224,7 @@ function useCommandCentreHrefs() {
       financials: getInternalNavHref("financials", basePath),
       expenses: getInternalNavHref("expenses", basePath),
       crm: getInternalNavHref("crm", basePath),
-      engineering: getInternalNavHref("engineering-dashboard", basePath),
+      engineering: getInternalNavHref("technology-dashboard", basePath),
       quality: getInternalNavHref("quality-management", basePath),
       inventory: getInternalNavHref("inventory-management", basePath),
       moduleGoLive: getInternalNavHref("module-go-live", basePath),
@@ -1096,10 +1097,10 @@ export function CommandCentreTileBody({ type }: { type: CommandCentreTileType })
     case "engineering":
       return (
         <MetricCard
-          label="Engineering"
+          label="Technology"
           value={liveProjects}
           href={hrefs.engineering}
-          hint="Live delivery projects as capacity proxy"
+          hint="Live delivery projects as technology estate proxy"
         />
       );
 

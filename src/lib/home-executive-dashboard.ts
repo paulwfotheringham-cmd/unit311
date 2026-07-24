@@ -52,7 +52,7 @@ export type ActivityEntry = {
     | "Employee"
     | "CRM"
     | "Finance"
-    | "Engineering"
+    | "Technology"
     | "Training"
     | "Inventory"
     | "HR";

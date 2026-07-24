@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import {
   BarChart3,
+  Cpu,
   Database,
   MessageSquare,
   Package,
@@ -45,10 +46,16 @@ const MODULES = [
     accent: "#a78bfa",
   },
   {
-    title: "Inventory / Asset Mgmt / Logistics",
-    description: "Stock, assets, shipments, and movement across locations.",
+    title: "Technology Management",
+    description: "Devices, software, SaaS, infrastructure, cloud, security and technology assets.",
+    icon: Cpu,
+    accent: "#38bdf8",
+  },
+  {
+    title: "Operations",
+    description: "Assets, inventory, logistics movements, and procurement.",
     icon: Package,
-    accent: "#fbbf24",
+    accent: "#22d3ee",
   },
   {
     title: "Data Repository",

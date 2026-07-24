@@ -269,10 +269,10 @@ export const COMMAND_CENTRE_TILE_CATALOG: CommandCentreTileDefinition[] = [
   },
   {
     type: "engineering",
-    title: "Engineering",
-    description: "Engineering capacity snapshot.",
+    title: "Technology",
+    description: "Technology estate snapshot.",
     defaultSize: "sm",
-    accent: "border-cyan-400/20",
+    accent: "border-sky-400/20",
   },
   {
     type: "quality",

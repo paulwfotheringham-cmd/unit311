@@ -33,7 +33,7 @@ export const executiveHomeDashboardConfig: WorkspaceDashboardConfig = {
           title: "AI Executive Summary",
           headline: "Good morning Philip.",
           summary:
-            "Sales pipeline increased 8% this week. Cash position remains healthy. Two contracts require approval. One project is behind schedule. Engineering capacity reaches 91% next Tuesday. Three invoices are overdue.",
+            "Sales pipeline increased 8% this week. Cash position remains healthy. Two contracts require approval. One project is behind schedule. Technology renewals need attention next Tuesday. Three invoices are overdue.",
           nextUp: "Review the ABC Medical proposal before 2pm.",
           metrics: [
             { label: "Needs attention", value: "6" },
@@ -119,8 +119,8 @@ export const executiveHomeDashboardConfig: WorkspaceDashboardConfig = {
             },
             {
               id: "ha4",
-              title: "Engineering capacity peak Tuesday",
-              detail: "Projected utilisation 91%. New commitments should wait until Wednesday.",
+              title: "Technology renewals due Tuesday",
+              detail: "Three SaaS and certificate renewals land Tuesday. Review before committing spend.",
               severity: "info",
               timeLabel: "Next week",
             },
@@ -223,8 +223,8 @@ export const executiveHomeDashboardConfig: WorkspaceDashboardConfig = {
             },
             {
               id: "tq5",
-              title: "Confirm Tuesday engineering allocation",
-              meta: "Capacity · 91% projected",
+              title: "Confirm Tuesday technology renewals",
+              meta: "Technology · 3 renewals due",
               status: "Deadline",
               dueLabel: "Monday",
               priority: "medium",

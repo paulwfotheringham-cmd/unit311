@@ -7,27 +7,27 @@ import {
   Banknote,
   Boxes,
   Briefcase,
-  Building2,
   CalendarDays,
   Cable,
   ChartColumn,
-  ClipboardCheck,
   ClipboardList,
   Cloud,
+  Cpu,
   Database,
   FileText,
   FolderKanban,
   Gauge,
+  Globe,
   GraduationCap,
   Handshake,
   HardDrive,
+  KeyRound,
   LayoutDashboard,
   Link2,
   Mail,
   MessageSquare,
   Package,
   Plug,
-  Scale,
   Share2,
   ShieldCheck,
   Target,
@@ -36,7 +36,6 @@ import {
   Users,
   UsersRound,
   Wallet,
-  Wrench,
 } from "lucide-react";
 
 type Capability = {
@@ -50,9 +49,8 @@ type WorkspaceVisual =
   | "clients"
   | "finance"
   | "people"
-  | "engineering"
-  | "corporate"
-  | "assets"
+  | "technology"
+  | "operations"
   | "productivity"
   | "integrations";
 
@@ -243,97 +241,55 @@ const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    id: "engineering",
-    title: "Engineering",
-    descriptor: "Engineering delivery",
+    id: "technology-management",
+    title: "Technology Management",
+    descriptor: "Technology estate",
     description:
-      "Plan capacity, deliver engineering projects and maintain technical quality and compliance.",
-    icon: Wrench,
-    visual: "engineering",
-    accent: { rgb: "249, 115, 22", label: "orange" },
+      "Manage your organisation's complete technology estate — devices, software, SaaS, telecommunications, infrastructure, cloud, networks, domains, certificates, identity, security and technology assets.",
+    icon: Cpu,
+    visual: "technology",
+    accent: { rgb: "56, 189, 248", label: "sky" },
     capabilities: [
       {
-        label: "Engineering Dashboard",
-        detail: "Utilisation, delivery risk and technical priorities in one view.",
-        icon: Gauge,
-      },
-      {
-        label: "Resource Utilisation",
-        detail: "Balance people load across active and upcoming commitments.",
-        icon: Activity,
-      },
-      {
-        label: "Capacity Planning",
-        detail: "Forecast capacity so commitments stay realistic and deliverable.",
-        icon: ChartColumn,
-      },
-      {
-        label: "Engineering Projects",
-        detail: "Govern technical delivery from scope through release.",
-        icon: FolderKanban,
-      },
-      {
-        label: "Technical Documentation",
-        detail: "Keep specs, decisions and system knowledge accessible.",
-        icon: FileText,
-      },
-      {
-        label: "Quality & Compliance",
-        detail: "Protect standards with structured quality and compliance controls.",
-        icon: ShieldCheck,
-      },
-    ],
-  },
-  {
-    id: "corporate-operations",
-    title: "Corporate Operations",
-    descriptor: "Governance & compliance",
-    description:
-      "Govern company structure, contracts, compliance and advisory relationships from one place.",
-    icon: Scale,
-    visual: "corporate",
-    accent: { rgb: "148, 163, 184", label: "slate" },
-    capabilities: [
-      {
-        label: "Company Information",
-        detail: "Centralise legal entity details and corporate records.",
-        icon: Building2,
-      },
-      {
-        label: "Cap Table & Shareholder Management",
-        detail: "Maintain ownership structure with audit-ready clarity.",
-        icon: ChartColumn,
-      },
-      {
-        label: "Software & Licences",
-        detail: "Track software estate, renewals and licence exposure.",
+        label: "Devices & Technology Assets",
+        detail: "Track hardware, assignments, warranties and the physical technology estate.",
         icon: HardDrive,
       },
       {
-        label: "Contracts",
-        detail: "Store and govern commercial agreements with clear ownership.",
-        icon: FileText,
+        label: "Software & SaaS",
+        detail: "Govern licences, subscriptions, renewals and application inventory.",
+        icon: KeyRound,
       },
       {
-        label: "Bank Accounts",
-        detail: "Keep banking relationships and account references organised.",
-        icon: Banknote,
+        label: "Telecommunications",
+        detail: "Manage mobile lines, carriers, plans and connectivity services.",
+        icon: Cable,
       },
       {
-        label: "Compliance & Governance",
-        detail: "Coordinate governance obligations and compliance evidence.",
+        label: "Infrastructure & Cloud",
+        detail: "Operate servers, platforms and cloud footprint across providers.",
+        icon: Cloud,
+      },
+      {
+        label: "Networks, Domains & Certificates",
+        detail: "Control DNS, domains, SSL certificates and network topology.",
+        icon: Globe,
+      },
+      {
+        label: "Identity & Security",
+        detail: "Coordinate identity, access, compliance posture and security controls.",
         icon: ShieldCheck,
       },
     ],
   },
   {
-    id: "assets-logistics",
-    title: "Assets & Logistics",
-    descriptor: "Inventory & procurement",
+    id: "operations",
+    title: "Operations",
+    descriptor: "Inventory & logistics",
     description:
-      "Track assets, inventory, logistics movements and procurement across your organisation.",
+      "Run day-to-day operations across assets, inventory, logistics movements and procurement.",
     icon: Package,
-    visual: "assets",
+    visual: "operations",
     accent: { rgb: "6, 182, 212", label: "cyan" },
     capabilities: [
       {
@@ -355,6 +311,16 @@ const WORKSPACES: Workspace[] = [
         label: "Procurement",
         detail: "Run purchasing with visibility from request to receipt.",
         icon: ClipboardList,
+      },
+      {
+        label: "Supplier Coordination",
+        detail: "Keep vendor relationships and fulfilment status visible.",
+        icon: Handshake,
+      },
+      {
+        label: "Operational Flow",
+        detail: "Connect warehouse, field and office movements in one picture.",
+        icon: Activity,
       },
     ],
   },
@@ -427,7 +393,7 @@ const WORKSPACES: Workspace[] = [
       },
       {
         label: "Delivery Tools",
-        detail: "Link project and engineering tools into operating workflows.",
+        detail: "Link project and delivery tools into operating workflows.",
         icon: FolderKanban,
       },
       {
@@ -509,30 +475,20 @@ function PanelAtmosphere({ visual }: { visual: WorkspaceVisual }) {
           <path d="M160 128L200 170M260 126L220 170M140 194L198 184M280 192L222 184" stroke="currentColor" strokeWidth="1" />
         </svg>
       );
-    case "engineering":
+    case "technology":
       return (
         <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
-          <path d="M50 60H370M50 110H370M50 160H370M50 210H370M50 260H370" stroke="currentColor" strokeWidth="0.8" />
-          <path d="M90 40V280M150 40V280M210 40V280M270 40V280M330 40V280" stroke="currentColor" strokeWidth="0.8" />
-          <path d="M80 250L170 100L250 190L340 120" stroke="currentColor" strokeWidth="1.3" />
-          <rect x="140" y="70" width="70" height="48" rx="6" stroke="currentColor" strokeWidth="1.1" />
-          <circle cx="170" cy="100" r="3.5" fill="currentColor" />
+          <rect x="70" y="70" width="90" height="60" rx="12" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="180" y="70" width="90" height="60" rx="12" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="290" y="70" width="60" height="60" rx="12" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="110" y="170" width="200" height="80" rx="14" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M115 100H180M270 100H290M160 130V170M225 130V170M320 130V190" stroke="currentColor" strokeWidth="1" />
+          <circle cx="160" cy="210" r="4" fill="currentColor" />
+          <circle cx="210" cy="210" r="4" fill="currentColor" />
+          <circle cx="260" cy="210" r="4" fill="currentColor" />
         </svg>
       );
-    case "corporate":
-      return (
-        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
-          <rect x="90" y="70" width="90" height="180" rx="10" stroke="currentColor" strokeWidth="1.1" />
-          <rect x="210" y="100" width="110" height="150" rx="10" stroke="currentColor" strokeWidth="1.1" />
-          <rect x="112" y="100" width="28" height="18" rx="3" stroke="currentColor" strokeWidth="1" />
-          <rect x="112" y="136" width="28" height="18" rx="3" stroke="currentColor" strokeWidth="1" />
-          <rect x="112" y="172" width="28" height="18" rx="3" stroke="currentColor" strokeWidth="1" />
-          <rect x="236" y="130" width="40" height="24" rx="4" stroke="currentColor" strokeWidth="1" />
-          <rect x="236" y="174" width="40" height="24" rx="4" stroke="currentColor" strokeWidth="1" />
-          <path d="M70 260H350" stroke="currentColor" strokeWidth="1" />
-        </svg>
-      );
-    case "assets":
+    case "operations":
       return (
         <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
           <rect x="70" y="180" width="70" height="50" rx="8" stroke="currentColor" strokeWidth="1.1" />
@@ -620,21 +576,16 @@ function TileAtmosphere({ visual }: { visual: WorkspaceVisual }) {
           <circle cx="80" cy="128" r="7.5" fill="currentColor" opacity="0.2" />
         </svg>
       );
-    case "engineering":
+    case "technology":
       return (
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
-          <path d="M24 48H136M24 78H136M24 108H136M24 138H136M24 168H136" stroke="currentColor" strokeWidth="0.8" opacity="0.08" />
-          <path d="M34 164L78 72L118 128L142 92" stroke="currentColor" strokeWidth="1.2" opacity="0.22" />
+          <rect x="28" y="56" width="40" height="28" rx="7" stroke="currentColor" strokeWidth="1" opacity="0.18" />
+          <rect x="78" y="56" width="40" height="28" rx="7" stroke="currentColor" strokeWidth="1" opacity="0.14" />
+          <rect x="48" y="112" width="64" height="40" rx="10" stroke="currentColor" strokeWidth="1" opacity="0.2" />
+          <path d="M48 70H78M68 84V112M98 84V112" stroke="currentColor" strokeWidth="1" opacity="0.14" />
         </svg>
       );
-    case "corporate":
-      return (
-        <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
-          <rect x="28" y="48" width="44" height="132" rx="8" stroke="currentColor" strokeWidth="1" opacity="0.14" />
-          <rect x="80" y="68" width="52" height="112" rx="8" stroke="currentColor" strokeWidth="1" opacity="0.1" />
-        </svg>
-      );
-    case "assets":
+    case "operations":
       return (
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
           <rect x="30" y="148" width="36" height="28" rx="5" fill="currentColor" opacity="0.1" />
@@ -849,7 +800,7 @@ export default function HomeWorkspaceExplorer() {
       <div
         role="tablist"
         aria-label="Unit311 Central workspaces"
-        className="workspace-explorer-open relative grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 md:gap-3 lg:grid-cols-3 lg:gap-3 xl:grid-cols-5 xl:gap-2.5 2xl:grid-cols-9 2xl:gap-2.5"
+        className="workspace-explorer-open relative grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 md:gap-3 lg:grid-cols-4 lg:gap-3 xl:grid-cols-4 xl:gap-2.5 2xl:grid-cols-8 2xl:gap-2.5"
       >
         {WORKSPACES.map((workspace) => (
           <WorkspaceTile
