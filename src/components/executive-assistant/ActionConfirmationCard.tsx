@@ -5,6 +5,7 @@
 
 export type ActionConfirmationView = {
   planId: string;
+  correlationId?: string;
   title: string;
   summary: string;
   status: string;

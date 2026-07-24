@@ -137,6 +137,7 @@ export function toPlanViewerModel(plan: PlanningGoal): PlanViewerModel {
 /** Minimal Phase 1 confirmation shape (avoid importing UI into lib). */
 export type LegacyActionConfirmationLike = {
   planId: string;
+  correlationId?: string;
   title: string;
   summary: string;
   status: string;
@@ -208,6 +209,7 @@ export function actionConfirmationToPlanViewer(
   return {
     kind: "action_plan",
     planId: confirmation.planId,
+    correlationId: confirmation.correlationId,
     goal: confirmation.aiRequest || confirmation.title,
     title: confirmation.title,
     status: confirmation.status,

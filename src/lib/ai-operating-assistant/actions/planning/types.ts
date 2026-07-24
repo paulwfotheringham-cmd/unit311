@@ -211,6 +211,7 @@ export type PlanningExecutionSummary = {
 export type PlanViewerModel = {
   kind: "goal_plan" | "action_plan";
   planId: string;
+  correlationId?: string;
   goal: string;
   title: string;
   status: string;
