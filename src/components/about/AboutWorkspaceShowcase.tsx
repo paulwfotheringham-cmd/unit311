@@ -1,0 +1,644 @@
+"use client";
+
+import { useId, useState, type CSSProperties, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Activity,
+  Banknote,
+  Boxes,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  ChartColumn,
+  ClipboardCheck,
+  ClipboardList,
+  FolderKanban,
+  Gauge,
+  GraduationCap,
+  Handshake,
+  LayoutDashboard,
+  Mail,
+  MessageSquare,
+  Package,
+  Plug,
+  Scale,
+  ShieldCheck,
+  Target,
+  Truck,
+  Users,
+  UsersRound,
+  Wallet,
+  Wrench,
+} from "lucide-react";
+
+type Feature = {
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+};
+
+type Workspace = {
+  id: string;
+  title: string;
+  shortTitle: string;
+  descriptor: string;
+  description: string;
+  accentRgb: string;
+  icon: LucideIcon;
+  features: Feature[];
+  shot: ReactNode;
+};
+
+function ShotShell({
+  title,
+  accentRgb,
+  children,
+}: {
+  title: string;
+  accentRgb: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="workspace-shot relative h-full w-full overflow-hidden rounded-[18px] border border-white/12 bg-[#070b14]"
+      style={{ "--ws-accent-rgb": accentRgb } as CSSProperties}
+    >
+      <div className="flex h-9 items-center gap-2 border-b border-white/10 bg-[#0b1220] px-3">
+        <span className="flex gap-1.5" aria-hidden>
+          <span className="h-2.5 w-2.5 rounded-full bg-[#f87171]/80" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#fbbf24]/80" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#34d399]/80" />
+        </span>
+        <span className="ml-2 truncate text-[11px] font-medium text-white/45">{title}</span>
+      </div>
+      <div className="grid h-[calc(100%-2.25rem)] grid-cols-[52px_minmax(0,1fr)]">
+        <div className="border-r border-white/8 bg-[#080e1a] px-1.5 py-2">
+          <div className="mx-auto mb-2 h-7 w-7 rounded-lg bg-[rgba(var(--ws-accent-rgb),0.22)]" />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="mx-auto mb-1.5 h-6 w-6 rounded-md bg-white/[0.04]"
+              style={i === 0 ? { background: `rgba(${accentRgb}, 0.28)` } : undefined}
+            />
+          ))}
+        </div>
+        <div className="min-h-0 overflow-hidden bg-[linear-gradient(180deg,#0a1220_0%,#070b14_100%)] p-3 sm:p-3.5">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KpiRow({ items, accentRgb }: { items: string[]; accentRgb: string }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {items.map((item, index) => (
+        <div
+          key={item}
+          className="rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2"
+          style={
+            index === 0
+              ? { borderColor: `rgba(${accentRgb}, 0.35)`, background: `rgba(${accentRgb}, 0.08)` }
+              : undefined
+          }
+        >
+          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35">{item}</p>
+          <p className="mt-1 text-[15px] font-semibold text-white/90">{index === 0 ? "94%" : index === 1 ? "128" : "12"}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ListRows({ rows, accentRgb }: { rows: string[]; accentRgb: string }) {
+  return (
+    <div className="mt-2.5 space-y-1.5">
+      {rows.map((row, index) => (
+        <div
+          key={row}
+          className="flex items-center justify-between rounded-lg border border-white/8 bg-white/[0.025] px-2.5 py-1.5"
+        >
+          <span className="truncate text-[11px] text-white/70">{row}</span>
+          <span
+            className="ml-2 h-1.5 w-10 rounded-full"
+            style={{ background: `rgba(${accentRgb}, ${index === 0 ? 0.7 : 0.28})` }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const WORKSPACES: Workspace[] = [
+  {
+    id: "business-central",
+    title: "Business Central",
+    shortTitle: "Central",
+    descriptor: "Executive oversight",
+    description:
+      "Run the organisation from one executive command centre — priorities, delivery health and strategic decisions in a single operating picture.",
+    accentRgb: "59, 130, 246",
+    icon: LayoutDashboard,
+    features: [
+      {
+        label: "Role-Based Executive Dashboard",
+        detail: "Live KPIs and strategic reporting tailored to leadership roles.",
+        icon: Gauge,
+      },
+      {
+        label: "Client Management",
+        detail: "Organisation-wide client visibility with relationship context.",
+        icon: Users,
+      },
+      {
+        label: "Sales & Onboarding",
+        detail: "Move opportunities from discovery through structured onboarding.",
+        icon: Handshake,
+      },
+      {
+        label: "Project Portfolio",
+        detail: "Track delivery risk, progress and ownership across the portfolio.",
+        icon: FolderKanban,
+      },
+    ],
+    shot: (
+      <ShotShell title="Business Central · Executive Dashboard" accentRgb="59, 130, 246">
+        <KpiRow items={["Health", "Pipeline", "At risk"]} accentRgb="59, 130, 246" />
+        <ListRows
+          rows={["Board pack review", "Enterprise renewals", "Capacity planning", "Grant milestones"]}
+          accentRgb="59, 130, 246"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "clients-projects",
+    title: "Clients & Projects",
+    shortTitle: "Clients",
+    descriptor: "Relationships & delivery",
+    description:
+      "Connect commercial pipeline and project delivery so account teams and delivery leads stay aligned from first conversation to close-out.",
+    accentRgb: "20, 184, 166",
+    icon: Briefcase,
+    features: [
+      {
+        label: "Client Directory",
+        detail: "Accounts, contacts and commercial history in one place.",
+        icon: Users,
+      },
+      {
+        label: "CRM & Pipeline",
+        detail: "Advance opportunities with clear stage ownership.",
+        icon: Handshake,
+      },
+      {
+        label: "Client Onboarding",
+        detail: "Standardise kickoff so every client starts consistently.",
+        icon: ClipboardList,
+      },
+      {
+        label: "Project Delivery",
+        detail: "Govern internal and external work with shared visibility.",
+        icon: FolderKanban,
+      },
+    ],
+    shot: (
+      <ShotShell title="Clients & Projects · Pipeline" accentRgb="20, 184, 166">
+        <KpiRow items={["Active", "Won", "Onboarding"]} accentRgb="20, 184, 166" />
+        <ListRows
+          rows={["Northwind renewal", "Helios discovery", "Atlas onboarding", "Orbit delivery"]}
+          accentRgb="20, 184, 166"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "financials",
+    title: "Financials",
+    shortTitle: "Finance",
+    descriptor: "Finance & reporting",
+    description:
+      "Operate cash, receivables, payables and reporting from a unified financial command centre without spreadsheet sprawl.",
+    accentRgb: "16, 185, 129",
+    icon: Wallet,
+    features: [
+      {
+        label: "Financial Dashboard",
+        detail: "Cash, runway and performance in one operating picture.",
+        icon: ChartColumn,
+      },
+      {
+        label: "Receivables & Payables",
+        detail: "Track customer balances and supplier obligations clearly.",
+        icon: Banknote,
+      },
+      {
+        label: "Expenses",
+        detail: "Capture spend with policy-aware review workflows.",
+        icon: ClipboardList,
+      },
+      {
+        label: "Reporting",
+        detail: "Produce board-ready financial reporting faster.",
+        icon: Activity,
+      },
+    ],
+    shot: (
+      <ShotShell title="Financials · Cash & Reporting" accentRgb="16, 185, 129">
+        <KpiRow items={["Cash", "AR", "AP"]} accentRgb="16, 185, 129" />
+        <ListRows
+          rows={["Treasury summary", "Open invoices", "Supplier approvals", "Monthly close"]}
+          accentRgb="16, 185, 129"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "hr-people",
+    title: "HR & People",
+    shortTitle: "People",
+    descriptor: "Workforce management",
+    description:
+      "Coordinate people operations across headcount, leave, performance and training before capacity issues become operational friction.",
+    accentRgb: "168, 85, 247",
+    icon: UsersRound,
+    features: [
+      {
+        label: "HR Dashboard",
+        detail: "See headcount, capacity and people risk early.",
+        icon: Gauge,
+      },
+      {
+        label: "Leave & Attendance",
+        detail: "Balance time-off with operational coverage.",
+        icon: CalendarDays,
+      },
+      {
+        label: "Performance",
+        detail: "Track goals, reviews and development conversations.",
+        icon: Target,
+      },
+      {
+        label: "Training",
+        detail: "Keep workforce skills current with structured learning.",
+        icon: GraduationCap,
+      },
+    ],
+    shot: (
+      <ShotShell title="HR & People · Workforce" accentRgb="168, 85, 247">
+        <KpiRow items={["Headcount", "Leave", "Training"]} accentRgb="168, 85, 247" />
+        <ListRows
+          rows={["Open requisitions", "Leave requests", "Review cycle", "Mandatory training"]}
+          accentRgb="168, 85, 247"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "engineering",
+    title: "Engineering",
+    shortTitle: "Engineering",
+    descriptor: "Engineering delivery",
+    description:
+      "Plan capacity, deliver technical projects and protect quality so engineering commitments stay realistic and deliverable.",
+    accentRgb: "249, 115, 22",
+    icon: Wrench,
+    features: [
+      {
+        label: "Engineering Dashboard",
+        detail: "Utilisation, delivery risk and priorities in one view.",
+        icon: Gauge,
+      },
+      {
+        label: "Capacity Planning",
+        detail: "Forecast capacity against upcoming commitments.",
+        icon: ChartColumn,
+      },
+      {
+        label: "Engineering Projects",
+        detail: "Govern technical delivery from scope through release.",
+        icon: FolderKanban,
+      },
+      {
+        label: "Quality & Compliance",
+        detail: "Protect standards with structured quality controls.",
+        icon: ShieldCheck,
+      },
+    ],
+    shot: (
+      <ShotShell title="Engineering · Delivery" accentRgb="249, 115, 22">
+        <KpiRow items={["Utilisation", "Projects", "Risk"]} accentRgb="249, 115, 22" />
+        <ListRows
+          rows={["Platform release", "API hardening", "Capacity plan", "Compliance review"]}
+          accentRgb="249, 115, 22"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "corporate-operations",
+    title: "Corporate Operations",
+    shortTitle: "Corporate",
+    descriptor: "Governance & compliance",
+    description:
+      "Govern company structure, contracts, licences and advisory relationships from one controlled corporate workspace.",
+    accentRgb: "148, 163, 184",
+    icon: Scale,
+    features: [
+      {
+        label: "Company Information",
+        detail: "Centralise legal entity details and records.",
+        icon: Building2,
+      },
+      {
+        label: "Contracts",
+        detail: "Store and govern agreements with clear ownership.",
+        icon: ClipboardCheck,
+      },
+      {
+        label: "Licences & Assets",
+        detail: "Track software estate and renewal exposure.",
+        icon: Package,
+      },
+      {
+        label: "Compliance",
+        detail: "Coordinate governance obligations and evidence.",
+        icon: ShieldCheck,
+      },
+    ],
+    shot: (
+      <ShotShell title="Corporate Operations · Governance" accentRgb="148, 163, 184">
+        <KpiRow items={["Entities", "Contracts", "Licences"]} accentRgb="148, 163, 184" />
+        <ListRows
+          rows={["Board resolutions", "Vendor contracts", "Licence renewals", "Policy register"]}
+          accentRgb="148, 163, 184"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "assets-logistics",
+    title: "Assets & Logistics",
+    shortTitle: "Operations",
+    descriptor: "Inventory & procurement",
+    description:
+      "Track assets, inventory movements and procurement so operations always know what is owned, where it sits and what needs ordering.",
+    accentRgb: "6, 182, 212",
+    icon: Package,
+    features: [
+      {
+        label: "Asset Register",
+        detail: "Know what you own and who is accountable.",
+        icon: Boxes,
+      },
+      {
+        label: "Inventory",
+        detail: "Monitor stock levels across locations.",
+        icon: Package,
+      },
+      {
+        label: "Logistics",
+        detail: "Coordinate shipments and operational flow.",
+        icon: Truck,
+      },
+      {
+        label: "Procurement",
+        detail: "Run purchasing from request through receipt.",
+        icon: ClipboardList,
+      },
+    ],
+    shot: (
+      <ShotShell title="Assets & Logistics · Operations" accentRgb="6, 182, 212">
+        <KpiRow items={["Assets", "Stock", "Orders"]} accentRgb="6, 182, 212" />
+        <ListRows
+          rows={["Field kits", "Warehouse transfer", "PO approvals", "Inbound shipments"]}
+          accentRgb="6, 182, 212"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "productivity",
+    title: "Productivity & Collaboration",
+    shortTitle: "Collaborate",
+    descriptor: "Communication & knowledge",
+    description:
+      "Centralise messaging, knowledge, calendar and support so organisational work stays visible, searchable and coordinated.",
+    accentRgb: "99, 102, 241",
+    icon: MessageSquare,
+    features: [
+      {
+        label: "Knowledge Repository",
+        detail: "Keep institutional knowledge structured and searchable.",
+        icon: LayoutDashboard,
+      },
+      {
+        label: "Email & Calendar",
+        detail: "Operate shared inboxes and schedules in context.",
+        icon: Mail,
+      },
+      {
+        label: "Communications",
+        detail: "Connect teams through organised channels.",
+        icon: MessageSquare,
+      },
+      {
+        label: "Support Desk",
+        detail: "Handle support conversations with clear ownership.",
+        icon: Handshake,
+      },
+    ],
+    shot: (
+      <ShotShell title="Productivity · Collaboration" accentRgb="99, 102, 241">
+        <KpiRow items={["Unread", "Meetings", "Tickets"]} accentRgb="99, 102, 241" />
+        <ListRows
+          rows={["Ops channel", "Shared inbox", "Weekly standup", "Support queue"]}
+          accentRgb="99, 102, 241"
+        />
+      </ShotShell>
+    ),
+  },
+  {
+    id: "integrations",
+    title: "Business Integrations",
+    shortTitle: "Integrations",
+    descriptor: "Connect your systems",
+    description:
+      "Connect Unit311 Central to the specialist systems you already rely on — integrate data and workflows without rip-and-replace.",
+    accentRgb: "100, 116, 139",
+    icon: Plug,
+    features: [
+      {
+        label: "Microsoft 365",
+        detail: "Connect identity, documents and collaboration.",
+        icon: Mail,
+      },
+      {
+        label: "Finance Systems",
+        detail: "Sync accounting platforms into one operating layer.",
+        icon: Wallet,
+      },
+      {
+        label: "CRM Platforms",
+        detail: "Keep commercial systems and pipeline data current.",
+        icon: Target,
+      },
+      {
+        label: "APIs & Webhooks",
+        detail: "Extend Unit311 Central with secure interfaces.",
+        icon: Plug,
+      },
+    ],
+    shot: (
+      <ShotShell title="Business Integrations · Connections" accentRgb="100, 116, 139">
+        <KpiRow items={["Connected", "Syncing", "Alerts"]} accentRgb="100, 116, 139" />
+        <ListRows
+          rows={["Microsoft 365", "Xero", "Salesforce", "Custom webhook"]}
+          accentRgb="100, 116, 139"
+        />
+      </ShotShell>
+    ),
+  },
+];
+
+export default function AboutWorkspaceShowcase() {
+  const [activeId, setActiveId] = useState(WORKSPACES[0].id);
+  const labelId = useId();
+  const active = WORKSPACES.find((workspace) => workspace.id === activeId) ?? WORKSPACES[0];
+  const ActiveIcon = active.icon;
+
+  return (
+    <section aria-labelledby={labelId} className="workspace-showcase">
+      <div className="max-w-3xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#93c5fd] sm:text-xs sm:tracking-[0.28em]">
+          Product
+        </p>
+        <h2 id={labelId} className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          Explore the Unit311 Central Workspace
+        </h2>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-white/68 sm:text-[16px]">
+          Select a workspace to see how Unit311 Central brings that part of the business into one
+          intelligent operating environment.
+        </p>
+      </div>
+
+      <div className="workspace-showcase-shell mt-6 overflow-hidden rounded-[24px] border border-white/12 bg-white/[0.035] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur-md sm:mt-7 sm:rounded-[28px]">
+        <div
+          role="tablist"
+          aria-label="Unit311 Central workspaces"
+          className="grid grid-cols-3 gap-2 border-b border-white/10 p-3 md:grid-cols-5 lg:grid-cols-9 lg:gap-2 lg:p-3.5"
+        >
+          {WORKSPACES.map((workspace) => {
+            const Icon = workspace.icon;
+            const isActive = workspace.id === active.id;
+            return (
+              <button
+                key={workspace.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveId(workspace.id)}
+                className={[
+                  "workspace-showcase-card relative flex min-h-[4.75rem] flex-col items-start gap-2 overflow-hidden rounded-2xl border px-2.5 py-2.5 text-left transition-[border-color,box-shadow,background,transform] duration-150 ease-out sm:min-h-[5.25rem] sm:px-3 sm:py-3",
+                  isActive ? "is-active" : "border-white/10 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.05]",
+                ].join(" ")}
+                style={{ "--ws-accent-rgb": workspace.accentRgb } as CSSProperties}
+              >
+                <span className="workspace-showcase-card-accent" aria-hidden />
+                <span
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10"
+                  style={{
+                    color: `rgb(${workspace.accentRgb})`,
+                    background: `rgba(${workspace.accentRgb}, 0.14)`,
+                  }}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.6} aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[11px] font-semibold leading-tight text-white sm:text-[12px]">
+                    {workspace.shortTitle}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[10px] text-white/40 sm:text-[11px]">
+                    {workspace.descriptor}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="workspace-showcase-stage border-t border-white/[0.04] p-4 sm:p-5 lg:p-6">
+          <div
+            key={active.id}
+            className="workspace-showcase-fade grid h-full grid-rows-[auto_minmax(0,1fr)] gap-4"
+            style={{ "--ws-accent-rgb": active.accentRgb } as CSSProperties}
+          >
+            <div className="flex items-start gap-3 sm:gap-4">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 sm:h-12 sm:w-12"
+                style={{
+                  color: `rgb(${active.accentRgb})`,
+                  background: `rgba(${active.accentRgb}, 0.14)`,
+                  boxShadow: `0 0 28px rgba(${active.accentRgb}, 0.22)`,
+                }}
+              >
+                <ActiveIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[1.2rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.4rem]">
+                  {active.title}
+                </h3>
+                <p className="mt-1 max-w-3xl text-[13.5px] leading-relaxed text-white/62 sm:text-[14.5px]">
+                  {active.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-5">
+              <div className="workspace-showcase-shot mx-auto w-full max-w-[560px] lg:mx-0 lg:max-w-none">
+                {active.shot}
+              </div>
+
+              <div className="flex min-h-0 flex-col">
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-[0.14em]"
+                  style={{ color: `rgba(${active.accentRgb}, 0.85)` }}
+                >
+                  Key capabilities
+                </p>
+                <ul className="mt-3 grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+                  {active.features.map((feature) => {
+                    const FeatureIcon = feature.icon;
+                    return (
+                      <li
+                        key={feature.label}
+                        className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:p-4"
+                      >
+                        <span
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10"
+                          style={{
+                            color: `rgb(${active.accentRgb})`,
+                            background: `rgba(${active.accentRgb}, 0.12)`,
+                          }}
+                        >
+                          <FeatureIcon className="h-4 w-4" strokeWidth={1.6} aria-hidden />
+                        </span>
+                        <p className="mt-3 text-[13px] font-semibold leading-snug text-white/90 sm:text-[13.5px]">
+                          {feature.label}
+                        </p>
+                        <p className="mt-1.5 flex-1 text-[12px] leading-relaxed text-white/48 sm:text-[12.5px]">
+                          {feature.detail}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
