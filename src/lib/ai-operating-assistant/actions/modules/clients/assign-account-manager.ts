@@ -42,6 +42,7 @@ export const assignAccountManagerAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.assignAccountManager",
     businessObject: "Client",
     intentExamples: [
       "Assign an account manager",

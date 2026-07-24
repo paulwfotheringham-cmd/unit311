@@ -35,6 +35,7 @@ export const updateClientAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.update",
     businessObject: "Client",
     intentExamples: [
       "Update a client",

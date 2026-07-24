@@ -116,12 +116,13 @@ function mergeSuggestedNext(
     label: f.label,
     actionId: f.actionId,
   }));
-  const seen = new Set<string>();
-  const merged: AssistantCapabilityRelationship[] = [];
-  for (const edge of [...fromRelationships, ...fromFollowUps]) {
-    const key = `${edge.actionId ?? ""}|${edge.capabilityId ?? ""}|${edge.label}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+  const seenActions = new Set(
+    fromRelationships.map((e) => e.actionId).filter((id): id is string => Boolean(id)),
+  );
+  const merged = [...fromRelationships];
+  for (const edge of fromFollowUps) {
+    if (edge.actionId && seenActions.has(edge.actionId)) continue;
+    if (edge.actionId) seenActions.add(edge.actionId);
     merged.push(edge);
   }
   return merged;
@@ -386,11 +387,12 @@ export function answerCapabilityQuestion(
     );
 
   const isCanYou =
+    !isCatalogue &&
     /\b(can\s+you|are\s+you\s+able\s+to|do\s+you\s+support|is\s+it\s+possible\s+to)\b/i.test(lower);
 
   if (!isCatalogue && !isCanYou) return null;
 
-  if (isCatalogue && !isCanYou) {
+  if (isCatalogue) {
     const capabilities = listCapabilities({ business: filter?.business });
     const statements = capabilities.map((c) => c.statement);
     const byObject = Object.entries(
@@ -421,7 +423,45 @@ export function answerCapabilityQuestion(
   }
 
   const hits = searchCapabilities(text, filter);
-  const strong = hits.filter((h) => h.score >= 8);
+  const verbOnly = new Set([
+    "create",
+    "add",
+    "update",
+    "archive",
+    "restore",
+    "assign",
+    "merge",
+    "remove",
+    "delete",
+    "invoice",
+    "generate",
+  ]);
+  const objectTokens = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(
+      (t) =>
+        t.length > 2 &&
+        !verbOnly.has(t) &&
+        !["can", "you", "do", "are", "able", "to", "the", "a", "an", "please", "support", "possible"].includes(
+          t,
+        ),
+    );
+
+  const strong = hits.filter((h) => {
+    if (h.score < 8) return false;
+    if (!objectTokens.length) return true;
+    return objectTokens.some((token) => {
+      const singular = token.replace(/s$/, "");
+      return (
+        h.capability.businessObject.toLowerCase().includes(singular) ||
+        h.capability.module.toLowerCase().includes(singular) ||
+        h.capability.semanticAliases.some((a) => a.toLowerCase().includes(singular)) ||
+        h.capability.actionId.toLowerCase().includes(singular)
+      );
+    });
+  });
   if (strong.length) {
     const top = strong.slice(0, 8);
     return {
@@ -462,5 +502,14 @@ export function answerCapabilityQuestion(
 
 /** Detect capability Q&A without treating it as a write intent. */
 export function isCapabilityQuestion(message: string): boolean {
+  const lower = message.trim().toLowerCase();
+  // Executable requests with a concrete entity belong to the write resolver.
+  if (/\b(called|named|titled)\b/i.test(lower)) return false;
+  if (
+    /\b(create|add|register|update|archive|assign|merge|restore)\b/i.test(lower) &&
+    /\b(ltd|limited|llc|inc|plc|holdings|engineering)\b/i.test(lower)
+  ) {
+    return false;
+  }
   return answerCapabilityQuestion(message) != null;
 }

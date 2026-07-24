@@ -63,6 +63,7 @@ export const addClientContactAction: AssistantActionDefinition = {
     required: ["contactName"],
   },
   capability: {
+    id: "clients.addContact",
     businessObject: "ClientContact",
     intentExamples: [
       "Add a contact to a client",
@@ -263,6 +264,7 @@ export const updateClientContactAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.updateContact",
     businessObject: "ClientContact",
     intentExamples: [
       "Update a client contact",
@@ -468,6 +470,7 @@ export const removeClientContactAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.removeContact",
     businessObject: "ClientContact",
     intentExamples: [
       "Remove a client contact",

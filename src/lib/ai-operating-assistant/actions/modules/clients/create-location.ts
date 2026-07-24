@@ -42,6 +42,7 @@ export const createClientLocationAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.createLocation",
     businessObject: "ClientLocation",
     intentExamples: [
       "Add a client location",

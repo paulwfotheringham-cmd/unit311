@@ -29,6 +29,7 @@ export const restoreClientAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.restore",
     businessObject: "Client",
     intentExamples: [
       "Restore a client",

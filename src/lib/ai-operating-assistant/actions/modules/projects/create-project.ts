@@ -69,8 +69,9 @@ export const createProjectAction: AssistantActionDefinition = {
     },
     suggestedFollowUps: [],
     relationships: {
-      // Future actions (assign manager / tasks / quote / kickoff) attach here when registered.
-      suggestedNext: [],
+      suggestedNext: [
+        // Wire Assign Manager / Create Task / Generate Quote / Schedule Kickoff when those actions register.
+      ],
     },
   },
   handler: {

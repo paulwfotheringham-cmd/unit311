@@ -109,6 +109,7 @@ export const mergeDuplicateClientsAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.merge",
     businessObject: "Client",
     intentExamples: [
       "Merge duplicate clients",

@@ -29,6 +29,7 @@ export const archiveClientAction: AssistantActionDefinition = {
     },
   },
   capability: {
+    id: "clients.archive",
     businessObject: "Client",
     intentExamples: [
       "Archive a client",
@@ -47,6 +48,11 @@ export const archiveClientAction: AssistantActionDefinition = {
       fields: [{ token: "recordLabel", path: "result.recordLabel" }],
     },
     suggestedFollowUps: [{ label: "Restore client", actionId: "clients.restoreClient" }],
+    relationships: {
+      suggestedNext: [
+        { label: "Restore client", actionId: "clients.restoreClient", reason: "Client Archived" },
+      ],
+    },
   },
   handler: {
     async validate(input, ctx) {
