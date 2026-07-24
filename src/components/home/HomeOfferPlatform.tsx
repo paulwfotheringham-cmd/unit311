@@ -7,7 +7,7 @@ export default function HomeOfferPlatform() {
   return (
     <section
       id="services"
-      className="relative scroll-mt-20 overflow-x-hidden bg-[#050816] py-12 sm:scroll-mt-28 sm:py-20 lg:py-24"
+      className="relative scroll-mt-20 overflow-x-hidden bg-[#050816] pt-12 pb-6 sm:scroll-mt-28 sm:pt-20 sm:pb-8 lg:pt-24 lg:pb-10"
     >
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div

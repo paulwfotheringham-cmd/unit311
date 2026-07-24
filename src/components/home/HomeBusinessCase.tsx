@@ -8,7 +8,7 @@ export default function HomeBusinessCase() {
   return (
     <section
       id="business-case"
-      className="relative scroll-mt-20 overflow-x-hidden bg-[#030712] pt-10 pb-6 sm:scroll-mt-28 sm:pt-20 sm:pb-12 lg:pt-28 lg:pb-16"
+      className="relative scroll-mt-20 overflow-x-hidden bg-[#030712] pt-4 pb-6 sm:scroll-mt-28 sm:pt-8 sm:pb-12 lg:pt-10 lg:pb-16"
     >
       <div
         className="pointer-events-none absolute inset-0"
