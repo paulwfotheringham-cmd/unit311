@@ -6,6 +6,7 @@ type WorkspaceLoader = () => Promise<unknown>;
 export const WORKSPACE_CHUNK_LOADERS: Partial<
   Record<InternalOperationsView, WorkspaceLoader>
 > = {
+  home: () => import("@/components/testflighthub/ExecutiveHomeDashboard"),
   crm: () => import("@/components/testflighthub/CrmWorkspace"),
   "crm-meetings": () => import("@/components/testflighthub/MeetingsWorkspace"),
   messaging: () => import("@/components/testflighthub/CommunicationsWorkspace"),
@@ -53,7 +54,7 @@ export const WORKSPACE_CHUNK_LOADERS: Partial<
 export const VIEW_NEIGHBOR_PREFETCH: Partial<
   Record<InternalOperationsView, InternalOperationsView[]>
 > = {
-  home: ["communications", "calendar", "crm", "projects"],
+  home: ["clients", "financials", "projects", "executive-assistant"],
   clients: ["crm", "clients-dashboard", "client-onboarding", "projects"],
   "clients-dashboard": ["clients", "crm", "projects"],
   "client-onboarding": ["clients", "crm"],

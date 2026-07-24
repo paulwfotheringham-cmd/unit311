@@ -612,7 +612,7 @@ export const internalViewTitles: Record<
   InternalOperationsView,
   { title: string; subtitle: string }
 > = {
-  home: { title: "Home", subtitle: "Home" },
+  home: { title: "Home", subtitle: "Executive Dashboard" },
   clients: { title: "Client Directory", subtitle: "Clients" },
   "clients-dashboard": { title: "Dashboard", subtitle: "Clients" },
   crm: { title: "Pipeline", subtitle: "Customer Management" },

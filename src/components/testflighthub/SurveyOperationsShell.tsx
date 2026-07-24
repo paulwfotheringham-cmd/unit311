@@ -26,7 +26,6 @@ import {
   type SurveyOperationsBasePath,
   type SurveyOperationsView,
 } from "@/lib/survey-operations-mock-data";
-import { cn } from "@/lib/utils";
 
 import PlatformFloatingAiAssistant from "./PlatformFloatingAiAssistant";
 import PlatformThemeProvider from "./PlatformThemeProvider";
@@ -56,7 +55,6 @@ export default function SurveyOperationsShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const isHomeView = mode === "internal" && activeView === "home";
   const pathname = usePathname() ?? "";
   const [isInternalHost] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -257,13 +255,7 @@ export default function SurveyOperationsShell({
 
         <div
           data-ai-target="page-main"
-          className={cn(
-            "safe-area-pb relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
-            isHomeView
-              ? // Desktop home fills the viewport (no page scroller). Mobile/tablet can scroll stacked tiles.
-                "overflow-y-auto overscroll-y-contain px-1.5 py-1.5 sm:px-2 sm:py-2 md:px-3 lg:overflow-hidden lg:px-3 lg:py-2 xl:px-4 [-webkit-overflow-scrolling:touch]"
-              : "overflow-y-auto overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]",
-          )}
+          className="safe-area-pb relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-2 sm:px-3 sm:py-3 md:px-4 [-webkit-overflow-scrolling:touch]"
         >
           {children}
         </div>
