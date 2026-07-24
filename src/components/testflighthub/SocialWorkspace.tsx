@@ -481,17 +481,6 @@ function PlatformColumn({ platform }: { platform: PlatformConfig }) {
 export default function SocialWorkspace() {
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-[#60a5fa]">
-            <Share2 className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Social publishing</h2>
-          </div>
-        </div>
-      </section>
-
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
         {PLATFORMS.map((platform) => (
           <PlatformColumn key={platform.id} platform={platform} />

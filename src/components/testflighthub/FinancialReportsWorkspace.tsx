@@ -392,15 +392,9 @@ export default function FinancialReportsWorkspace() {
     <div className="space-y-5">
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-              Financials
-            </p>
-            <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl">Financial Reports</h2>
-            <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Generate, manage and export financial reports across your organisation.
-            </p>
-          </div>
+          <p className="max-w-2xl text-sm text-white/55">
+            Generate, manage and export financial reports across your organisation.
+          </p>
           <button
             type="button"
             onClick={openCreate}

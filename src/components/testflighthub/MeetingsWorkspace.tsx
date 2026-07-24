@@ -171,11 +171,7 @@ export default function MeetingsWorkspace() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">CRM</p>
-          <h2 className="mt-1 text-2xl font-semibold text-white">Executive Strategy Session Meetings</h2>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/70">
           <Video className="h-4 w-4 text-sky-300" />
           {meetings.length} meeting{meetings.length === 1 ? "" : "s"}

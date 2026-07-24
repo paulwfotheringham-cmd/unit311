@@ -217,15 +217,7 @@ export default function ClientsDashboardWorkspace({
   return (
     <div className="space-y-3 sm:space-y-4">
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-3 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-              Executive client management
-            </p>
-            <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Portfolio health, directory, and recent movement — live workspace data only.
-            </p>
-          </div>
+        <div className="flex flex-wrap items-start justify-end gap-2">
           <button
             type="button"
             onClick={() => void loadDashboard({ soft: true })}

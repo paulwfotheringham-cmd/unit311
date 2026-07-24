@@ -18,7 +18,7 @@ import {
   DEFAULT_DEBTORS_TILE_LAYOUT,
 } from "@/lib/view-dashboard-tile-catalogs";
 import { cn } from "@/lib/utils";
-import { ArrowDownLeft, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -57,23 +57,6 @@ export default function DebtorsWorkspace() {
         title="Debtors key details"
         showCustomizeHint={false}
       />
-      <section className={panelClassName()}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-            <ArrowDownLeft className="h-5 w-5 text-sky-300" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
-              Accounts Receivable
-            </p>
-            <h2 className="mt-0.5 text-lg font-semibold text-white">Debtors</h2>
-            <p className="mt-1 text-sm text-white/55">
-              Demo ledger — client receivables, ageing, and collection outlook
-            </p>
-          </div>
-        </div>
-      </section>
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {DEBTORS_KPIS.map((kpi) => (
           <KpiCard key={kpi.id} kpi={kpi} />

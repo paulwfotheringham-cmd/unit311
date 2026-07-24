@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ExternalLink,
-  Globe,
   Loader2,
   Plus,
   RefreshCw,
@@ -560,22 +559,7 @@ export default function WebsiteManagementWorkspace() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-            <Globe className="h-5 w-5 text-sky-300" />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/90">
-              Tools
-            </p>
-            <h1 className="mt-0.5 text-2xl font-semibold text-white">Website Management</h1>
-            <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Connect client websites, manage CMS content, and track deployments from a single
-              operations workspace.
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-start justify-end gap-4">
         <button type="button" className={WsPrimaryButtonClass()} onClick={openWizard}>
           <Plus className="h-4 w-4" />
           Connect website

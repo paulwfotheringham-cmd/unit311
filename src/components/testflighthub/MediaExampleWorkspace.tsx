@@ -1,26 +1,10 @@
 "use client";
 
 import { MEDIA_EXAMPLE_CLIPS } from "@/lib/media-example-data";
-import { Film } from "lucide-react";
 
 export default function MediaExampleWorkspace() {
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-[#60a5fa]">
-            <Film className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Media Example</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/50">
-              High-impact DJI-style aerial samples for client demos — a luxury yacht pursuit and a
-              stadium crowd on match day, side by side.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
         {MEDIA_EXAMPLE_CLIPS.map((clip) => (
           <article

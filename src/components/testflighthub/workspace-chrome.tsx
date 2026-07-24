@@ -12,13 +12,13 @@ export function WorkspaceBreadcrumb({ crumbs }: WorkspaceBreadcrumbProps) {
   if (crumbs.length === 0) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-1">
-      <ol className="flex min-w-0 flex-wrap items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
+    <nav aria-label="Breadcrumb" className="mb-0.5">
+      <ol className="flex min-w-0 flex-wrap items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;
           return (
             <li key={`${crumb}-${index}`} className="flex min-w-0 items-center gap-1">
-              {index > 0 ? <span className="text-white/25">/</span> : null}
+              {index > 0 ? <span className="shrink-0 text-white/25">/</span> : null}
               <span className={isLast ? "truncate text-white/55" : "truncate"}>{crumb}</span>
             </li>
           );

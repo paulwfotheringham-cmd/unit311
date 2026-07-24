@@ -570,13 +570,7 @@ export default function ProcurementWorkspace() {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Procurement & Purchasing</h1>
-          <p className="mt-1 text-sm text-white/50">
-            Requisitions, POs, suppliers, receipts, and three-way match — Unit311 Central.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-end justify-end gap-4">
         <div className="min-w-[14rem]">
           <ProcurementFieldLabel>Acting as</ProcurementFieldLabel>
           <select

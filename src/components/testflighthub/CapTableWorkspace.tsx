@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRightLeft, Eye, Pencil, PieChart, Plus, Trash2, X } from "lucide-react";
+import { ArrowRightLeft, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import {
   ownershipPercent,
@@ -306,20 +306,6 @@ export default function CapTableWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-white/12 bg-white/[0.03] px-4 py-4 sm:px-5">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-            <PieChart className="h-5 w-5 text-sky-200" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white">Cap Table</h2>
-            <p className="mt-1 text-sm text-white/65">
-              Manage shareholders, equity ownership, and capital structure.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <CorporateKpiTile label="Issued Shares" value={formatShares(totalShares)} />
         <CorporateKpiTile label="Shareholders" value={store.shareholders.length} />

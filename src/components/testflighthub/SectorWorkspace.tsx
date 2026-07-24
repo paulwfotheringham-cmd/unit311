@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { ExternalLink, Layers, Pickaxe } from "lucide-react";
+import { ExternalLink, Layers } from "lucide-react";
 
 import {
   formatSectorWebsiteHref,
@@ -43,21 +43,7 @@ export default function SectorWorkspace() {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-              Sector Intelligence
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <Pickaxe className="h-5 w-5 text-amber-400" />
-              <h2 className="text-lg font-semibold text-white">Sector</h2>
-            </div>
-            <p className="mt-2 max-w-2xl text-sm text-white/60">
-              Select a country, then choose a sub-sector to view addressable site counts, key
-              organisations, drone adoption, and Unit311 service opportunities.
-            </p>
-          </div>
-
+        <div className="flex flex-wrap items-end justify-end gap-4">
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="sector-country-select"

@@ -192,18 +192,13 @@ export default function SurveyOperationsShell({
                 <Menu className="h-4 w-4" />
               </button>
               <div className="min-w-0">
-                {breadcrumbCrumbs && breadcrumbCrumbs.length > 1 ? (
+                {breadcrumbCrumbs && breadcrumbCrumbs.length > 0 ? (
                   <WorkspaceBreadcrumb crumbs={breadcrumbCrumbs} />
-                ) : (
-                  <p
-                    className="truncate text-[10px] font-semibold uppercase tracking-[0.16em]"
-                    style={{ color: "var(--platform-accent, #60a5fa)" }}
-                  >
-                    {resolvedSubtitle}
-                  </p>
-                )}
+                ) : resolvedSubtitle ? (
+                  <WorkspaceBreadcrumb crumbs={[resolvedSubtitle]} />
+                ) : null}
                 <div className="flex min-w-0 items-center gap-2">
-                  <h1 className="truncate text-sm font-semibold text-white sm:text-base md:text-lg">
+                  <h1 className="truncate text-base font-semibold tracking-tight text-white sm:text-lg md:text-xl">
                     {resolvedTitle}
                   </h1>
                   {isDemoHost ? (

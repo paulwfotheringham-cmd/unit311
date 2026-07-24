@@ -229,14 +229,7 @@ export default function BoardPackCustomizerWorkspace() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-            Business Central
-          </p>
-          <h2 className="mt-0.5 text-lg font-semibold text-white">Board pack</h2>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             disabled={generatingReviewPdf}
@@ -255,7 +248,6 @@ export default function BoardPackCustomizerWorkspace() {
             <FileDown className="h-3.5 w-3.5" />
             {generatingReviewPdf ? "Generating…" : "Download board review PDF"}
           </button>
-        </div>
       </div>
 
       {message ? (

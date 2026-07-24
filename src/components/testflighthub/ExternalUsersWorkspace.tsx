@@ -563,16 +563,7 @@ export default function ExternalUsersWorkspace() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300/80">
-            Identity & access
-          </p>
-          <h1 className="mt-0.5 text-xl font-semibold text-white">Client Portal Users</h1>
-          <p className="mt-0.5 text-xs text-white/45">
-            External identity administration for client portal access.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-end justify-end gap-3">
         <div className="flex flex-wrap gap-2">
           <button type="button" className={WsPrimaryButtonClass(busy)} onClick={() => setInviteOpen(true)}>
             <UserPlus className="h-3.5 w-3.5" />

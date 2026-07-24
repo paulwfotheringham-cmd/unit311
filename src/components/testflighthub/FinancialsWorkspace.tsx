@@ -71,7 +71,7 @@ export default function FinancialsWorkspace() {
         storageKey="unit311-financials-dashboard-tiles-v2"
         catalog={tiles.length ? tiles : FINANCIALS_DASHBOARD_TILES}
         defaultLayout={DEFAULT_FINANCIALS_TILE_LAYOUT}
-        title="Customize tiles"
+        title="Key metrics"
         showCustomizeHint
         onTileClick={(tileId) => {
           if (tileId === "burn-rate") setBurnDrillOpen(true);
@@ -80,16 +80,10 @@ export default function FinancialsWorkspace() {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300/90">
-              Financials
-            </p>
-            <h2 className="mt-1 text-lg font-semibold text-white">Overview</h2>
-            <p className="mt-1 text-sm text-white/55">
-              Live figures from the shared financial overview service (GL, AR, AP, Wise treasury).
-              Burn Rate uses posted expenses when available.
-            </p>
-          </div>
+          <p className="text-sm text-white/55">
+            Live figures from the shared financial overview service (GL, AR, AP, Wise treasury).
+            Burn Rate uses posted expenses when available.
+          </p>
           <button
             type="button"
             onClick={() => void load()}

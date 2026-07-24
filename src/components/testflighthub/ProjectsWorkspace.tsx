@@ -329,27 +329,6 @@ export default function ProjectsWorkspace({
     }
   }
 
-  const headerCopy =
-    scope === "internal"
-      ? {
-          eyebrow: "Internal programmes",
-          title: "Internal Projects",
-          description:
-            "Projects that run our business — people, finance, technology, security and corporate systems.",
-        }
-      : scope === "external"
-        ? {
-            eyebrow: "Customer delivery",
-            title: "External Projects",
-            description:
-              "Customer implementation and transformation programmes with commercial and delivery status.",
-          }
-        : {
-            eyebrow: "Field Operations",
-            title: "Projects",
-            description: "Live field work and scheduled mobilisations across client accounts.",
-          };
-
   if (usesPortfolio) {
     return (
       <div className="space-y-5">
@@ -362,14 +341,7 @@ export default function ProjectsWorkspace({
           showCustomizeHint={false}
         />
 
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-              {headerCopy.eyebrow}
-            </p>
-            <h2 className="mt-1 text-lg font-semibold text-white">{headerCopy.title}</h2>
-            <p className="mt-1 text-sm text-white/55">{headerCopy.description}</p>
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
             onClick={() => setShowForm((open) => !open)}
@@ -625,14 +597,7 @@ export default function ProjectsWorkspace({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-            {headerCopy.eyebrow}
-          </p>
-          <h2 className="mt-1 text-lg font-semibold text-white">{headerCopy.title}</h2>
-          <p className="mt-2 text-sm text-white/55">{headerCopy.description}</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <button
           type="button"
           onClick={() => setShowForm((open) => !open)}

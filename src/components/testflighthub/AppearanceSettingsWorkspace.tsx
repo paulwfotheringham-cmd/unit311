@@ -28,8 +28,7 @@ export default function AppearanceSettingsWorkspace() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Appearance</h1>
-        <p className="mt-2 text-sm leading-relaxed text-white/55">
+        <p className="text-sm leading-relaxed text-white/55">
           Choose one of five professionally designed themes for Unit311 Central.
         </p>
         <p className="mt-2 text-sm leading-relaxed text-white/45">

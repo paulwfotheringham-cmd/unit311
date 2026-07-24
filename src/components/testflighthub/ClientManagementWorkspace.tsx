@@ -448,10 +448,7 @@ export default function ClientManagementWorkspace({
         <div className="space-y-4">
           <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Client Directory</h2>
-                <p className="mt-1 text-xs text-white/45">{clients.length} accounts</p>
-              </div>
+              <p className="text-xs text-white/45">{clients.length} accounts</p>
               <button
                 type="button"
                 onClick={() => void handleAddClient()}

@@ -134,15 +134,7 @@ export default function AccountsReceivableWorkspace() {
     <div className="space-y-4">
       <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300/90">
-              Financials
-            </p>
-            <h2 className="mt-1 text-lg font-semibold text-white">Accounts Receivable</h2>
-            <p className="mt-1 text-sm text-white/55">
-              Client invoices posted to the General Ledger.
-            </p>
-          </div>
+          <p className="text-sm text-white/55">Client invoices posted to the General Ledger.</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

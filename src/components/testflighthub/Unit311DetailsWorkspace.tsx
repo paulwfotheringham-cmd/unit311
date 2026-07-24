@@ -6,7 +6,6 @@ import {
   Clock3,
   ExternalLink,
   FileText,
-  FolderOpen,
   Loader2,
   Network,
   Plus,
@@ -688,21 +687,6 @@ export default function Unit311DetailsWorkspace() {
 
   return (
     <div className="flex min-h-[calc(100dvh-14rem)] flex-col gap-4">
-      <section className="shrink-0 rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-[#60a5fa]">
-            <FolderOpen className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Unit311 Details</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-white/50">
-              Technical knowledge centre — documentation, living architecture diagrams, and
-              operational notes for every platform system.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
           {error}

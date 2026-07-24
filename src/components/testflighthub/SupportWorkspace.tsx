@@ -14,7 +14,7 @@ import {
 } from "@/lib/support-data";
 import { cn } from "@/lib/utils";
 import SupportTicketClientActions from "@/components/testflighthub/SupportTicketClientActions";
-import { Archive, ArchiveRestore, BarChart3, LifeBuoy, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BarChart3, Loader2, Plus, Save, Search, Trash2 } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -232,21 +232,11 @@ export default function SupportWorkspace() {
   );
 
   const latestTicket = visibleTickets[0] ?? null;
-  const urgentOpenCount = useMemo(
-    () =>
-      tickets.filter(
-        (ticket) => !ticket.archived && !ticket.closed && (ticket.priority === "urgent" || ticket.priority === "high"),
-      ).length,
-    [tickets],
-  );
 
   const selectedTicket = useMemo(
     () => filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0] ?? null,
     [filteredTickets, selectedTicketId],
   );
-
-  const openCount = useMemo(() => tickets.filter((ticket) => !ticket.archived).length, [tickets]);
-  const archivedCount = useMemo(() => tickets.filter((ticket) => ticket.archived).length, [tickets]);
 
   const isDirty = useMemo(() => {
     if (!selectedTicket) return false;
@@ -438,34 +428,6 @@ export default function SupportWorkspace() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-              <LifeBuoy className="h-5 w-5 text-sky-300" />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-                Client support
-              </p>
-              <h2 className="mt-0.5 text-lg font-semibold text-white">Support ticketing</h2>
-              <p className="mt-1 text-sm text-white/55">
-                {openCount} open · {archivedCount} archived · {urgentOpenCount} high priority
-              </p>
-              {latestTicket && (
-                <p className="mt-2 text-xs text-white/45">
-                  Latest in:{" "}
-                  <span className="font-medium text-sky-200">
-                    {latestTicket.id} · {latestTicket.organisation || latestTicket.name}
-                  </span>{" "}
-                  · updated {formatSupportDate(latestTicket.updatedAt)}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {!loading && (
         <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">

@@ -93,18 +93,7 @@ export default function WebODMWorkspace() {
 
   return (
     <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
-            Photogrammetry
-          </p>
-          <h2 className="mt-1 text-lg font-semibold text-white">WebODM Processing</h2>
-          <p className="mt-2 max-w-2xl text-sm text-white/55">
-            Live view of projects and tasks from your WebODM server. Works locally when WebODM is
-            running and credentials are set in Vercel Environment Variables (or{" "}
-            <span className="font-mono">.env.local</span> for local dev).
-          </p>
-        </div>
+      <div className="flex flex-wrap items-start justify-end gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <span
             className={cn(

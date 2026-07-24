@@ -160,16 +160,10 @@ export default function OpexWorkspace() {
     <div className="space-y-4">
       <section className={cn(panelClassName(), "p-5 sm:p-6")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300/90">
-              Financials · Operating expenditure
-            </p>
-            <h2 className="mt-1 text-lg font-semibold text-white">Opex</h2>
-            <p className="mt-2 max-w-3xl text-sm text-white/60">
-              Yearly operating costs for {OPEX_CLIENT_COUNT} clients. Edit line items to model
-              subscription, platform, and compliance spend.
-            </p>
-          </div>
+          <p className="max-w-3xl text-sm text-white/60">
+            Yearly operating costs for {OPEX_CLIENT_COUNT} clients. Edit line items to model
+            subscription, platform, and compliance spend.
+          </p>
           <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/55">
             <Wallet className="h-4 w-4 text-emerald-300" />
             Based on {OPEX_CLIENT_COUNT} clients

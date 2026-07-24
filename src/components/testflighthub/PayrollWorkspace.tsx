@@ -244,17 +244,7 @@ export default function PayrollWorkspace() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-300/90">
-            Human Resources
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-white">Payroll</h2>
-          <p className="mt-1 max-w-2xl text-sm text-white/55">
-            US monthly payroll engine integrated with HR salaries, General Ledger, Accounts Payable,
-            Wise, and the Executive Dashboard.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-start justify-end gap-3">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

@@ -364,13 +364,7 @@ export default function RecruitmentWorkspace() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Recruitment</h2>
-          <p className="mt-1 text-sm text-white/50">
-            Track vacancies and candidates through hiring in one place.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-start justify-end gap-2">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

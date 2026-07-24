@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
-import { Check, Link2, Loader2, PenLine, Plus, Save, Share2, X } from "lucide-react";
+import { Check, Link2, Loader2, Plus, Save, Share2, X } from "lucide-react";
 
 import { createInitialUsers, type ManagedUser } from "@/lib/user-management-data";
 
@@ -318,21 +318,6 @@ export default function WhiteboardWorkspace() {
 
   return (
     <div className="flex min-h-0 flex-col gap-4">
-      <section className="shrink-0 rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-[#60a5fa]">
-            <PenLine className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Whiteboard</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/50">
-              Create and manage named whiteboard projects. Select a project from the list, sketch
-              your ideas, then click Save.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
           {error}

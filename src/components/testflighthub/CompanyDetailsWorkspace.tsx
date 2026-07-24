@@ -320,16 +320,10 @@ export default function CompanyDetailsWorkspace() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-white/12 bg-white/[0.03] px-4 py-4 sm:px-5">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-            <Building2 className="h-5 w-5 text-sky-200" aria-hidden />
-          </span>
           <div>
             <h2 className="text-lg font-semibold text-white">
               {draft.legalCompanyName.trim() || "Company Details"}
             </h2>
-            <p className="mt-1 text-sm text-white/65">
-              Canonical legal entity record for this workspace.
-            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

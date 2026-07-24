@@ -9,7 +9,7 @@ import {
   type PlatformCustomerSubscription,
 } from "@/lib/platform-billing-data";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Building2, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Search } from "lucide-react";
 
 type PlatformBillingResponse = {
   subscriptions?: PlatformCustomerSubscription[];
@@ -155,17 +155,9 @@ export default function PlatformBillingWorkspace() {
 
       <section className="rounded-2xl border border-white/15 bg-white/[0.04] shadow-[0_24px_64px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-200">
-              <Building2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-white">Platform Billing</h2>
-              <p className="text-xs text-white/45">
-                All customer subscriptions across Unit311 Central
-              </p>
-            </div>
-          </div>
+          <p className="text-xs text-white/45">
+            All customer subscriptions across Unit311 Central
+          </p>
           <div className="relative w-full max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
             <input

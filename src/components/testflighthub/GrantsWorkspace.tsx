@@ -15,7 +15,7 @@ import {
   type GrantStatus,
 } from "@/lib/grants-data";
 import { cn } from "@/lib/utils";
-import { Landmark, LayoutGrid, Plus, TrendingUp, X } from "lucide-react";
+import { LayoutGrid, Plus, TrendingUp, X } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -222,17 +222,10 @@ export default function GrantsWorkspace() {
   return (
     <section className="min-w-0 space-y-4 sm:space-y-5" aria-label="Grants workspace">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 text-[#60a5fa]">
-            <Landmark className="h-4 w-4 shrink-0" />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Business Central</p>
-          </div>
-          <h2 className="mt-1 text-lg font-semibold text-white sm:text-xl md:text-2xl">Grants</h2>
-          <p className="mt-1 max-w-2xl text-sm text-white/50">
-            Track funding programmes, application pipeline, approval rates, and disbursement status
-            across EU, national, and regional schemes.
-          </p>
-        </div>
+        <p className="max-w-2xl text-sm text-white/50">
+          Track funding programmes, application pipeline, approval rates, and disbursement status
+          across EU, national, and regional schemes.
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserCircle2 } from "lucide-react";
 
 import {
   WorkspaceError,
@@ -63,20 +62,6 @@ export default function ProfileWorkspace() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-white/10 bg-[#0a1422]/80 p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-            <UserCircle2 className="h-5 w-5 text-sky-300" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Profile</h2>
-            <p className="text-sm text-white/55">
-              Your Unit311 Central operator profile for this session.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {loading ? <WorkspaceLoading label="Loading profile…" /> : null}
       {!loading && error ? (
         <WorkspaceError message={error} onRetry={() => void loadProfile()} />

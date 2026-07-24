@@ -6,7 +6,6 @@ import {
   ClipboardList,
   FileText,
   Plus,
-  ShieldCheck,
   UserPlus,
 } from "lucide-react";
 
@@ -82,32 +81,17 @@ export default function QualityManagementWorkspace() {
         </p>
       ) : null}
 
-      <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10">
-              <ShieldCheck className="h-5 w-5 text-sky-300" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Quality Management System</h2>
-              <p className="mt-1 text-sm text-white/50">
-                Central dashboard for document control, CAPA, audits, and compliance posture.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {quickLinks.map((link) => (
-              <Link
-                key={link.view}
-                href={getInternalNavHref(link.view, basePath)}
-                className={tqmsSecondaryButtonClass()}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="flex flex-wrap gap-2">
+        {quickLinks.map((link) => (
+          <Link
+            key={link.view}
+            href={getInternalNavHref(link.view, basePath)}
+            className={tqmsSecondaryButtonClass()}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <TqmsKpiTile label="Controlled Documents" value={kpis.controlledDocuments} />

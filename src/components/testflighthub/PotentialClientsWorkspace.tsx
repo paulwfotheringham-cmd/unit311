@@ -338,15 +338,9 @@ export default function PotentialClientsWorkspace() {
                   />
                 </div>
               </div>
-            ) : (
-              <>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300/90">
-                  {displayIntro.eyebrow}
-                </p>
-                <h2 className="mt-1 text-lg font-semibold text-white">{displayIntro.title}</h2>
-                <p className="mt-2 max-w-3xl text-sm text-white/60">{displayIntro.description}</p>
-              </>
-            )}
+            ) : displayIntro.description ? (
+              <p className="max-w-3xl text-sm text-white/60">{displayIntro.description}</p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/55">

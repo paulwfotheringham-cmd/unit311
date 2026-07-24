@@ -299,16 +299,10 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
     <div className="space-y-4">
       <header className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300/80">
-              Live communication
-            </p>
-            <h1 className="mt-1 text-xl font-semibold text-white">Communications</h1>
-            <p className="mt-1 max-w-2xl text-sm text-white/55">
-              Voice, video, screen share, meeting links, and presence. Persistent chat stays in
-              Messaging.
-            </p>
-          </div>
+          <p className="max-w-2xl text-sm text-white/55">
+            Voice, video, screen share, meeting links, and presence. Persistent chat stays in
+            Messaging.
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
