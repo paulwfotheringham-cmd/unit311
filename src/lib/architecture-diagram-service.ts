@@ -158,7 +158,7 @@ export async function createArchitectureDiagramForSection(input: {
       : seedTemplate === "platform-overview"
         ? "Platform Overview"
         : seedTemplate === "voice-and-video"
-          ? "Voice & Video Architecture"
+          ? "Communications Architecture"
           : seedTemplate === "software-asset-register"
             ? "Software Asset Register Architecture"
             : seedTemplate === "executive-ai"
@@ -190,7 +190,7 @@ export async function ensureCoreArchitectureSeeds(): Promise<{
       }),
       createArchitectureDiagramForSection({
         sectionSlug: "voice-and-video",
-        title: "Voice & Video Architecture",
+        title: "Communications Architecture",
         seedTemplate: "voice-and-video",
       }),
       createArchitectureDiagramForSection({

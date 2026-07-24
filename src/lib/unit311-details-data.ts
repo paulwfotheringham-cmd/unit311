@@ -80,8 +80,8 @@ export const UNIT311_DETAIL_CATEGORIES: readonly Unit311DetailCategory[] = [
   { id: "linkedin", label: "Linkedin", folderName: "Linkedin", builtin: true },
   {
     id: "voice-and-video",
-    label: "Voice & Video",
-    folderName: "Voice & Video",
+    label: "Communications",
+    folderName: "Communications",
     builtin: true,
   },
   {

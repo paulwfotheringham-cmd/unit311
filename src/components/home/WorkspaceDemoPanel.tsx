@@ -261,7 +261,7 @@ function getDemoRows(view: InternalOperationsView): DemoRow[] {
 
 function DemoBody({ view }: { view: InternalOperationsView }) {
   if (view === "home") return <HomeDemo />;
-  if (view === "messaging") return <MessagingDemo />;
+  if (view === "messaging" || view === "communications") return <MessagingDemo />;
   if (view === "calendar") return <CalendarDemo />;
   if (view === "settings" || view === "billing") return <SettingsDemo />;
   if (view === "strategy" || view === "whiteboard" || view === "sector" || view === "competitors") {

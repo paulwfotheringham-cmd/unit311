@@ -192,7 +192,7 @@ const PAGE_GUIDES: Record<string, AiPageGuide> = {
     forms: ["Lead form"],
     workflows: ["Work the pipeline", "Set next actions", "Hand off to clients"],
     permissions: ["Available to most operators"],
-    relationships: ["Clients", "Potential clients", "Messaging"],
+    relationships: ["Clients", "Potential clients", "Communications"],
     commonQuestions: [
       "What is in the hot pipeline?",
       "How do I update a lead?",

@@ -166,7 +166,7 @@ export const DISCOVERY_QUESTION_TEMPLATES: DiscoveryQuestionTemplate[] = [
   {
     id: "software-messaging",
     section: "Software applications",
-    label: "Messaging",
+    label: "Communications",
     rows: 1,
   },
   {

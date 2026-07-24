@@ -51,8 +51,8 @@ export default async function MeetVoicePage({ params }: MeetVoicePageProps) {
         <p className="mt-6 text-center text-xs text-white/40">
           Session ID: {sessionId}
           {" · "}
-          <Link href="/internaldashboard?view=messaging" className="text-sky-300 hover:underline">
-            Open Messaging
+          <Link href="/internaldashboard?view=communications" className="text-sky-300 hover:underline">
+            Open Communications
           </Link>
         </p>
       </div>

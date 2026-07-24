@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  ArrowUpRight,
   Banknote,
   Boxes,
   Briefcase,
@@ -38,7 +40,6 @@ import {
   UserCog,
   Users,
   UsersRound,
-  Video,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -48,6 +49,11 @@ type Capability = {
   icon: LucideIcon;
 };
 
+type QuickAction = {
+  label: string;
+  href: string;
+};
+
 type WorkspaceVisual = "central" | "clients" | "finance" | "people" | "engineering" | "corporate" | "assets" | "productivity" | "integrations";
 
 type Workspace = {
@@ -55,10 +61,13 @@ type Workspace = {
   title: string;
   descriptor: string;
   description: string;
+  aiSummary: string;
   icon: LucideIcon;
   visual: WorkspaceVisual;
   accent: string;
   capabilities: Capability[];
+  highlights?: string[];
+  quickActions?: QuickAction[];
   footnote?: string;
 };
 
@@ -69,6 +78,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Executive oversight",
     description:
       "Executive oversight, strategic planning, AI-powered decision making and enterprise-wide workflow automation.",
+    aiSummary:
+      "Surfaces what needs attention across the organisation — priorities, approvals and strategic signals — so leadership can act without chasing updates.",
     icon: LayoutDashboard,
     visual: "central",
     accent: "rgba(125, 211, 252, 0.55)",
@@ -92,6 +103,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Relationships & delivery",
     description:
       "Manage client relationships, pipeline, onboarding and project delivery in one connected workspace.",
+    aiSummary:
+      "Keeps commercial and delivery teams aligned — from first conversation through onboarding to live project progress.",
     icon: Briefcase,
     visual: "clients",
     accent: "rgba(147, 197, 253, 0.55)",
@@ -110,6 +123,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Finance & reporting",
     description:
       "Run finance operations, banking connections and reporting from a unified financial command centre.",
+    aiSummary:
+      "Gives finance a single operating picture — cash, receivables, payables and reporting — without jumping between systems.",
     icon: Wallet,
     visual: "finance",
     accent: "rgba(110, 231, 183, 0.45)",
@@ -129,6 +144,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Workforce management",
     description:
       "Coordinate workforce management across people, leave, performance, payroll and training.",
+    aiSummary:
+      "Helps people leaders see capacity, leave risk and performance signals in one place before issues become operational friction.",
     icon: UsersRound,
     visual: "people",
     accent: "rgba(196, 181, 253, 0.5)",
@@ -149,6 +166,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Engineering delivery",
     description:
       "Plan capacity, deliver engineering projects and maintain technical quality and compliance.",
+    aiSummary:
+      "Connects utilisation, capacity and delivery risk so engineering leads can balance commitments with quality and compliance.",
     icon: Wrench,
     visual: "engineering",
     accent: "rgba(125, 211, 252, 0.5)",
@@ -168,6 +187,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Governance & compliance",
     description:
       "Govern company structure, contracts, compliance and advisory relationships from one place.",
+    aiSummary:
+      "Centralises the records and relationships that keep the company governed — structure, contracts, licences and advisers.",
     icon: Scale,
     visual: "corporate",
     accent: "rgba(186, 230, 253, 0.5)",
@@ -187,6 +208,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Inventory & procurement",
     description:
       "Track assets, inventory, logistics movements and procurement across your organisation.",
+    aiSummary:
+      "Gives operations clarity on where assets and stock sit, what is moving, and what needs procurement attention.",
     icon: Package,
     visual: "assets",
     accent: "rgba(253, 224, 71, 0.35)",
@@ -203,6 +226,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Communication & knowledge",
     description:
       "Centralise communication, knowledge, calendar and support across your organisation.",
+    aiSummary:
+      "Pulls messaging, knowledge, calendar and support into one collaboration layer so work stays visible and searchable.",
     icon: MessageSquare,
     visual: "productivity",
     accent: "rgba(165, 180, 252, 0.5)",
@@ -210,8 +235,8 @@ const WORKSPACES: Workspace[] = [
       { label: "Information Repository", icon: Database },
       { label: "Email", icon: Mail },
       { label: "Calendar", icon: CalendarDays },
-      { label: "Messaging", icon: MessageSquare },
-      { label: "Voice & Video", icon: Video },
+      { label: "Communications", icon: MessageSquare },
+      { label: "Calendar", icon: CalendarDays },
       { label: "Social", icon: Share2 },
       { label: "Support Desk / WhatsApp", icon: Cable },
     ],
@@ -222,6 +247,8 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Connect your existing systems",
     description:
       "Connect Unit311 Central to the specialist systems your business already relies on—integrate rather than replace.",
+    aiSummary:
+      "Designed to sit alongside your stack — connecting Microsoft, finance, CRM and delivery tools without forcing rip-and-replace.",
     icon: Plug,
     visual: "integrations",
     accent: "rgba(56, 189, 248, 0.5)",

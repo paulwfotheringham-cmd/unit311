@@ -214,7 +214,7 @@ export const ARCHITECTURE_DIAGRAM_CATALOG: readonly ArchitectureCatalogEntry[] =
   },
   {
     sectionSlug: "voice-and-video",
-    title: "Voice & Video",
+    title: "Communications",
     description: "Executive Call WebRTC 1:1 streaming",
     seedTemplate: "voice-and-video",
   },
@@ -385,7 +385,7 @@ export function createPlatformOverviewDiagram(): ArchitectureDiagramDocument {
     { id: "mod-financials", label: "Financials", slug: "finance", icon: "wallet" },
     { id: "mod-hr", label: "HR", slug: null, icon: "badge" },
     { id: "mod-assets", label: "Assets", slug: "storage", icon: "boxes" },
-    { id: "mod-messaging", label: "Messaging", slug: null, icon: "message-square" },
+    { id: "mod-messaging", label: "Communications", slug: null, icon: "message-square" },
     { id: "mod-ea", label: "Executive Assistant", slug: null, icon: "sparkles" },
     { id: "mod-files", label: "File Repository", slug: "storage", icon: "folder-open" },
   ] as const;
@@ -603,7 +603,7 @@ export function createVoiceAndVideoArchitectureDiagram(): ArchitectureDiagramDoc
     viewport: { x: 20, y: 10, zoom: 0.88 },
     meta: {
       generator: "voice-and-video-seed",
-      title: "Voice & Video Architecture",
+      title: "Communications Architecture",
       sourceDocument: "docs/VOICE_AND_VIDEO_ARCHITECTURE.md",
     },
     nodes: [

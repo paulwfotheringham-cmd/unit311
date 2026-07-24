@@ -11,6 +11,8 @@ import { Loader2, Mic, MicOff, MonitorUp, PhoneOff, ScreenShareOff, Video, Video
 type MessagingCallRoomProps = {
   sessionId: string;
   expectedMode: "voice" | "video";
+  /** When true, fills a parent panel instead of owning the full viewport. */
+  embedded?: boolean;
 };
 
 async function readApiJson<T>(response: Response): Promise<T> {
@@ -39,7 +41,11 @@ function connectionLabel(state: RTCPeerConnectionState) {
   }
 }
 
-export default function MessagingCallRoom({ sessionId, expectedMode }: MessagingCallRoomProps) {
+export default function MessagingCallRoom({
+  sessionId,
+  expectedMode,
+  embedded = false,
+}: MessagingCallRoomProps) {
   const [payload, setPayload] = useState<MessagingCallSessionPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -301,7 +307,12 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
 
   if (loading) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[#020617] text-white/70">
+      <section
+        className={cn(
+          "flex items-center justify-center bg-[#020617] text-white/70",
+          embedded ? "h-full min-h-[240px]" : "min-h-screen",
+        )}
+      >
         <Loader2 className="h-5 w-5 animate-spin" />
         <span className="ml-2 text-sm">Loading call…</span>
       </section>
@@ -310,16 +321,23 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
 
   if (leftCall) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[#020617] px-5">
+      <section
+        className={cn(
+          "flex items-center justify-center bg-[#020617] px-5",
+          embedded ? "h-full min-h-[240px]" : "min-h-screen",
+        )}
+      >
         <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#07111f] p-8 text-center">
           <h1 className="text-lg font-semibold text-white">Call ended</h1>
-          <p className="mt-2 text-sm text-white/55">You can close this window and return to Messaging.</p>
-          <Link
-            href="/internaldashboard?view=messaging"
-            className="mt-6 inline-flex h-10 items-center justify-center rounded-xl bg-[#2563eb] px-4 text-sm font-semibold text-white"
-          >
-            Back to Messaging
-          </Link>
+          <p className="mt-2 text-sm text-white/55">You can close this panel and return to Communications.</p>
+          {!embedded ? (
+            <Link
+              href="/internaldashboard?view=communications"
+              className="mt-6 inline-flex h-10 items-center justify-center rounded-xl bg-[#2563eb] px-4 text-sm font-semibold text-white"
+            >
+              Back to Communications
+            </Link>
+          ) : null}
         </div>
       </section>
     );
@@ -327,12 +345,17 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
 
   if (error && !payload) {
     return (
-      <section className="flex min-h-screen items-center justify-center bg-[#020617] px-5">
+      <section
+        className={cn(
+          "flex items-center justify-center bg-[#020617] px-5",
+          embedded ? "h-full min-h-[240px]" : "min-h-screen",
+        )}
+      >
         <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#07111f] p-8 text-center">
           <h1 className="text-lg font-semibold text-white">Unable to open call</h1>
           <p className="mt-2 text-sm text-white/55">{error}</p>
           <p className="mt-4 text-xs text-white/40">
-            Sign in to Unit311 Central, then open the Join call link from Messaging.
+            Sign in to Unit311 Central, then open the Join call link from Communications.
           </p>
         </div>
       </section>
@@ -344,11 +367,16 @@ export default function MessagingCallRoom({ sessionId, expectedMode }: Messaging
     : payload?.room.hostOperatorName || "Host";
 
   return (
-    <section className="flex min-h-screen flex-col bg-[#020617] text-white">
+    <section
+      className={cn(
+        "flex flex-col bg-[#020617] text-white",
+        embedded ? "h-full min-h-0" : "min-h-screen",
+      )}
+    >
       <header className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-            Messaging {isVoice ? "voice" : "video"}
+            Communications {isVoice ? "voice" : "video"}
           </p>
           <h1 className="text-lg font-semibold">
             {payload?.viewer.isHost ? "You are hosting" : "Joined call"} · {peerName}

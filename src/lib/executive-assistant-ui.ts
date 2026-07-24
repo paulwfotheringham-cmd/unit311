@@ -108,7 +108,7 @@ const CONTEXT_BY_VIEW: Partial<Record<string, ExecutiveAssistantPageContext>> = 
     suggestedPrompts: ["Today's meetings", "Prepare briefing", "Find free time", "Schedule follow-up"],
   },
   messaging: {
-    label: "Messaging",
+    label: "Communications",
     suggestedPrompts: ["Unread summary", "Draft reply", "Find conversation", "Action items"],
   },
   "files-internal": {

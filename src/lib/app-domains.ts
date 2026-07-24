@@ -551,6 +551,7 @@ export function isInternalAppPath(pathname: string): boolean {
     pathname === "/crm" ||
     pathname === "/financials" ||
     pathname === "/messaging" ||
+    pathname === "/communications" ||
     pathname === "/calendar" ||
     pathname === "/info-email" ||
     pathname === "/projects" ||
@@ -600,7 +601,8 @@ export function legacyViewRedirects(): Record<string, string> {
   return {
     "/crm": "/?view=crm",
     "/financials": "/?view=financials",
-    "/messaging": "/?view=messaging",
+    "/messaging": "/?view=communications",
+    "/communications": "/?view=communications",
     "/calendar": "/?view=calendar",
     "/info-email": "/?view=info-email",
     "/projects": "/?view=projects",

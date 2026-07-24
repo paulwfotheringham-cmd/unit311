@@ -26,17 +26,23 @@ import {
   PLATFORM_CACHE_KEYS,
 } from "@/lib/platform-fetch-cache";
 import WorkspaceLoadingFallback from "@/components/testflighthub/WorkspaceLoadingFallback";
+import MessagingCallRoom from "@/components/messaging/MessagingCallRoom";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
 import {
   CalendarClock,
+  FolderOpen,
   Hash,
+  Link2,
   Loader2,
   MessageSquare,
   Mic,
+  MoreHorizontal,
   Paperclip,
   Phone,
   Plus,
+  Search,
   Send,
+  Sparkles,
   Trash2,
   UserPlus,
   Users,
@@ -44,9 +50,19 @@ import {
   X,
 } from "lucide-react";
 
-type MessagingWorkspaceProps = {
+type CommunicationsWorkspaceProps = {
   users?: ManagedUser[];
 };
+
+type PresenceStatus = "online" | "away" | "busy" | "offline";
+
+type ConversationLinkKind =
+  | ""
+  | "crm-client"
+  | "project"
+  | "opportunity"
+  | "support-ticket"
+  | "internal-task";
 
 function formatOperatorLabel(operator: ManagedUser) {
   const email = operator.email || (operator.username.includes("@") ? operator.username : "");
@@ -73,26 +89,62 @@ function inputClassName() {
   return "w-full rounded-xl border border-white/10 bg-[#0b1524] px-3 py-2 text-sm text-white outline-none focus:border-sky-400/50";
 }
 
+function presenceDotClass(status: PresenceStatus) {
+  switch (status) {
+    case "online":
+      return "bg-emerald-400";
+    case "away":
+      return "bg-amber-400";
+    case "busy":
+      return "bg-rose-400";
+    default:
+      return "bg-white/35";
+  }
+}
+
+function presenceLabel(status: PresenceStatus) {
+  switch (status) {
+    case "online":
+      return "Online";
+    case "away":
+      return "Away";
+    case "busy":
+      return "Busy";
+    default:
+      return "Offline";
+  }
+}
+
+function parseMeetSessionFromLink(callLink: string): { mode: "voice" | "video"; sessionId: string } | null {
+  const match = callLink.match(/\/meet\/(voice|video)\/([^/?#]+)/i);
+  if (!match?.[1] || !match[2]) return null;
+  return {
+    mode: match[1].toLowerCase() === "voice" ? "voice" : "video",
+    sessionId: match[2],
+  };
+}
+
 function MessageBody({
   message,
   isSelf,
+  onJoinCall,
 }: {
   message: ChatMessage;
   isSelf: boolean;
+  onJoinCall?: (callLink: string) => void;
 }) {
   if (message.messageType === "call" && message.callLink) {
     return (
       <div className="mt-2 space-y-2">
         <p className="text-sm leading-relaxed text-white/80">{message.content}</p>
-        <a
-          href={message.callLink}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={() => onJoinCall?.(message.callLink!)}
           className="inline-flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-200 transition-colors hover:bg-sky-500/20"
         >
           <Video className="h-4 w-4" />
           Join call
-        </a>
+        </button>
       </div>
     );
   }
@@ -157,7 +209,7 @@ function MessageBody({
   );
 }
 
-export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
+export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceProps) {
   const [internalUsers, setInternalUsers] = useState<ManagedUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -228,6 +280,18 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [memberDraft, setMemberDraft] = useState<string[]>([]);
   const [activeCallLink, setActiveCallLink] = useState<string | null>(null);
+  const [activeCallSession, setActiveCallSession] = useState<{
+    mode: "voice" | "video";
+    sessionId: string;
+  } | null>(null);
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [aiRecordMeeting, setAiRecordMeeting] = useState(false);
+  const [aiTranscription, setAiTranscription] = useState(false);
+  const [aiSummary, setAiSummary] = useState(false);
+  const [aiActionItems, setAiActionItems] = useState(false);
+  const [conversationLinkKind, setConversationLinkKind] = useState<ConversationLinkKind>("");
+  const [conversationLinkNote, setConversationLinkNote] = useState("");
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
@@ -263,6 +327,16 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
     () => channels.filter((channel) => channel.channelType === "client"),
     [channels],
   );
+
+  const directoryNeedle = directoryQuery.trim().toLowerCase();
+  const filteredInternalChannels = useMemo(() => {
+    if (!directoryNeedle) return internalChannels;
+    return internalChannels.filter((channel) => channel.name.toLowerCase().includes(directoryNeedle));
+  }, [directoryNeedle, internalChannels]);
+  const filteredClientChannels = useMemo(() => {
+    if (!directoryNeedle) return clientChannels;
+    return clientChannels.filter((channel) => channel.name.toLowerCase().includes(directoryNeedle));
+  }, [clientChannels, directoryNeedle]);
 
   const channelMembers = useMemo(
     () =>
@@ -804,12 +878,25 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
         callLink,
       });
       setActiveCallLink(callLink);
-      window.open(callLink, "_blank", "noopener,noreferrer");
+      const parsed = parseMeetSessionFromLink(callLink);
+      if (parsed) {
+        setActiveCallSession(parsed);
+      }
     } catch (callError) {
       setError(callError instanceof Error ? callError.message : "Failed to start call");
     } finally {
       setSending(false);
     }
+  }
+
+  function openCallInWorkspace(callLink: string) {
+    const parsed = parseMeetSessionFromLink(callLink);
+    if (!parsed) {
+      window.open(callLink, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setActiveCallLink(callLink);
+    setActiveCallSession(parsed);
   }
 
   async function handleScheduleCall(event: React.FormEvent) {
@@ -1197,7 +1284,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
         <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-sky-300" />
-            <h2 className="text-sm font-semibold text-white">Join as operator</h2>
+            <h2 className="text-sm font-semibold text-white">Join Communications</h2>
           </div>
 
           {!joinedOperator ? (
@@ -1205,11 +1292,11 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
               {usersLoading ? (
                 <div className="flex items-center gap-2 text-sm text-white/50">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading internal users…
+                  Loading directory…
                 </div>
               ) : activeOperators.length === 0 ? (
                 <p className="text-sm text-white/50">
-                  No internal users found. Add admin, info, and paul under Internal users.
+                  No internal users found. Add operators under Internal users.
                 </p>
               ) : (
                 <>
@@ -1230,7 +1317,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
                     disabled={!pendingOperatorId}
                     className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#2563eb] text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Join messaging
+                    Join Communications
                   </button>
                 </>
               )}
@@ -1238,10 +1325,14 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
           ) : (
             <div className="mt-4 rounded-xl border border-sky-400/30 bg-sky-500/10 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">
-                Connected
+                Signed in
               </p>
               <p className="mt-1 text-sm font-semibold text-white">
                 {formatOperatorLabel(joinedOperator)}
+              </p>
+              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-200/90">
+                <span className={cn("h-2 w-2 rounded-full", presenceDotClass("online"))} />
+                {presenceLabel("online")}
               </p>
               <button
                 type="button"
@@ -1257,7 +1348,17 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
         <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <Hash className="h-4 w-4 text-violet-300" />
-            <h2 className="text-sm font-semibold text-white">Channels</h2>
+            <h2 className="text-sm font-semibold text-white">Directory</h2>
+          </div>
+
+          <div className="relative mt-3">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35" />
+            <input
+              value={directoryQuery}
+              onChange={(event) => setDirectoryQuery(event.target.value)}
+              placeholder="Search conversations…"
+              className={cn(inputClassName(), "pl-9")}
+            />
           </div>
 
           <button
@@ -1286,32 +1387,53 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
           )}
 
           {!joinedOperator && (
-            <p className="mt-2 text-xs text-white/40">Join as an operator above to create channels.</p>
+            <p className="mt-2 text-xs text-white/40">Join Communications above to create channels.</p>
           )}
 
           <div className="mt-4 space-y-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                Internal users
+                Recent conversations
               </p>
               <ul className="mt-2 space-y-1.5">
-                {(internalChannels.length > 0 ? internalChannels : [activeChannel]).map(
-                  (channel) => renderChannelButton(channel),
-                )}
+                {(filteredInternalChannels.length > 0
+                  ? filteredInternalChannels
+                  : directoryNeedle
+                    ? []
+                    : [activeChannel]
+                ).map((channel) => renderChannelButton(channel))}
+                {directoryNeedle && filteredInternalChannels.length === 0 ? (
+                  <li className="px-1 text-xs text-white/40">No matching conversations.</li>
+                ) : null}
               </ul>
             </div>
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                External clients
+                Groups
               </p>
-              {clientChannels.length === 0 ? (
+              <ul className="mt-2 space-y-1.5">
+                {filteredInternalChannels
+                  .filter((channel) => channel.memberOperatorIds.length > 2)
+                  .map((channel) => renderChannelButton(channel))}
+                {filteredInternalChannels.filter((channel) => channel.memberOperatorIds.length > 2)
+                  .length === 0 ? (
+                  <li className="px-1 text-xs text-white/40">No group channels yet.</li>
+                ) : null}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                External contacts
+              </p>
+              {filteredClientChannels.length === 0 ? (
                 <p className="mt-2 text-xs text-white/40">
-                  No client channels yet. Create one to share with Westport.
+                  No client or partner channels yet. Create one for clients, suppliers, or guests.
                 </p>
               ) : (
                 <ul className="mt-2 space-y-1.5">
-                  {clientChannels.map((channel) => renderChannelButton(channel))}
+                  {filteredClientChannels.map((channel) => renderChannelButton(channel))}
                 </ul>
               )}
             </div>
@@ -1320,28 +1442,36 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
 
         <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
-            Online now
+            Online users
           </p>
           <ul className="mt-3 space-y-2">
             {participants.length === 0 ? (
-              <li className="text-xs text-white/40">No operators in this channel yet.</li>
+              <li className="text-xs text-white/40">No one online in this conversation yet.</li>
             ) : (
               participants.map((participant) => (
                 <li
                   key={participant.operatorId}
                   className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/70"
                 >
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  <span>{participant.operatorName}</span>
+                  <span
+                    className={cn("h-2 w-2 shrink-0 rounded-full", presenceDotClass("online"))}
+                    title={presenceLabel("online")}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{participant.operatorName}</span>
+                  <span className="text-[10px] text-emerald-200/80">{presenceLabel("online")}</span>
                 </li>
               ))
             )}
           </ul>
 
-          <form onSubmit={(event) => void handleScheduleCall(event)} className="mt-5 border-t border-white/10 pt-4">
+          <form
+            id="communications-schedule"
+            onSubmit={(event) => void handleScheduleCall(event)}
+            className="mt-5 border-t border-white/10 pt-4"
+          >
             <div className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4 text-amber-300" />
-              <h3 className="text-sm font-semibold text-white">Schedule a call</h3>
+              <h3 className="text-sm font-semibold text-white">Schedule meeting</h3>
             </div>
             <div className="mt-3 space-y-2">
               <input
@@ -1475,7 +1605,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
                   onClick={handleLeave}
                   className="inline-flex h-9 items-center rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06]"
                 >
-                  Switch operator
+                  Switch identity
                 </button>
               ) : null}
               <button
@@ -1488,7 +1618,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
               >
                 <UserPlus className="h-3.5 w-3.5" />
-                Add users
+                Add participant
               </button>
               <button
                 type="button"
@@ -1497,7 +1627,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
               >
                 <Phone className="h-3.5 w-3.5" />
-                Voice
+                Voice call
               </button>
               <button
                 type="button"
@@ -1506,26 +1636,171 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20 disabled:opacity-50"
               >
                 <Video className="h-3.5 w-3.5" />
-                Video
+                Video call
+              </button>
+              <button
+                type="button"
+                disabled={!joinedOperator}
+                onClick={() => {
+                  setScheduleTitle(`Meeting — ${activeChannel.name}`);
+                  setShowMoreOptions(false);
+                  document.getElementById("communications-schedule")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                  });
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                Schedule meeting
+              </button>
+              <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06]">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Files
+                <input
+                  type="file"
+                  className="hidden"
+                  disabled={!joinedOperator || uploading}
+                  onChange={(event) => void handleAttachFile(event)}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowMoreOptions((current) => !current)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06]"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+                More
               </button>
             </div>
           </div>
 
-          {activeCallLink && (
+          {showMoreOptions && (
+            <div className="mt-3 grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-2">
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                  <Sparkles className="h-3.5 w-3.5 text-violet-300" />
+                  AI meeting options
+                </p>
+                <p className="mb-2 text-[11px] text-white/40">All options default off. Nothing is recorded automatically.</p>
+                <div className="space-y-1.5 text-xs text-white/75">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiRecordMeeting}
+                      onChange={(event) => setAiRecordMeeting(event.target.checked)}
+                    />
+                    Record meeting
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiTranscription}
+                      onChange={(event) => setAiTranscription(event.target.checked)}
+                    />
+                    AI transcription
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiSummary}
+                      onChange={(event) => setAiSummary(event.target.checked)}
+                    />
+                    AI summary
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiActionItems}
+                      onChange={(event) => setAiActionItems(event.target.checked)}
+                    />
+                    Action items
+                  </label>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                  <Link2 className="h-3.5 w-3.5 text-sky-300" />
+                  Optional link
+                </p>
+                <p className="mb-2 text-[11px] text-white/40">Link this conversation only when you choose to.</p>
+                <select
+                  value={conversationLinkKind}
+                  onChange={(event) =>
+                    setConversationLinkKind(event.target.value as ConversationLinkKind)
+                  }
+                  className={inputClassName()}
+                >
+                  <option value="">No link</option>
+                  <option value="crm-client">CRM client</option>
+                  <option value="project">Project</option>
+                  <option value="opportunity">Opportunity</option>
+                  <option value="support-ticket">Support ticket</option>
+                  <option value="internal-task">Internal task</option>
+                </select>
+                {conversationLinkKind ? (
+                  <input
+                    value={conversationLinkNote}
+                    onChange={(event) => setConversationLinkNote(event.target.value)}
+                    placeholder="Reference name or ID"
+                    className={cn(inputClassName(), "mt-2")}
+                  />
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {activeCallSession && (
+            <div className="mt-3 overflow-hidden rounded-xl border border-sky-400/30 bg-[#020617]">
+              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs text-sky-100">
+                <span className="inline-flex items-center gap-2">
+                  {activeCallSession.mode === "voice" ? (
+                    <Phone className="h-3.5 w-3.5" />
+                  ) : (
+                    <Video className="h-3.5 w-3.5" />
+                  )}
+                  Live {activeCallSession.mode} call in Communications
+                  {(aiRecordMeeting || aiTranscription || aiSummary || aiActionItems) && (
+                    <span className="rounded-md border border-violet-400/30 bg-violet-500/10 px-1.5 py-0.5 text-[10px] text-violet-100">
+                      AI options on
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCallSession(null);
+                    setActiveCallLink(null);
+                  }}
+                  className="rounded-md px-2 py-1 text-white/60 hover:bg-white/10 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="h-[min(52vh,520px)] min-h-[320px]">
+                <MessagingCallRoom
+                  sessionId={activeCallSession.sessionId}
+                  expectedMode={activeCallSession.mode}
+                  embedded
+                />
+              </div>
+            </div>
+          )}
+
+          {activeCallLink && !activeCallSession && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
               <div className="flex items-center gap-2">
                 <Mic className="h-4 w-4" />
-                <span>Live call started — open the room to join</span>
+                <span>Live call ready in this conversation</span>
               </div>
               <div className="flex items-center gap-2">
-                <a
-                  href={activeCallLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => openCallInWorkspace(activeCallLink)}
                   className="font-medium underline underline-offset-2"
                 >
                   Join call
-                </a>
+                </button>
                 <button type="button" onClick={() => setActiveCallLink(null)} aria-label="Dismiss">
                   <X className="h-4 w-4" />
                 </button>
@@ -1613,7 +1888,11 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
                           {formatMessageTime(message.createdAt)}
                         </p>
                       </div>
-                      <MessageBody message={message} isSelf={isSelf} />
+                      <MessageBody
+                        message={message}
+                        isSelf={isSelf}
+                        onJoinCall={openCallInWorkspace}
+                      />
                     </div>
                   </div>
                 );
@@ -1625,7 +1904,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
 
         {!joinedOperator && (
           <div className="border-t border-amber-400/25 bg-amber-500/10 px-5 py-4">
-            <p className="text-sm font-semibold text-amber-100">Join as an operator to send messages</p>
+            <p className="text-sm font-semibold text-amber-100">Join Communications to send messages</p>
             <p className="mt-1 text-xs text-amber-100/70">
               Pick your name, then join — you can also use the panel on the left.
             </p>
@@ -1699,7 +1978,7 @@ export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
               placeholder={
                 joinedOperator
                   ? `Message in ${activeChannel.name}…`
-                  : "Join as an operator to send messages"
+                  : "Join Communications to send messages"
               }
               className="min-h-[52px] flex-1 resize-y rounded-xl border border-white/10 bg-[#0b1524] px-4 py-3 text-sm text-white placeholder:text-white/35 outline-none focus:border-sky-400/50 disabled:opacity-50"
             />

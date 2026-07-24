@@ -55,6 +55,7 @@ export type InternalOperationsView =
   | "recent-missions"
   | "webodm"
   | "messaging"
+  | "communications"
   | "social"
   | "settings"
   | "billing"
@@ -195,6 +196,7 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "recent-missions",
   "webodm",
   "messaging",
+  "communications",
   "social",
   "settings",
   "billing",
@@ -320,6 +322,9 @@ export function normalizeInternalOperationsView(value: string | null): InternalO
   if (value === "debtors") return "accounts-receivable";
   if (value === "creditors") return "accounts-payable";
   if (value === "opex") return "financials";
+  if (value === "messaging" || value === "voice-video" || value === "voice-and-video") {
+    return "communications";
+  }
   if (legacyCorporateViewToTab(value)) return "corporate-information";
   return isInternalOperationsView(value) ? value : "home";
 }
@@ -496,8 +501,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
       },
       { label: "Email", icon: "Mail", view: "info-email" as const },
       { label: "Calendar", icon: "CalendarDays", view: "calendar" as const },
-      { label: "Voice & Video", icon: "Video", view: "media-example" as const },
-      { label: "Messaging", icon: "MessageSquare", view: "messaging" as const },
+      { label: "Communications", icon: "MessageSquare", view: "communications" as const },
       { label: "Social", icon: "Share2", view: "social" as const },
       {
         label: "Support Desk",
@@ -570,6 +574,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
     color: "#6C63FF",
     items: [
       { label: "Website Management", icon: "Globe", view: "website-management" as const },
+      { label: "Media Library", icon: "Film", view: "media-example" as const },
       { label: "Testing", icon: "FlaskConical", view: "testing" as const },
       { label: "Telemetry", icon: "Radio", view: "telemetry" as const },
       { label: "Users", icon: "Users", view: "users" as const },
@@ -665,7 +670,8 @@ export const internalViewTitles: Record<
   grants: { title: "Grants", subtitle: "Projects" },
   "recent-missions": { title: "Recent Missions", subtitle: "Internal Operations" },
   webodm: { title: "WebODM Processing", subtitle: "Internal Operations" },
-  messaging: { title: "Messaging", subtitle: "Business Productivity" },
+  messaging: { title: "Communications", subtitle: "Business Productivity" },
+  communications: { title: "Communications", subtitle: "Business Productivity" },
   social: { title: "Social", subtitle: "Business Productivity" },
   settings: { title: "General", subtitle: "Settings" },
   billing: { title: "Billing", subtitle: "Settings" },
@@ -689,7 +695,7 @@ export const internalViewTitles: Record<
   },
   support: { title: "Support Desk", subtitle: "Business Productivity" },
   telemetry: { title: "Live Telemetry", subtitle: "Tools" },
-  "media-example": { title: "Voice & Video", subtitle: "Business Productivity" },
+  "media-example": { title: "Media Library", subtitle: "Tools" },
   "design-mockups": { title: "Design Concepts", subtitle: "Internal Operations" },
   sector: { title: "Sector Intelligence", subtitle: "Unit311" },
   training: { title: "Staff Courses", subtitle: "Training" },
@@ -813,11 +819,11 @@ export const internalHomeTileRows = [
   ],
   [
     {
-      id: "messaging",
-      view: "messaging" as const,
+      id: "communications",
+      view: "communications" as const,
       icon: "messaging" as const,
-      title: "Messaging",
-      description: "Internal operator chat.",
+      title: "Communications",
+      description: "Messaging, voice, and video in one hub.",
       accent: "from-blue-500/20 to-sky-600/10 border-blue-400/30",
     },
     {

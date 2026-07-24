@@ -95,7 +95,7 @@ const DEMO_NAV_SECTIONS: InternalNavSection[] = [
       { label: "Calendar", icon: "CalendarDays", view: "calendar" },
       { label: "Logistics", icon: "Truck", view: "logistics" },
       { label: "Email", icon: "Mail", view: "info-email" },
-      { label: "Messaging", icon: "MessageSquare", view: "messaging" },
+      { label: "Communications", icon: "MessageSquare", view: "communications" },
       { label: "Social", icon: "Share2", view: "social" },
       { label: "Support", icon: "LifeBuoy", view: "support" },
     ],

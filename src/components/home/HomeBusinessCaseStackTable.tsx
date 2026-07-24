@@ -4,7 +4,7 @@ const STACK_ROWS = [
   { function: "Project Management", product: "Zoho Projects", cost: "US$600" },
   { function: "Asset Management", product: "Sortly", cost: "US$1,000" },
   { function: "Support Desk", product: "Zoho Desk", cost: "US$840" },
-  { function: "Messaging, Voice & Video", product: "Microsoft Teams Essentials", cost: "US$480" },
+  { function: "Communications", product: "Microsoft Teams Essentials", cost: "US$480" },
   { function: "Learning Management", product: "TalentLMS", cost: "US$500" },
   { function: "Social Media", product: "Buffer", cost: "US$800" },
   { function: "Expense Management", product: "Expensify", cost: "US$800" },

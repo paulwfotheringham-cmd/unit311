@@ -8,7 +8,7 @@ export const EXTERNAL_USER_PORTAL_MODULES = [
   "Invoices",
   "Support",
   "Documents",
-  "Messaging",
+  "Communications",
   "Calendar",
   "Engineering",
   "Training",
@@ -150,12 +150,12 @@ export function defaultModulesForRole(role: ExternalUserRole): ExternalUserPorta
         "Invoices",
         "Support",
         "Documents",
-        "Messaging",
+        "Communications",
         "Calendar",
         "Training",
       ];
     case "Contributor":
-      return ["Projects", "Files", "Support", "Documents", "Messaging", "Calendar"];
+      return ["Projects", "Files", "Support", "Documents", "Communications", "Calendar"];
     case "Viewer":
       return ["Projects", "Files", "Documents", "Reports"];
   }

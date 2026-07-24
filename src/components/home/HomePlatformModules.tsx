@@ -62,7 +62,7 @@ const MODULES = [
     accent: "#3b82f6",
   },
   {
-    title: "Messaging",
+    title: "Communications",
     description: "Internal channels, client messaging, and live collaboration.",
     icon: MessageSquare,
     accent: "#6366f1",

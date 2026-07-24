@@ -53,7 +53,7 @@ export const MODULE_GO_LIVE_CATALOG: readonly Omit<ModuleGoLiveEntry, "status">[
   { id: "MOD-103", module: "Client Explorer" },
   { id: "MOD-110", module: "Calendar" },
   { id: "MOD-111", module: "Email" },
-  { id: "MOD-112", module: "Messaging" },
+  { id: "MOD-112", module: "Communications" },
   { id: "MOD-113", module: "Social" },
   { id: "MOD-114", module: "Support Desk" },
   { id: "MOD-120", module: "Training Dashboard" },
