@@ -8,6 +8,7 @@ import { getAssistantAction } from "./actions/registry";
 import { cardsFromArtifacts } from "./execution-card-adapters";
 import { eaStage, eaStop, getEaCorrelationId, setEaConversationId } from "./ea-forensic-trace";
 import { topicHintFromHistory } from "./intent-router";
+import { extractConversationEntityMemory } from "./intent-action-resolver";
 import {
   createAssistantResponse,
   formatOpenAIError,
@@ -438,6 +439,7 @@ export async function* runAssistantTurn(input: {
 
   const resolved = await resolveHistory(input.session, input.request, context);
   const activeArtifact = extractActiveArtifact(resolved.history);
+  const entityMemory = extractConversationEntityMemory(resolved.history);
   const userMessage: AssistantChatMessage = {
     id: createMessageId(),
     role: "user",
@@ -463,6 +465,15 @@ export async function* runAssistantTurn(input: {
             openUrl: activeArtifact.openUrl,
           }
         : null,
+      activeClient:
+        entityMemory.clientId || entityMemory.clientName
+          ? {
+              clientId: entityMemory.clientId ?? null,
+              clientName: entityMemory.clientName ?? null,
+              projectId: entityMemory.projectId ?? null,
+              projectName: entityMemory.projectName ?? null,
+            }
+          : null,
       topicHint: topicHintFromHistory(resolved.history),
     }),
     input.request.structuredJson ? buildStructuredJsonHint() : "",

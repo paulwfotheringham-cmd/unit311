@@ -132,16 +132,20 @@ export function cardsFromExecuteSuccess(input: {
   followUpActions?: AssistantFollowUpAction[];
   navigateHref?: string;
   navigateLabel?: string;
+  meta?: Record<string, unknown>;
 }): EaExecutionCard[] {
   const cards: EaExecutionCard[] = [
     buildSummaryCard({
-      title: input.title,
+      title: input.title.startsWith("✓") ? input.title : `✓ ${input.title}`,
       body: input.body,
       fields: input.fields,
       nextActions: input.followUpActions,
       statusTone: "success",
     }),
   ];
+  if (input.meta && cards[0]) {
+    cards[0] = { ...cards[0], meta: { ...cards[0].meta, ...input.meta } };
+  }
   if (input.navigateHref) {
     cards.push(
       buildNavigationCard({
@@ -215,7 +219,11 @@ export function successCardsFromDefinitions(input: {
   return cardsFromExecuteSuccess({
     title,
     fields,
-    body: primary?.message,
+    body: undefined,
     followUpActions: input.followUpActions,
+    meta: {
+      clientId: primary?.recordId ?? null,
+      clientName: primary?.recordLabel ?? null,
+    },
   });
 }

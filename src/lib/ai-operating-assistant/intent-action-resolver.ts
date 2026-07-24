@@ -11,7 +11,7 @@ import {
   formatOpenAIError,
   getAssistantModel,
 } from "./openai-client";
-import type { AssistantBusinessContext } from "./types";
+import type { AssistantBusinessContext, AssistantChatMessage } from "./types";
 import {
   getAssistantAction,
   listAssistantActionDescriptors,
@@ -39,6 +39,15 @@ export type ResolvedBusinessActionIntent =
       kind: "none";
       reason: string;
     };
+
+/** Entities remembered from the current conversation (Chief-of-Staff context). */
+export type ConversationEntityMemory = {
+  clientId?: string | null;
+  clientName?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  employeeName?: string | null;
+};
 
 /** Tiny generic verb list only — domain nouns come from capability metadata. */
 const GENERIC_VERBS: Record<string, string[]> = {
@@ -124,6 +133,10 @@ function extractPerson(message: string): string | null {
     /(?:assign|appoint)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+as\b/i,
   );
   if (assign?.[1]) return assign[1].trim();
+  const asRole = message.match(
+    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+as\s+(?:project\s+manager|account\s+manager|pm|manager)\b/i,
+  );
+  if (asRole?.[1]) return asRole[1].trim();
   const contact = message.match(
     /(?:contact|person)\s+(?:called|named)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
   );
@@ -133,6 +146,151 @@ function extractPerson(message: string): string | null {
 function extractUrl(message: string): string | null {
   const match = message.match(/https?:\/\/\S+/i);
   return match?.[0] ?? null;
+}
+
+/**
+ * Recover the active business entity from recent conversation turns.
+ * Used so “them / that client / for them” resolves without re-stating names.
+ */
+export function extractConversationEntityMemory(
+  history: AssistantChatMessage[],
+): ConversationEntityMemory {
+  const memory: ConversationEntityMemory = {};
+  const recent = history.slice(-16).reverse();
+
+  for (const message of recent) {
+    if (message.role === "user") {
+      const named = extractNamedEntity(message.content);
+      if (named && !memory.clientName) {
+        if (/\b(client|customer|signed|onboard|company)\b/i.test(message.content)) {
+          memory.clientName = named;
+        } else if (/\bproject\b/i.test(message.content) && !memory.projectName) {
+          memory.projectName = named;
+        } else if (!memory.clientName) {
+          memory.clientName = named;
+        }
+      }
+      const person = extractPerson(message.content);
+      if (person && !memory.employeeName) memory.employeeName = person;
+      continue;
+    }
+
+    if (message.role !== "assistant") continue;
+
+    for (const card of message.executionCards ?? []) {
+      for (const field of card.fields ?? []) {
+        const key = field.key.toLowerCase();
+        const value = field.value == null ? "" : String(field.value).trim();
+        if (!value) continue;
+        if ((key === "id" || key === "recordid" || key === "clientid") && !memory.clientId) {
+          if (/^[0-9a-f-]{8,}$/i.test(value) || /^cli_/i.test(value)) {
+            memory.clientId = value;
+          }
+        }
+        if (
+          (key === "name" || key === "companyname" || key === "clientname" || key === "recordlabel") &&
+          !memory.clientName
+        ) {
+          memory.clientName = value;
+        }
+        if ((key === "projectname" || key === "project") && !memory.projectName) {
+          memory.projectName = value;
+        }
+      }
+      if (card.meta && typeof card.meta === "object") {
+        const meta = card.meta as Record<string, unknown>;
+        if (typeof meta.clientId === "string" && !memory.clientId) memory.clientId = meta.clientId;
+        if (typeof meta.clientName === "string" && !memory.clientName) {
+          memory.clientName = meta.clientName;
+        }
+      }
+    }
+
+    for (const followUp of message.followUpActions ?? []) {
+      const input = followUp.input;
+      if (!input) continue;
+      if (typeof input.clientId === "string" && !memory.clientId) memory.clientId = input.clientId;
+      if (typeof input.clientName === "string" && !memory.clientName) {
+        memory.clientName = input.clientName;
+      }
+      if (typeof input.companyName === "string" && !memory.clientName) {
+        memory.clientName = input.companyName;
+      }
+    }
+
+    const idMatch = message.content.match(
+      /\b(?:ID|clientId|Client ID)\s*[:#]?\s*([0-9a-f-]{8,}|\w[\w-]{6,})/i,
+    );
+    if (idMatch?.[1] && !memory.clientId) memory.clientId = idMatch[1];
+
+    const nameBlock = message.content.match(
+      /(?:Client created|Name)\s*\n+\s*([^\n]{2,80})/i,
+    );
+    if (nameBlock?.[1] && !memory.clientName) memory.clientName = nameBlock[1].trim();
+
+    const createdFor = message.content.match(
+      /(?:create client|created)\s+for\s+([^.?\n]{2,80})/i,
+    );
+    if (createdFor?.[1] && !memory.clientName) memory.clientName = createdFor[1].trim();
+  }
+
+  return memory;
+}
+
+function messageNeedsEntityResolution(message: string): boolean {
+  return /\b(them|they|their|that\s+client|this\s+client|the\s+client|that\s+customer|this\s+customer|for\s+them|for\s+that)\b/i.test(
+    message,
+  );
+}
+
+function applyConversationMemory(
+  actionId: string,
+  input: Record<string, unknown>,
+  memory: ConversationEntityMemory,
+  message: string,
+): Record<string, unknown> {
+  const next = { ...input };
+  const definition = getAssistantAction(actionId);
+  const props =
+    definition?.inputSchema &&
+    typeof definition.inputSchema === "object" &&
+    "properties" in definition.inputSchema
+      ? ((definition.inputSchema as { properties?: Record<string, unknown> }).properties ?? {})
+      : {};
+
+  const clientName = memory.clientName?.trim() || null;
+  const clientId = memory.clientId?.trim() || null;
+
+  if (clientId) {
+    for (const key of ["clientId", "id"]) {
+      if (key in props && next[key] == null) next[key] = clientId;
+    }
+  }
+  if (clientName) {
+    for (const key of ["clientName", "companyName", "name"]) {
+      if (key in props && next[key] == null) next[key] = clientName;
+    }
+    if (actionId.startsWith("projects.") && next.clientName == null && "clientName" in props) {
+      next.clientName = clientName;
+    }
+    if (actionId.startsWith("clients.") && messageNeedsEntityResolution(message)) {
+      const primaries = definition?.capability.entityExtraction?.primaryNameFields ?? [];
+      for (const field of primaries) {
+        if (next[field] == null) next[field] = clientName;
+      }
+    }
+  }
+
+  if (memory.projectName && "projectName" in props && next.projectName == null) {
+    next.projectName = memory.projectName;
+  }
+  if (memory.employeeName) {
+    for (const key of ["employeeName", "managerName", "accountManager", "projectManager", "personName"]) {
+      if (key in props && next[key] == null) next[key] = memory.employeeName;
+    }
+  }
+
+  return next;
 }
 
 function requiredFieldsFromSchema(descriptor: AssistantActionDescriptor): string[] {
@@ -404,6 +562,7 @@ function classifyHeuristic(
 export async function resolveBusinessActionIntent(
   message: string,
   business: AssistantBusinessContext,
+  history: AssistantChatMessage[] = [],
 ): Promise<ResolvedBusinessActionIntent> {
   const text = message.trim();
   if (!text) return { kind: "none", reason: "empty" };
@@ -423,6 +582,7 @@ export async function resolveBusinessActionIntent(
     return { kind: "none", reason: "no_registered_actions" };
   }
 
+  const memory = extractConversationEntityMemory(history);
   const llm = await classifyWithLlm(text, business, descriptors);
   const heuristic = classifyHeuristic(text, descriptors);
 
@@ -437,7 +597,13 @@ export async function resolveBusinessActionIntent(
     return { kind: "none", reason: "no_semantic_match" };
   }
 
-  const input = buildInputForAction(text, chosen.actionId, chosen.input);
+  let input = buildInputForAction(text, chosen.actionId, chosen.input);
+  input = applyConversationMemory(chosen.actionId, input, memory, text);
+
+  // Explicit clientId / companyName tokens from follow-up prompts.
+  const idToken = text.match(/\bclientId\s+([0-9a-f-]{8,}|\w[\w-]{6,})\b/i);
+  if (idToken?.[1] && input.clientId == null) input.clientId = idToken[1];
+
   const missing = missingRequired(chosen.actionId, input);
 
   if (missing.length) {
@@ -456,7 +622,12 @@ export async function resolveBusinessActionIntent(
     actionId: chosen.actionId,
     input,
     confidence: chosen.confidence,
-    reason: llm && llm.actionId === chosen.actionId ? "llm_semantic" : "heuristic_semantic",
+    reason: [
+      llm && llm.actionId === chosen.actionId ? "llm_semantic" : "heuristic_semantic",
+      memory.clientName || memory.clientId ? "with_conversation_memory" : null,
+    ]
+      .filter(Boolean)
+      .join("|"),
     missingFields: [],
   };
 }

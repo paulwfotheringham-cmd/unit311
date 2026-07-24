@@ -24,6 +24,10 @@ export type DirectAssistantIntent = {
     | "getMonthlyPayrollObligation"
     | "platformSearch"
     | "queryPayroll"
+    | "queryBusiness"
+    | "getSmartInsights"
+    | "getBusinessHealth"
+    | "getDailyBrief"
     | "proposeBusinessActionPlan"
     | "listBusinessActions"
     | "searchCapabilities"
@@ -117,6 +121,68 @@ export function resolveDirectIntent(
   // —— Goal-oriented Planning Engine ——
   const goalIntent = resolveGoalPlanningIntent(text, lower);
   if (goalIntent) return goalIntent;
+
+  // —— Executive business reasoning (live data only) ——
+  if (
+    /\b(what\s+changed|changed\s+since\s+yesterday|overnight|since\s+yesterday|what'?s\s+new)\b/i.test(
+      lower,
+    )
+  ) {
+    return {
+      tool: "getDailyBrief",
+      args: {},
+      reason: "what_changed",
+    };
+  }
+
+  if (
+    /\b(at\s+risk|miss\s+deadlines?|likely\s+to\s+miss|overdue\s+projects?|projects?\s+.*overdue|stale\s+projects?)\b/i.test(
+      lower,
+    ) &&
+    !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    return {
+      tool: "getSmartInsights",
+      args: { category: "projects" },
+      reason: "projects_at_risk",
+    };
+  }
+
+  if (
+    /\b(highest\s+overdue|overdue\s+balances?|customers?\s+.*overdue|overdue\s+invoices?|who\s+owes)\b/i.test(
+      lower,
+    ) &&
+    !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    return {
+      tool: "searchInvoices",
+      args: { overdueOnly: true, pageSize: 50 },
+      reason: "overdue_balances",
+    };
+  }
+
+  if (
+    /\b(overloaded|workload|capacity|too\s+many\s+reports|over\s+capacity)\b/i.test(lower) &&
+    !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    return {
+      tool: "getSmartInsights",
+      args: { category: "hr" },
+      reason: "employee_workload",
+    };
+  }
+
+  if (
+    /\b(how\s+is\s+(the\s+)?business|business\s+health|operating\s+status|biggest\s+risks)\b/i.test(
+      lower,
+    )
+  ) {
+    return {
+      tool: "queryBusiness",
+      args: { question: text },
+      reason: "business_reasoning",
+    };
+  }
 
   // —— Live data lists (never invent “no access”) ——
 

@@ -18,6 +18,8 @@ export type AssistantFollowUpAction = {
   actionId?: string;
   artifactId?: string;
   requiresConfirmation?: boolean;
+  /** Prefill for the next Action Framework propose (e.g. clientId from prior create). */
+  input?: Record<string, unknown>;
 };
 
 export type AssistantCitation = {

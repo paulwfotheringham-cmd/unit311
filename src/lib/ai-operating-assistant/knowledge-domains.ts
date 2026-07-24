@@ -31,10 +31,10 @@ const CAPABILITY_HINT =
   /\b(what\s+can\s+you\s+do|what\s+are\s+you\s+(able|capable)\s+of|list\s+(your\s+)?(capabilities|actions)|what\s+actions?\s+(exist|are\s+(there|available)|for)|can\s+you\s+(create|add|archive|update|assign|merge)|capabilities?\s+for|actions?\s+for)\b/i;
 
 const WRITE_HINT =
-  /\b(create|add|register|archive|restore|assign|merge|update|delete|terminate|approve\s+payment)\b/i;
+  /\b(create|add|register|archive|restore|assign|merge|update|delete|terminate|approve\s+payment|signed|signing|we've\s+just\s+signed|just\s+signed)\b/i;
 
 const BUSINESS_HINT =
-  /\b(show\s+(my\s+)?|list\s+(my\s+)?|how\s+many|who\s+(manages|owns|is)|overdue|at\s+risk|outstanding|which\s+projects|clients?\b|employees?\b|invoices?\b|headcount|cash\s+position)\b/i;
+  /\b(show\s+(my\s+)?|list\s+(my\s+)?|how\s+many|who\s+(manages|owns|is)|overdue|at\s+risk|outstanding|which\s+projects|clients?\b|employees?\b|invoices?\b|headcount|cash\s+position|overloaded|workload|what\s+changed|miss\s+deadlines?|highest\s+overdue)\b/i;
 
 /**
  * Coarse domain classification used before tool selection.

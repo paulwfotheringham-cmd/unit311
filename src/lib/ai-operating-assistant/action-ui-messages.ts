@@ -49,12 +49,12 @@ export function formatPlanReadyMessage(input: {
   const name = input.entityLabel?.trim();
   const detail = input.detail?.trim();
   if (name && detail) {
-    return `I'll ${input.actionName.toLowerCase()} for ${name} (${detail}). Approve to continue.`;
+    return `Ready to ${input.actionName.toLowerCase()} for ${name} (${detail}). Approve to continue.`;
   }
   if (name) {
-    return `I'll ${input.actionName.toLowerCase()} for ${name}. Approve to continue.`;
+    return `Ready to ${input.actionName.toLowerCase()} for ${name}. Approve to continue.`;
   }
-  return `I'll ${input.actionName.toLowerCase()}. Approve to continue.`;
+  return `Ready to ${input.actionName.toLowerCase()}. Approve to continue.`;
 }
 
 /**

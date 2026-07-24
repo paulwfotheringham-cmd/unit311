@@ -271,13 +271,35 @@ export async function POST(request: NextRequest, context: RouteContext) {
           const fromLegacy = definition.capability.suggestedFollowUps ?? [];
           const merged =
             fromRelationships.length > 0
-              ? fromRelationships.map((f) => ({ label: f.label, actionId: f.actionId }))
+              ? fromRelationships.map((f) => ({
+                  label: f.label,
+                  actionId: f.actionId,
+                }))
               : fromLegacy;
+
+          const contextInput: Record<string, unknown> = {};
+          if (step.result?.recordId) {
+            contextInput.clientId = step.result.recordId;
+            contextInput.id = step.result.recordId;
+          }
+          if (step.result?.recordLabel) {
+            contextInput.clientName = step.result.recordLabel;
+            contextInput.companyName = step.result.recordLabel;
+          }
+          const fromOutput = step.result?.output;
+          if (fromOutput && typeof fromOutput === "object") {
+            for (const key of ["clientId", "companyName", "clientName", "projectId", "projectName"]) {
+              const value = (fromOutput as Record<string, unknown>)[key];
+              if (typeof value === "string" && value.trim()) contextInput[key] = value.trim();
+            }
+          }
+
           return merged.map((followUp, index) => ({
             id: `followup_${step.actionId}_${index}`,
             label: followUp.label,
             kind: "generate" as const,
             actionId: followUp.actionId,
+            input: Object.keys(contextInput).length ? contextInput : undefined,
           }));
         });
 

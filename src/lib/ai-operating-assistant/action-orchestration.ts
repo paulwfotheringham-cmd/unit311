@@ -180,7 +180,7 @@ export async function resolveOrchestrationRoute(
       };
     }
 
-    const businessIntent = await resolveBusinessActionIntent(message, business);
+    const businessIntent = await resolveBusinessActionIntent(message, business, history);
     if (businessIntent.kind === "need_info") {
       const cards = buildNeedInfoCards({
         actionId: businessIntent.actionId,
@@ -228,7 +228,7 @@ export async function resolveOrchestrationRoute(
 
   // WRITE — registry-driven propose / need_info.
   if (domain.domain !== "platform" && domain.domain !== "capability") {
-    const businessIntent = await resolveBusinessActionIntent(message, business);
+    const businessIntent = await resolveBusinessActionIntent(message, business, history);
     if (businessIntent.kind === "need_info") {
       const cards = buildNeedInfoCards({
         actionId: businessIntent.actionId,
@@ -291,7 +291,7 @@ export async function redirectManualGuidanceToActionPlan(
 ): Promise<DirectAssistantIntent | null> {
   if (!isManualGuidanceTool(toolName)) return null;
   ensureActionModulesRegistered();
-  const intent = await resolveBusinessActionIntent(userMessage, business);
+  const intent = await resolveBusinessActionIntent(userMessage, business, []);
   if (intent.kind !== "propose") return null;
   return proposeSteps(intent.actionId, intent.input, userMessage, "redirect_from_guidance");
 }

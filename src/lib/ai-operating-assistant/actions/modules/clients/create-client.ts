@@ -81,12 +81,17 @@ export const createClientAction: AssistantActionDefinition = {
     },
     suggestedFollowUps: [
       { label: "Add contact", actionId: "clients.addClientContact" },
+      { label: "Create first project", actionId: "projects.createProject" },
       { label: "Assign account manager", actionId: "clients.assignAccountManager" },
-      { label: "Create project", actionId: "projects.createProject" },
+      { label: "Schedule kickoff" },
     ],
     relationships: {
       suggestedNext: [
-        { label: "Create Project", actionId: "projects.createProject", reason: "Client Created" },
+        {
+          label: "Create first project",
+          actionId: "projects.createProject",
+          reason: "Client Created",
+        },
         { label: "Add Contact", actionId: "clients.addClientContact", reason: "Client Created" },
         {
           label: "Assign Account Manager",

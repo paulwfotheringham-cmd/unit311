@@ -494,7 +494,16 @@ export default function ExecutiveAssistantPanel({
       action.actionId === "generateReportPdf" ||
       action.actionId === "generateFinancialReportPdf"
     ) {
-      void handleSend(undefined, action.label || "Generate PDF");
+      const input = action.input ?? {};
+      const clientName =
+        (typeof input.clientName === "string" && input.clientName) ||
+        (typeof input.companyName === "string" && input.companyName) ||
+        null;
+      const clientId = typeof input.clientId === "string" ? input.clientId : null;
+      const parts = [action.label || "Continue"];
+      if (clientName) parts.push(`for ${clientName}`);
+      if (clientId) parts.push(`clientId ${clientId}`);
+      void handleSend(undefined, parts.join(" "));
       return;
     }
 
