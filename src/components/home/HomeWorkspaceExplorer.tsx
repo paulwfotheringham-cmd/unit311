@@ -77,25 +77,20 @@ const WORKSPACES: Workspace[] = [
     title: "Business Central",
     descriptor: "Executive oversight",
     description:
-      "Executive oversight, strategic planning, AI-powered decision making and enterprise-wide workflow automation.",
+      "Executive oversight, strategic planning, AI-powered decision making and enterprise-wide business management.",
     aiSummary:
       "Surfaces what needs attention across the organisation — priorities, approvals and strategic signals — so leadership can act without chasing updates.",
     icon: LayoutDashboard,
     visual: "central",
     accent: "rgba(125, 211, 252, 0.55)",
     capabilities: [
-      { label: "Executive Dashboard", icon: Gauge },
-      { label: "Executive AI Assistant", icon: Sparkles },
-      { label: "Role-Based Workspaces", icon: Users },
-      { label: "Workflow & Approvals", icon: ClipboardCheck },
-      { label: "Organisation Dashboard", icon: Building2 },
-      { label: "Competitors", icon: Target },
-      { label: "Whiteboards", icon: FileStack },
-      { label: "Executive Decks", icon: ChartColumn },
-      { label: "Strategic Planning", icon: Activity },
+      { label: "Role-Based Executive Dashboard", icon: Gauge },
+      { label: "Client Management", icon: Users },
+      { label: "Sales Pipeline, Discovery & Client Onboarding", icon: Handshake },
+      { label: "Executive Project Dashboard", icon: ChartColumn },
+      { label: "Project Management", icon: FolderKanban },
+      { label: "Grant Management", icon: FileText },
     ],
-    footnote:
-      "Workflow & Approvals supports simple through to highly complex multi-stage approval processes across projects, procurement, HR, finance, contracts, quality management, engineering change requests, expenses, leave requests and any other business workflow.",
   },
   {
     id: "clients-projects",
@@ -409,6 +404,48 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
   }
 }
 
+function BusinessCentralPanel({ workspace }: { workspace: Workspace }) {
+  return (
+    <div className="relative space-y-8 sm:space-y-9">
+      <div className="max-w-3xl">
+        <h3 className="text-[1.35rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.55rem] lg:text-[1.7rem]">
+          {workspace.title}
+        </h3>
+        <p className="mt-1.5 text-[13px] font-medium text-white/45 sm:text-[14px]">
+          {workspace.descriptor}
+        </p>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/68 sm:mt-5 sm:text-[16px] sm:leading-relaxed">
+          {workspace.description}
+        </p>
+      </div>
+
+      <section>
+        <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          Key capabilities
+        </h4>
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {workspace.capabilities.map((capability) => {
+            const CapIcon = capability.icon;
+            return (
+              <li
+                key={capability.label}
+                className="flex items-start gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5 sm:py-4"
+              >
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sky-300/85">
+                  <CapIcon className="h-4 w-4" strokeWidth={1.55} aria-hidden />
+                </span>
+                <span className="min-w-0 pt-1.5 text-[13.5px] font-medium leading-snug text-white/80 sm:text-[14px]">
+                  {capability.label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
 function ExpandedPanel({
   panelId,
   workspace,
@@ -417,6 +454,7 @@ function ExpandedPanel({
   workspace: Workspace | null;
 }) {
   const Icon = workspace?.icon;
+  const isBusinessCentral = workspace?.id === "business-central";
   const keyCapabilities = workspace?.capabilities.slice(0, 6) ?? [];
   const highlights =
     workspace?.highlights ??
@@ -434,7 +472,9 @@ function ExpandedPanel({
       aria-hidden={!workspace}
       className={[
         "workspace-panel relative overflow-hidden border border-white/[0.1] px-5 pb-6 pt-5 sm:px-7 sm:pb-7 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-6",
-        "rounded-b-[22px] rounded-t-none sm:rounded-b-[26px] lg:rounded-b-[28px]",
+        isBusinessCentral
+          ? "is-detached rounded-[22px] sm:rounded-[26px] lg:rounded-[28px]"
+          : "rounded-b-[22px] rounded-t-none sm:rounded-b-[26px] lg:rounded-b-[28px]",
         workspace ? "" : "pointer-events-none",
       ].join(" ")}
       style={
@@ -443,7 +483,7 @@ function ExpandedPanel({
           : undefined
       }
     >
-      <div className="workspace-panel-bridge" aria-hidden />
+      {!isBusinessCentral ? <div className="workspace-panel-bridge" aria-hidden /> : null}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.07] via-transparent to-transparent" aria-hidden />
       <div
         className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full blur-3xl"
@@ -452,115 +492,119 @@ function ExpandedPanel({
       />
 
       {workspace && Icon ? (
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-8 xl:gap-10">
-          <div className="min-w-0 space-y-5 sm:space-y-6">
-            <div className="flex items-start gap-3.5 sm:gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-12 sm:w-12 sm:rounded-[17px]">
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
-              </span>
-              <div className="min-w-0 pt-0.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/75">
-                  Workspace overview
-                </p>
-                <h3 className="mt-1 text-[1.25rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.45rem] lg:text-[1.6rem]">
-                  {workspace.title}
-                </h3>
-                <p className="mt-1 text-[12.5px] font-medium text-white/42 sm:text-[13px]">
-                  {workspace.descriptor}
-                </p>
+        isBusinessCentral ? (
+          <BusinessCentralPanel workspace={workspace} />
+        ) : (
+          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-8 xl:gap-10">
+            <div className="min-w-0 space-y-5 sm:space-y-6">
+              <div className="flex items-start gap-3.5 sm:gap-4">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-12 sm:w-12 sm:rounded-[17px]">
+                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
+                </span>
+                <div className="min-w-0 pt-0.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/75">
+                    Workspace overview
+                  </p>
+                  <h3 className="mt-1 text-[1.25rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.45rem] lg:text-[1.6rem]">
+                    {workspace.title}
+                  </h3>
+                  <p className="mt-1 text-[12.5px] font-medium text-white/42 sm:text-[13px]">
+                    {workspace.descriptor}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <section>
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                What this workspace is for
-              </h4>
-              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-white/68 sm:text-[15px] sm:leading-relaxed">
-                {workspace.description}
-              </p>
-            </section>
-
-            <section className="rounded-2xl border border-sky-400/15 bg-sky-500/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">
-              <div className="flex items-center gap-2 text-sky-200/90">
-                <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
-                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em]">
-                  AI summary
-                </h4>
-              </div>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-white/72 sm:text-[14.5px]">
-                {workspace.aiSummary}
-              </p>
-            </section>
-
-            {highlights.length > 0 ? (
               <section>
                 <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                  Important information
+                  What this workspace is for
                 </h4>
-                <ul className="mt-2.5 space-y-2">
-                  {highlights.map((item) => (
-                    <li
-                      key={item}
-                      className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 text-[13px] leading-relaxed text-white/58 sm:text-[13.5px]"
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-          </div>
-
-          <div className="min-w-0 space-y-5 sm:space-y-6">
-            <section>
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                Key capabilities
-              </h4>
-              <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                {keyCapabilities.map((capability) => {
-                  const CapIcon = capability.icon;
-                  return (
-                    <li
-                      key={capability.label}
-                      className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sky-300/85">
-                        <CapIcon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
-                      </span>
-                      <span className="min-w-0 text-[13px] font-medium leading-snug text-white/78">
-                        {capability.label}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-              {workspace.capabilities.length > keyCapabilities.length ? (
-                <p className="mt-2.5 text-[12px] text-white/35">
-                  Plus {workspace.capabilities.length - keyCapabilities.length} more modules inside
-                  the live workspace.
+                <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-white/68 sm:text-[15px] sm:leading-relaxed">
+                  {workspace.description}
                 </p>
-              ) : null}
-            </section>
+              </section>
 
-            <section>
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                Quick actions
-              </h4>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                {quickActions.map((action) => (
-                  <Link
-                    key={action.label}
-                    href={action.href}
-                    className="inline-flex items-center justify-between gap-3 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-[13px] font-semibold text-white/85 transition-colors hover:border-sky-300/35 hover:bg-sky-500/10 hover:text-white sm:min-w-[12.5rem]"
-                  >
-                    <span>{action.label}</span>
-                    <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-sky-300/80" aria-hidden />
-                  </Link>
-                ))}
-              </div>
-            </section>
+              <section className="rounded-2xl border border-sky-400/15 bg-sky-500/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">
+                <div className="flex items-center gap-2 text-sky-200/90">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                    AI summary
+                  </h4>
+                </div>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-white/72 sm:text-[14.5px]">
+                  {workspace.aiSummary}
+                </p>
+              </section>
+
+              {highlights.length > 0 ? (
+                <section>
+                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                    Important information
+                  </h4>
+                  <ul className="mt-2.5 space-y-2">
+                    {highlights.map((item) => (
+                      <li
+                        key={item}
+                        className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 text-[13px] leading-relaxed text-white/58 sm:text-[13.5px]"
+                      >
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
+
+            <div className="min-w-0 space-y-5 sm:space-y-6">
+              <section>
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                  Key capabilities
+                </h4>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  {keyCapabilities.map((capability) => {
+                    const CapIcon = capability.icon;
+                    return (
+                      <li
+                        key={capability.label}
+                        className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sky-300/85">
+                          <CapIcon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
+                        </span>
+                        <span className="min-w-0 text-[13px] font-medium leading-snug text-white/78">
+                          {capability.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {workspace.capabilities.length > keyCapabilities.length ? (
+                  <p className="mt-2.5 text-[12px] text-white/35">
+                    Plus {workspace.capabilities.length - keyCapabilities.length} more modules inside
+                    the live workspace.
+                  </p>
+                ) : null}
+              </section>
+
+              <section>
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                  Quick actions
+                </h4>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {quickActions.map((action) => (
+                    <Link
+                      key={action.label}
+                      href={action.href}
+                      className="inline-flex items-center justify-between gap-3 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-[13px] font-semibold text-white/85 transition-colors hover:border-sky-300/35 hover:bg-sky-500/10 hover:text-white sm:min-w-[12.5rem]"
+                    >
+                      <span>{action.label}</span>
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-sky-300/80" aria-hidden />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <div className="h-24" aria-hidden />
       )}
@@ -580,6 +624,7 @@ function WorkspaceTile({
   onToggle: () => void;
 }) {
   const Icon = workspace.icon;
+  const isDetachedOpen = isOpen && workspace.id === "business-central";
 
   return (
     <button
@@ -596,6 +641,7 @@ function WorkspaceTile({
         "min-h-[9.25rem] sm:min-h-[9.75rem] xl:min-h-[8.85rem] xl:rounded-[14px] 2xl:min-h-[9.35rem] 2xl:rounded-[16px]",
         "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050816]",
         isOpen ? "is-open" : "",
+        isDetachedOpen ? "is-detached" : "",
       ].join(" ")}
       style={{ "--tile-accent": workspace.accent } as CSSProperties}
     >
@@ -636,6 +682,7 @@ export default function HomeWorkspaceExplorer() {
   const [openId, setOpenId] = useState<string | null>(null);
   const panelId = useId();
   const openWorkspace = WORKSPACES.find((workspace) => workspace.id === openId) ?? null;
+  const isBusinessCentralOpen = openWorkspace?.id === "business-central";
 
   function toggleWorkspace(id: string) {
     setOpenId((current) => (current === id ? null : id));
@@ -680,8 +727,12 @@ export default function HomeWorkspaceExplorer() {
 
       <div
         className={[
-          "grid transition-[grid-template-rows] duration-150 ease-out",
-          openWorkspace ? "mt-0 grid-rows-[1fr]" : "mt-0 grid-rows-[0fr]",
+          "grid transition-[grid-template-rows,margin-top] duration-150 ease-out",
+          openWorkspace
+            ? isBusinessCentralOpen
+              ? "mt-7 grid-rows-[1fr] sm:mt-8"
+              : "mt-0 grid-rows-[1fr]"
+            : "mt-0 grid-rows-[0fr]",
         ].join(" ")}
       >
         <div className="min-h-0 overflow-hidden">
