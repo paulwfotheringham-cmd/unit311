@@ -28,6 +28,7 @@ export type DirectAssistantIntent = {
     | "getSmartInsights"
     | "getBusinessHealth"
     | "getDailyBrief"
+    | "searchCRM"
     | "proposeBusinessActionPlan"
     | "listBusinessActions"
     | "searchCapabilities"
@@ -124,7 +125,7 @@ export function resolveDirectIntent(
 
   // —— Executive business reasoning (live data only) ——
   if (
-    /\b(what\s+changed|changed\s+since\s+yesterday|overnight|since\s+yesterday|what'?s\s+new)\b/i.test(
+    /\b(what\s+changed|changed\s+since\s+yesterday|overnight|since\s+yesterday|what'?s\s+new|what\s+happened)\b/i.test(
       lower,
     )
   ) {
@@ -136,10 +137,60 @@ export function resolveDirectIntent(
   }
 
   if (
-    /\b(at\s+risk|miss\s+deadlines?|likely\s+to\s+miss|overdue\s+projects?|projects?\s+.*overdue|stale\s+projects?)\b/i.test(
+    /\b(requires?\s+my\s+attention|what\s+should\s+i\s+focus|focus\s+on\s+today|attention\s+today|priorit(y|ies)\s+today)\b/i.test(
+      lower,
+    )
+  ) {
+    return {
+      tool: "getDailyBrief",
+      args: {},
+      reason: "attention_today",
+    };
+  }
+
+  if (
+    /\b(summarise|summarize)\s+(the\s+)?business\b|\bbusiness\s+summary\b|\bhow\s+is\s+(the\s+)?business\b|\bbusiness\s+health\b|\boperating\s+status\b/i.test(
+      lower,
+    )
+  ) {
+    return {
+      tool: "queryBusiness",
+      args: { question: text },
+      reason: "business_summary",
+    };
+  }
+
+  if (
+    /\b(biggest\s+opportunities|pipeline|hot\s+leads|crm\s+opportunities|sales\s+pipeline)\b/i.test(
       lower,
     ) &&
     !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    return {
+      tool: "searchCRM",
+      args: { status: "Hot", pageSize: 50 },
+      reason: "sales_opportunities",
+    };
+  }
+
+  if (
+    /\b(customers?\s+are\s+at\s+risk|clients?\s+at\s+risk|which\s+customers?\s+.*risk|inactive\s+clients?)\b/i.test(
+      lower,
+    ) &&
+    !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    return {
+      tool: "getSmartInsights",
+      args: { category: "clients" },
+      reason: "customers_at_risk",
+    };
+  }
+
+  if (
+    /\b(at\s+risk|miss\s+deadlines?|likely\s+to\s+miss|overdue\s+projects?|projects?\s+.*overdue|stale\s+projects?|behind\s+schedule|highest-?risk\s+projects?|highest\s+risk\s+projects?)\b/i.test(
+      lower,
+    ) &&
+    !/\b(pdf|export|customer|client)\b/i.test(lower)
   ) {
     return {
       tool: "getSmartInsights",
@@ -149,7 +200,7 @@ export function resolveDirectIntent(
   }
 
   if (
-    /\b(highest\s+overdue|overdue\s+balances?|customers?\s+.*overdue|overdue\s+invoices?|who\s+owes)\b/i.test(
+    /\b(highest\s+overdue|overdue\s+balances?|customers?\s+.*overdue|overdue\s+invoices?|who\s+owes|owes\s+us\s+the\s+most|which\s+invoices?\s+are\s+overdue)\b/i.test(
       lower,
     ) &&
     !/\b(pdf|export)\b/i.test(lower)
@@ -162,7 +213,22 @@ export function resolveDirectIntent(
   }
 
   if (
-    /\b(overloaded|workload|capacity|too\s+many\s+reports|over\s+capacity)\b/i.test(lower) &&
+    /\b(how\s+much\s+cash|cash\s+(do\s+we\s+have|position|balance)|bank\s+balance|treasury)\b/i.test(
+      lower,
+    ) &&
+    !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    return {
+      tool: "getCashPosition",
+      args: {},
+      reason: "cash_position",
+    };
+  }
+
+  if (
+    /\b(overloaded|workload|capacity|too\s+many\s+reports|over\s+capacity|who\s+is\s+overloaded)\b/i.test(
+      lower,
+    ) &&
     !/\b(pdf|export)\b/i.test(lower)
   ) {
     return {
@@ -173,14 +239,27 @@ export function resolveDirectIntent(
   }
 
   if (
-    /\b(how\s+is\s+(the\s+)?business|business\s+health|operating\s+status|biggest\s+risks)\b/i.test(
-      lower,
-    )
+    /\b(what\s+should\s+i\s+delegate|delegate|biggest\s+risks)\b/i.test(lower) &&
+    !/\b(pdf|export)\b/i.test(lower)
   ) {
     return {
-      tool: "queryBusiness",
-      args: { question: text },
-      reason: "business_reasoning",
+      tool: "getSmartInsights",
+      args: {},
+      reason: "executive_risks_or_delegate",
+    };
+  }
+
+  if (
+    /\b(prepare\s+for\s+(my\s+)?meeting|meeting\s+with)\b/i.test(lower) &&
+    !/\b(pdf|export)\b/i.test(lower)
+  ) {
+    const person =
+      text.match(/\b(?:with|meeting)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/)?.[1] ||
+      text.replace(/^.*meeting\s+with\s+/i, "").replace(/[?.!].*$/, "").trim();
+    return {
+      tool: "platformSearch",
+      args: { query: person || text },
+      reason: "meeting_prep",
     };
   }
 
@@ -198,10 +277,10 @@ export function resolveDirectIntent(
   }
 
   if (
-    (/\b(on\s+leave|currently\s+on\s+leave|who('?s| is)\s+on\s+leave|everyone\s+.*leave|people\s+.*leave)\b/i.test(
+    (/\b(on\s+leave|currently\s+on\s+leave|who('?s| is)\s+on\s+leave|everyone\s+.*leave|people\s+.*leave|today'?s\s+leave|leave\s+today|show\s+.*leave)\b/i.test(
       lower,
     ) ||
-      /^(list|show|get|give me|display)\s+(all\s+)?leave\b/i.test(text)) &&
+      /^(list|show|get|give me|display)\s+(all\s+|today'?s\s+|my\s+)?leave\b/i.test(text)) &&
     !/\b(pdf|export|download|balance|balances)\b/i.test(lower)
   ) {
     return {

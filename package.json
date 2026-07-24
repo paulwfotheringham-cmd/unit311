@@ -31,7 +31,11 @@
     "guard:canonical-repo": "node scripts/assert-canonical-unit311-repo.mjs",
     "deploy:prod": "node scripts/assert-canonical-unit311-repo.mjs && node -e \"console.error('BLOCKED: Use Git deploys from Unit311central/unit311central. See docs/PRODUCTION_DEPLOYMENT.md'); process.exit(1)\"",
     "demo:refresh": "node scripts/refresh-demo-workspace.mjs",
-    "demo:verify": "node scripts/verify-demo-release.mjs"
+    "demo:verify": "node scripts/verify-demo-release.mjs",
+    "test:executive-acceptance": "node scripts/executive-acceptance-suite.mjs",
+    "test:executive-intents": "node --import tsx scripts/executive-acceptance-intents.mjs",
+    "test:ea-domains": "node scripts/verify-ea-knowledge-domains.mjs",
+    "test:ea-intelligence": "node scripts/verify-ea-intelligence.mjs"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",

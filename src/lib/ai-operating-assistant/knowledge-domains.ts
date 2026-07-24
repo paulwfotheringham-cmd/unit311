@@ -34,7 +34,7 @@ const WRITE_HINT =
   /\b(create|add|register|archive|restore|assign|merge|update|delete|terminate|approve\s+payment|signed|signing|we've\s+just\s+signed|just\s+signed)\b/i;
 
 const BUSINESS_HINT =
-  /\b(show\s+(my\s+)?|list\s+(my\s+)?|how\s+many|who\s+(manages|owns|is)|overdue|at\s+risk|outstanding|which\s+projects|clients?\b|employees?\b|invoices?\b|headcount|cash\s+position|overloaded|workload|what\s+changed|miss\s+deadlines?|highest\s+overdue)\b/i;
+  /\b(show\s+(my\s+)?|list\s+(my\s+)?|how\s+many|how\s+much\s+cash|who\s+(manages|owns|is|owes)|overdue|at\s+risk|biggest\s+risks|outstanding|which\s+projects|clients?\b|employees?\b|invoices?\b|headcount|cash\s+(position|do\s+we\s+have|balance)|overloaded|workload|what\s+(has\s+)?changed|what\s+happened|miss\s+deadlines?|highest\s+overdue|summarise|summarize|attention|focus\s+on\s+today|opportunities|pipeline|behind\s+schedule|delegate|meeting\s+with|leave|overnight|since\s+yesterday)\b/i;
 
 /**
  * Coarse domain classification used before tool selection.
