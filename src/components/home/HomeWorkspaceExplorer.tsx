@@ -409,15 +409,6 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
   }
 }
 
-function CapabilityChip({ label, icon: Icon }: Capability) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.035] px-3.5 py-2 text-[12.5px] font-medium tracking-wide text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm sm:text-[13px]">
-      <Icon className="h-3.5 w-3.5 shrink-0 text-sky-300/85 sm:h-4 sm:w-4" strokeWidth={1.6} aria-hidden />
-      {label}
-    </span>
-  );
-}
-
 function ExpandedPanel({
   panelId,
   workspace,
@@ -426,6 +417,14 @@ function ExpandedPanel({
   workspace: Workspace | null;
 }) {
   const Icon = workspace?.icon;
+  const keyCapabilities = workspace?.capabilities.slice(0, 6) ?? [];
+  const highlights =
+    workspace?.highlights ??
+    (workspace?.footnote ? [workspace.footnote] : []);
+  const quickActions: QuickAction[] = workspace?.quickActions ?? [
+    { label: "Book a founder session", href: "/book" },
+    { label: "Create your workspace", href: "/signup" },
+  ];
 
   return (
     <div
@@ -434,7 +433,7 @@ function ExpandedPanel({
       aria-labelledby={workspace ? `${panelId}-${workspace.id}` : undefined}
       aria-hidden={!workspace}
       className={[
-        "workspace-panel relative overflow-hidden border border-white/[0.1] p-5 sm:p-7 lg:p-8",
+        "workspace-panel relative overflow-hidden border border-white/[0.1] px-5 pb-6 pt-5 sm:px-7 sm:pb-7 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-6",
         "rounded-b-[22px] rounded-t-none sm:rounded-b-[26px] lg:rounded-b-[28px]",
         workspace ? "" : "pointer-events-none",
       ].join(" ")}
@@ -444,47 +443,126 @@ function ExpandedPanel({
           : undefined
       }
     >
+      <div className="workspace-panel-bridge" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.07] via-transparent to-transparent" aria-hidden />
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/35 to-transparent"
-        aria-hidden
-      />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.02] to-transparent" aria-hidden />
-      <div
-        className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full blur-3xl"
-        style={{ background: workspace ? workspace.accent : "transparent", opacity: 0.16 }}
+        className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full blur-3xl"
+        style={{ background: workspace ? workspace.accent : "transparent", opacity: 0.14 }}
         aria-hidden
       />
 
       {workspace && Icon ? (
-        <div className="relative">
-          <div className="flex items-start gap-3.5 sm:gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-12 sm:w-12 sm:rounded-[18px]">
-              <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
-            </span>
-            <div className="min-w-0 pt-0.5">
-              <h3 className="text-[1.2rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.4rem] lg:text-[1.55rem]">
-                {workspace.title}
-              </h3>
-              <p className="mt-1.5 max-w-3xl text-[13.5px] leading-relaxed text-white/58 sm:mt-2 sm:text-[15px] sm:leading-relaxed lg:text-[16px]">
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-8 xl:gap-10">
+          <div className="min-w-0 space-y-5 sm:space-y-6">
+            <div className="flex items-start gap-3.5 sm:gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-12 sm:w-12 sm:rounded-[17px]">
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
+              </span>
+              <div className="min-w-0 pt-0.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/75">
+                  Workspace overview
+                </p>
+                <h3 className="mt-1 text-[1.25rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.45rem] lg:text-[1.6rem]">
+                  {workspace.title}
+                </h3>
+                <p className="mt-1 text-[12.5px] font-medium text-white/42 sm:text-[13px]">
+                  {workspace.descriptor}
+                </p>
+              </div>
+            </div>
+
+            <section>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                What this workspace is for
+              </h4>
+              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-white/68 sm:text-[15px] sm:leading-relaxed">
                 {workspace.description}
               </p>
-            </div>
+            </section>
+
+            <section className="rounded-2xl border border-sky-400/15 bg-sky-500/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">
+              <div className="flex items-center gap-2 text-sky-200/90">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                  AI summary
+                </h4>
+              </div>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-white/72 sm:text-[14.5px]">
+                {workspace.aiSummary}
+              </p>
+            </section>
+
+            {highlights.length > 0 ? (
+              <section>
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                  Important information
+                </h4>
+                <ul className="mt-2.5 space-y-2">
+                  {highlights.map((item) => (
+                    <li
+                      key={item}
+                      className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 text-[13px] leading-relaxed text-white/58 sm:text-[13.5px]"
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-2 sm:mt-6 sm:gap-2.5">
-            {workspace.capabilities.map((capability) => (
-              <CapabilityChip key={capability.label} {...capability} />
-            ))}
-          </div>
+          <div className="min-w-0 space-y-5 sm:space-y-6">
+            <section>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                Key capabilities
+              </h4>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                {keyCapabilities.map((capability) => {
+                  const CapIcon = capability.icon;
+                  return (
+                    <li
+                      key={capability.label}
+                      className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sky-300/85">
+                        <CapIcon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
+                      </span>
+                      <span className="min-w-0 text-[13px] font-medium leading-snug text-white/78">
+                        {capability.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {workspace.capabilities.length > keyCapabilities.length ? (
+                <p className="mt-2.5 text-[12px] text-white/35">
+                  Plus {workspace.capabilities.length - keyCapabilities.length} more modules inside
+                  the live workspace.
+                </p>
+              ) : null}
+            </section>
 
-          {workspace.footnote ? (
-            <p className="mt-5 max-w-4xl text-[12.5px] leading-relaxed text-white/45 sm:mt-6 sm:text-[13.5px]">
-              {workspace.footnote}
-            </p>
-          ) : null}
+            <section>
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                Quick actions
+              </h4>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {quickActions.map((action) => (
+                  <Link
+                    key={action.label}
+                    href={action.href}
+                    className="inline-flex items-center justify-between gap-3 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-[13px] font-semibold text-white/85 transition-colors hover:border-sky-300/35 hover:bg-sky-500/10 hover:text-white sm:min-w-[12.5rem]"
+                  >
+                    <span>{action.label}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-sky-300/80" aria-hidden />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </div>
         </div>
       ) : (
-        <div className="h-20" aria-hidden />
+        <div className="h-24" aria-hidden />
       )}
     </div>
   );
@@ -514,8 +592,8 @@ function WorkspaceTile({
       onClick={onToggle}
       className={[
         "workspace-tile group relative flex flex-col overflow-hidden rounded-[16px] text-left sm:rounded-[18px]",
-        // Compact software selectors — height follows content, not marketing-card min heights.
-        "min-h-0 xl:rounded-[14px] 2xl:rounded-[16px]",
+        // Balanced selector height — ~15–20% taller than ultra-compact, still content-led.
+        "min-h-[9.25rem] sm:min-h-[9.75rem] xl:min-h-[8.85rem] xl:rounded-[14px] 2xl:min-h-[9.35rem] 2xl:rounded-[16px]",
         "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050816]",
         isOpen ? "is-open" : "",
       ].join(" ")}
@@ -532,7 +610,7 @@ function WorkspaceTile({
         <Atmosphere visual={workspace.visual} />
       </span>
 
-      <span className="relative z-[1] flex flex-col gap-1.5 p-3 sm:gap-2 sm:p-3.5 md:p-3.5 lg:gap-2 lg:p-3.5 xl:gap-1.5 xl:p-2.5 2xl:gap-2 2xl:p-3">
+      <span className="relative z-[1] flex h-full flex-col justify-between gap-2.5 p-3.5 sm:gap-3 sm:p-4 md:p-4 lg:gap-3 lg:p-4 xl:gap-2.5 xl:p-3 2xl:gap-3 2xl:p-3.5">
         <span className="workspace-tile-icon flex h-11 w-11 items-center justify-center rounded-[12px] sm:h-12 sm:w-12 sm:rounded-[14px] md:h-[3.15rem] md:w-[3.15rem] lg:h-12 lg:w-12 xl:h-10 xl:w-10 xl:rounded-[11px] 2xl:h-11 2xl:w-11 2xl:rounded-[12px]">
           <Icon
             className="h-5 w-5 text-white sm:h-[1.35rem] sm:w-[1.35rem] md:h-6 md:w-6 lg:h-6 lg:w-6 xl:h-[1.15rem] xl:w-[1.15rem] 2xl:h-5 2xl:w-5"
@@ -541,7 +619,7 @@ function WorkspaceTile({
           />
         </span>
 
-        <span className="flex min-h-0 flex-col gap-0.5 sm:gap-1">
+        <span className="flex min-h-0 flex-col gap-1 sm:gap-1.5">
           <span className="line-clamp-2 text-[0.95rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white sm:text-[1rem] md:text-[1.02rem] lg:text-[1.05rem] xl:line-clamp-3 xl:text-[12.5px] xl:leading-[1.25] 2xl:text-[13.5px] 2xl:leading-[1.25]">
             {workspace.title}
           </span>
