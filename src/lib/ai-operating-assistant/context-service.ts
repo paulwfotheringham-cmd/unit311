@@ -60,7 +60,7 @@ export async function buildBusinessContext(
     // Organisation lookup is optional until onboarding tables are live.
   }
 
-  return {
+  const context: AssistantBusinessContext = {
     user: {
       id: input.session.sub,
       username: input.session.username,
@@ -72,11 +72,12 @@ export async function buildBusinessContext(
       name: organisationName,
     },
     workspace: {
-      id: input.workspaceId ?? organisationId ?? input.session.workspaceId ?? null,
+      // Never use organisationId as workspace id — platform_organisations ≠ workspaces.
+      id: input.workspaceId ?? input.session.workspaceId ?? null,
       name:
         input.workspaceName ??
-        organisationName ??
         input.session.workspaceName ??
+        organisationName ??
         "Unit311 Central",
       slug: input.workspaceSlug ?? input.session.workspaceSlug ?? null,
     },
@@ -100,6 +101,21 @@ export async function buildBusinessContext(
     permissions: permissionFlags(roleView),
     generatedAt: new Date().toISOString(),
   };
+
+  // Overlay host-resolved workspace when available (authoritative tenancy).
+  if (!input.workspaceId) {
+    try {
+      const { requireCurrentWorkspace } = await import("@/lib/workspace-context");
+      const workspace = await requireCurrentWorkspace();
+      context.workspace.id = workspace.id;
+      context.workspace.name = workspace.name;
+      context.workspace.slug = workspace.slug;
+    } catch {
+      // Keep session claim when host resolution is unavailable.
+    }
+  }
+
+  return context;
 }
 
 export function describeSelection(selection: AssistantPageSelection) {
