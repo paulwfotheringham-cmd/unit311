@@ -125,6 +125,7 @@ export function toPlanViewerModel(plan: PlanningGoal): PlanViewerModel {
       error: step.error,
       skipReason: step.skipReason,
       previewSummary: step.preview?.summary ?? null,
+      input: step.input ?? {},
     })),
     graph: plan.graph,
     affectedRecords: plan.steps.flatMap((step) => step.preview?.affectedRecords ?? []),
@@ -197,6 +198,7 @@ export function actionConfirmationToPlanViewer(
     error: action.error,
     skipReason: null as string | null,
     previewSummary: action.preview?.summary ?? null,
+    input: action.input ?? {},
   }));
 
   const done = steps.filter((step) =>

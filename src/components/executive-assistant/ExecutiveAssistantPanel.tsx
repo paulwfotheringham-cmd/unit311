@@ -20,11 +20,7 @@ import {
   startWorkflowGuide,
 } from "@/lib/ai-operating-assistant/proactive-client";
 import type { AiExplanation } from "@/lib/ai-operating-assistant/explainability";
-import {
-  executeConfirmedAction,
-  proposeAction,
-  type AssistantPendingActionKind,
-} from "@/lib/ai-operating-assistant/action-service";
+import { type AssistantPendingActionKind } from "@/lib/ai-operating-assistant/action-service";
 import { PlanViewer } from "@/components/executive-assistant/PlanViewer";
 import { actionConfirmationToPlanViewer } from "@/lib/ai-operating-assistant/actions/planning/summaries";
 import type { PlanViewerModel } from "@/lib/ai-operating-assistant/actions/planning/types";
@@ -638,6 +634,8 @@ export default function ExecutiveAssistantPanel({
               };
               const viewer = result.items?.[0]?.viewer;
               if (viewer) {
+                // Keep actionConfirmation null for goal plans, but viewer.steps must
+                // carry input (see toPlanViewerModel) so Approve does not send {}.
                 setActionConfirmation(null);
                 setPlanViewer(viewer);
               }
@@ -1005,7 +1003,7 @@ export default function ExecutiveAssistantPanel({
                             actionId: step.actionId,
                             name: step.name,
                             module: step.module,
-                            input: {},
+                            input: step.input ?? {},
                             status: step.status,
                           })),
                       }),
@@ -1122,7 +1120,15 @@ export default function ExecutiveAssistantPanel({
                             module: action.module,
                             input: action.input ?? {},
                             status: action.status,
-                          })) ?? [],
+                          })) ??
+                          planViewer.steps.map((step) => ({
+                            stepId: step.stepId,
+                            actionId: step.actionId,
+                            name: step.name,
+                            module: step.module,
+                            input: step.input ?? {},
+                            status: step.status,
+                          })),
                       }),
                     });
                   } catch {
@@ -1147,10 +1153,21 @@ export default function ExecutiveAssistantPanel({
                   type="button"
                   onClick={() => {
                     void (async () => {
-                      const action = proposeAction(pendingConfirm.kind);
-                      const result = await executeConfirmedAction(action);
-                      showNotice(result.message);
+                      // Legacy catalogue Confirm must NEVER call executeConfirmedAction
+                      // (client-side blocked stub). Re-route create-style confirms into chat
+                      // so Action Framework propose → Plan Viewer → Approve runs instead.
+                      const kind = pendingConfirm.kind;
                       setPendingConfirm(null);
+                      if (kind === "create_client") {
+                        void handleSend(
+                          undefined,
+                          "Create a new client. Use the Action Framework plan and wait for Approve.",
+                        );
+                        return;
+                      }
+                      showNotice(
+                        "This confirmation path is retired. Ask the assistant to propose an Action Plan, then Approve in the Plan Viewer.",
+                      );
                     })();
                   }}
                   className="rounded-lg border border-amber-400/40 bg-amber-500/20 px-2.5 py-1.5 text-[11px] font-semibold text-amber-50"

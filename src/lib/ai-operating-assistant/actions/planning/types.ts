@@ -239,6 +239,8 @@ export type PlanViewerModel = {
     error?: string | null;
     skipReason?: string | null;
     previewSummary?: string | null;
+    /** Required for Approve rehydration when actionConfirmation state is missing. */
+    input?: Record<string, unknown>;
   }>;
   graph: PlanningExecutionGraph;
   affectedRecords: Array<{
