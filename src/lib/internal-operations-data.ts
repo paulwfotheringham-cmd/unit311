@@ -94,7 +94,15 @@ export type InternalOperationsView =
   | "engineering"
   | "engineering-dashboard"
   | "engineering-resources"
-  | "engineering-capacity";
+  | "engineering-capacity"
+  | "technology"
+  | "technology-dashboard"
+  | "technology-devices"
+  | "technology-software"
+  | "technology-telecommunications"
+  | "technology-infrastructure"
+  | "technology-reports"
+  | "technology-settings";
 
 /** App Router folder path (middleware may rewrite `/` → this on the internal host). */
 export const INTERNAL_OPERATIONS_APP_PATH = "/internaldashboard";
@@ -236,6 +244,14 @@ export const internalOperationsViews: InternalOperationsView[] = [
   "engineering-dashboard",
   "engineering-resources",
   "engineering-capacity",
+  "technology",
+  "technology-dashboard",
+  "technology-devices",
+  "technology-software",
+  "technology-telecommunications",
+  "technology-infrastructure",
+  "technology-reports",
+  "technology-settings",
 ];
 
 /** Nav aliases that share one implementation until modules are redesigned. */
@@ -253,6 +269,17 @@ export const ENGINEERING_NAV_VIEWS = [
   "engineering-capacity",
 ] as const satisfies readonly InternalOperationsView[];
 
+export const TECHNOLOGY_NAV_VIEWS = [
+  "technology",
+  "technology-dashboard",
+  "technology-devices",
+  "technology-software",
+  "technology-telecommunications",
+  "technology-infrastructure",
+  "technology-reports",
+  "technology-settings",
+] as const satisfies readonly InternalOperationsView[];
+
 export const ASSETS_NAV_VIEWS = [
   "assets",
   "inventory-management",
@@ -266,6 +293,10 @@ export function isProjectsNavView(view: InternalOperationsView): boolean {
 
 export function isEngineeringNavView(view: InternalOperationsView): boolean {
   return (ENGINEERING_NAV_VIEWS as readonly string[]).includes(view);
+}
+
+export function isTechnologyNavView(view: InternalOperationsView): boolean {
+  return (TECHNOLOGY_NAV_VIEWS as readonly string[]).includes(view);
 }
 
 export function isAssetsNavView(view: InternalOperationsView): boolean {
@@ -283,7 +314,6 @@ export const CORPORATE_INFORMATION_TABS = [
   { key: "office-locations", label: "Office Locations" },
   { key: "bank-accounts", label: "Bank Accounts" },
   { key: "professional-advisors", label: "Professional Advisors" },
-  { key: "software-licences", label: "Software & Licences" },
   { key: "contracts", label: "Contracts" },
 ] as const;
 
@@ -306,8 +336,6 @@ export function legacyCorporateViewToTab(
       return "bank-accounts";
     case "corporate-advisers":
       return "professional-advisors";
-    case "corporate-software":
-      return "software-licences";
     case "corporate-contracts":
       return "contracts";
     default:
@@ -325,6 +353,11 @@ export function normalizeInternalOperationsView(value: string | null): InternalO
   if (value === "voice-video" || value === "voice-and-video") {
     return "communications";
   }
+  // Software Licences moved from Corporate Information → Technology Management.
+  if (value === "corporate-software" || value === "software-licences") {
+    return "technology-software";
+  }
+  if (value === "technology") return "technology-dashboard";
   if (legacyCorporateViewToTab(value)) return "corporate-information";
   return isInternalOperationsView(value) ? value : "home";
 }
@@ -471,7 +504,6 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
       { label: "Office Locations", icon: "MapPin", view: "office-locations" as const },
       { label: "Bank Accounts", icon: "Landmark", view: "corporate-bank-accounts" as const },
       { label: "Professional Advisors", icon: "Handshake", view: "corporate-advisers" as const },
-      { label: "Software Licences", icon: "KeyRound", view: "corporate-software" as const },
       { label: "Contracts", icon: "ScrollText", view: "corporate-contracts" as const },
       {
         label: "Unit311 Details",
@@ -481,6 +513,21 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
           { label: "Module Go-Live", view: "module-go-live" as const },
         ],
       },
+    ],
+  },
+  {
+    kind: "workspace",
+    label: "Technology Management",
+    icon: "Cpu",
+    color: "#38BDF8",
+    items: [
+      { label: "Dashboard", icon: "LayoutDashboard", view: "technology-dashboard" as const },
+      { label: "Devices", icon: "Laptop", view: "technology-devices" as const },
+      { label: "Software", icon: "KeyRound", view: "technology-software" as const },
+      { label: "Telecommunications", icon: "Radio", view: "technology-telecommunications" as const },
+      { label: "Infrastructure", icon: "Server", view: "technology-infrastructure" as const },
+      { label: "Reports", icon: "ScrollText", view: "technology-reports" as const },
+      { label: "Settings", icon: "Settings", view: "technology-settings" as const },
     ],
   },
   {
@@ -635,7 +682,7 @@ export const internalViewTitles: Record<
   "corporate-bank-accounts": { title: "Bank Accounts", subtitle: "Corporate Information" },
   "corporate-advisers": { title: "Professional Advisors", subtitle: "Corporate Information" },
   "corporate-insurance": { title: "Insurance", subtitle: "Corporate Information" },
-  "corporate-software": { title: "Software Licences", subtitle: "Corporate Information" },
+  "corporate-software": { title: "Software", subtitle: "Technology Management" },
   "corporate-contracts": { title: "Contracts", subtitle: "Corporate Information" },
   financials: { title: "Dashboard", subtitle: "Financials" },
   "general-ledger": { title: "General Ledger", subtitle: "Financials" },
@@ -721,6 +768,20 @@ export const internalViewTitles: Record<
     subtitle: "Engineering",
   },
   "engineering-capacity": { title: "Capacity Planning", subtitle: "Engineering" },
+  technology: { title: "Technology Management", subtitle: "Technology Management" },
+  "technology-dashboard": { title: "Dashboard", subtitle: "Technology Management" },
+  "technology-devices": { title: "Devices", subtitle: "Technology Management" },
+  "technology-software": { title: "Software", subtitle: "Technology Management" },
+  "technology-telecommunications": {
+    title: "Telecommunications",
+    subtitle: "Technology Management",
+  },
+  "technology-infrastructure": {
+    title: "Infrastructure",
+    subtitle: "Technology Management",
+  },
+  "technology-reports": { title: "Reports", subtitle: "Technology Management" },
+  "technology-settings": { title: "Settings", subtitle: "Technology Management" },
 };
 
 /** Breadcrumb labels for the active internal leaf (section → … → page).

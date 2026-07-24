@@ -88,6 +88,9 @@ export const UserManagementWorkspace = lazyWorkspace(() => import("./UserManagem
 export const EngineeringDashboardWorkspace = lazyWorkspace(() => import("./EngineeringDashboardWorkspace"));
 export const EngineeringResourcesWorkspace = lazyWorkspace(() => import("./EngineeringResourcesWorkspace"));
 export const EngineeringCapacityWorkspace = lazyWorkspace(() => import("./EngineeringCapacityWorkspace"));
+export const TechnologyDashboardWorkspace = lazyWorkspace(() => import("./TechnologyDashboardWorkspace"));
+export const TechnologySoftwareWorkspace = lazyWorkspace(() => import("./TechnologySoftwareWorkspace"));
+export const TechnologyPlaceholderWorkspace = lazyWorkspace(() => import("./TechnologyPlaceholderWorkspace"));
 export const ExternalClientAccessWorkspace = lazyWorkspace(() => import("./ExternalClientAccessWorkspace"));
 export const WebsiteManagementWorkspace = lazyWorkspace(() => import("./WebsiteManagementWorkspace"));
 export const WebODMWorkspace = lazyWorkspace(() => import("./WebODMWorkspace"));

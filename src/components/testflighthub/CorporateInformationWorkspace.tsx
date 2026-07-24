@@ -15,7 +15,6 @@ import CompanyDetailsWorkspace from "./CompanyDetailsWorkspace";
 import ContractsWorkspace from "./ContractsWorkspace";
 import OfficeLocationsWorkspace from "./OfficeLocationsWorkspace";
 import ProfessionalAdvisorsWorkspace from "./ProfessionalAdvisorsWorkspace";
-import SoftwareAssetRegisterWorkspace from "./SoftwareAssetRegisterWorkspace";
 
 function resolveTab(searchParams: URLSearchParams): CorporateInformationTab {
   const fromTab = searchParams.get("tab");
@@ -27,6 +26,7 @@ function resolveTab(searchParams: URLSearchParams): CorporateInformationTab {
 /**
  * Hosts Corporate Information leaf workspaces.
  * Navigation is sidebar-only — no duplicate horizontal tabs.
+ * Software Licences now lives under Technology Management.
  */
 export default function CorporateInformationWorkspace() {
   const searchParams = useSearchParams();
@@ -44,7 +44,6 @@ export default function CorporateInformationWorkspace() {
       {tab === "bank-accounts" ? <BankAccountsWorkspace /> : null}
       {tab === "professional-advisors" ? <ProfessionalAdvisorsWorkspace /> : null}
       {tab === "contracts" ? <ContractsWorkspace /> : null}
-      {tab === "software-licences" ? <SoftwareAssetRegisterWorkspace /> : null}
     </div>
   );
 }

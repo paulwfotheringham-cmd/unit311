@@ -120,13 +120,43 @@ const CONTEXT_BY_VIEW: Partial<Record<string, ExecutiveAssistantPageContext>> = 
     suggestedPrompts: ["Explain this system", "Open architecture", "Related documentation", "Operational risks"],
   },
   "corporate-software": {
-    label: "Software & Licences",
+    label: "Software",
     suggestedPrompts: [
       "Renewals due soon",
       "Unused licences",
       "Monthly software spend",
       "Generate software report",
     ],
+  },
+  "technology-software": {
+    label: "Software",
+    suggestedPrompts: [
+      "Renewals due soon",
+      "Unused licences",
+      "Monthly software spend",
+      "Generate software report",
+    ],
+  },
+  "technology-dashboard": {
+    label: "Technology Management",
+    suggestedPrompts: [
+      "Summarise technology estate",
+      "Renewals this month",
+      "Infrastructure health",
+      "Open software licences",
+    ],
+  },
+  "technology-devices": {
+    label: "Devices",
+    suggestedPrompts: ["Device inventory", "Unassigned devices", "Warranty expirations", "Assign a laptop"],
+  },
+  "technology-telecommunications": {
+    label: "Telecommunications",
+    suggestedPrompts: ["Active mobile lines", "SIM inventory", "Telecom spend", "Carrier contracts"],
+  },
+  "technology-infrastructure": {
+    label: "Infrastructure",
+    suggestedPrompts: ["Cloud platforms", "SSL certificates", "Backup status", "Identity & SSO"],
   },
   "executive-assistant": {
     label: "Executive Assistant",

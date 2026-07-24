@@ -119,6 +119,9 @@ import {
   SupportWorkspace,
   TelemetryDashboard,
   TestingWeatherPanel,
+  TechnologyDashboardWorkspace,
+  TechnologyPlaceholderWorkspace,
+  TechnologySoftwareWorkspace,
   TrainingDashboardWorkspace,
   TqmsReportsWorkspace,
   Unit311DetailsWorkspace,
@@ -807,6 +810,32 @@ export default function InternalOperationsDashboard({
           {activeView === "engineering-resources" && <EngineeringResourcesWorkspace />}
 
           {activeView === "engineering-capacity" && <EngineeringCapacityWorkspace />}
+
+          {(activeView === "technology" || activeView === "technology-dashboard") && (
+            <TechnologyDashboardWorkspace />
+          )}
+
+          {activeView === "technology-devices" && (
+            <TechnologyPlaceholderWorkspace module="devices" />
+          )}
+
+          {activeView === "technology-software" && <TechnologySoftwareWorkspace />}
+
+          {activeView === "technology-telecommunications" && (
+            <TechnologyPlaceholderWorkspace module="telecommunications" />
+          )}
+
+          {activeView === "technology-infrastructure" && (
+            <TechnologyPlaceholderWorkspace module="infrastructure" />
+          )}
+
+          {activeView === "technology-reports" && (
+            <TechnologyPlaceholderWorkspace module="reports" />
+          )}
+
+          {activeView === "technology-settings" && (
+            <TechnologyPlaceholderWorkspace module="settings" />
+          )}
         </div>
       </div>
       <AdminPerformanceMode activeView={activeView} />

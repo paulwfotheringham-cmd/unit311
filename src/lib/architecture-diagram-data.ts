@@ -711,9 +711,9 @@ export function createSoftwareAssetRegisterArchitectureDiagram(): ArchitectureDi
       }),
       node("sar-workspace", "Software Asset Register", "frontend", 40, 50, {
         parentId: "group-ui",
-        description: "Corporate Information · explorer + detail",
+        description: "Technology Management · Software",
         docSectionSlug: "software-asset-register",
-        href: "/?view=corporate-software",
+        href: "/?view=technology-software",
         icon: "layout-grid",
         status: "live",
       }),

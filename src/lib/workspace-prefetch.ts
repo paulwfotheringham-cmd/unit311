@@ -45,6 +45,21 @@ export const WORKSPACE_CHUNK_LOADERS: Partial<
   procurement: () => import("@/components/testflighthub/ProcurementWorkspace"),
   support: () => import("@/components/testflighthub/SupportWorkspace"),
   logistics: () => import("@/components/testflighthub/LogisticsWorkspace"),
+  technology: () => import("@/components/testflighthub/TechnologyDashboardWorkspace"),
+  "technology-dashboard": () =>
+    import("@/components/testflighthub/TechnologyDashboardWorkspace"),
+  "technology-devices": () =>
+    import("@/components/testflighthub/TechnologyPlaceholderWorkspace"),
+  "technology-software": () =>
+    import("@/components/testflighthub/TechnologySoftwareWorkspace"),
+  "technology-telecommunications": () =>
+    import("@/components/testflighthub/TechnologyPlaceholderWorkspace"),
+  "technology-infrastructure": () =>
+    import("@/components/testflighthub/TechnologyPlaceholderWorkspace"),
+  "technology-reports": () =>
+    import("@/components/testflighthub/TechnologyPlaceholderWorkspace"),
+  "technology-settings": () =>
+    import("@/components/testflighthub/TechnologyPlaceholderWorkspace"),
 };
 
 /**
@@ -92,6 +107,32 @@ export const VIEW_NEIGHBOR_PREFETCH: Partial<
   "inventory-management": ["assets", "procurement", "logistics"],
   procurement: ["inventory-management", "assets", "logistics"],
   logistics: ["procurement", "inventory-management", "fleet"],
+  technology: [
+    "technology-dashboard",
+    "technology-devices",
+    "technology-software",
+    "technology-telecommunications",
+  ],
+  "technology-dashboard": [
+    "technology-devices",
+    "technology-software",
+    "technology-telecommunications",
+    "technology-infrastructure",
+  ],
+  "technology-devices": ["technology-software", "technology-dashboard", "assets"],
+  "technology-software": ["technology-devices", "technology-dashboard", "technology-reports"],
+  "technology-telecommunications": [
+    "technology-devices",
+    "technology-dashboard",
+    "technology-infrastructure",
+  ],
+  "technology-infrastructure": [
+    "technology-dashboard",
+    "technology-telecommunications",
+    "technology-reports",
+  ],
+  "technology-reports": ["technology-dashboard", "technology-software"],
+  "technology-settings": ["technology-dashboard", "settings"],
   settings: ["profile", "users"],
   profile: ["settings"],
   users: ["settings", "users-external"],
