@@ -364,15 +364,8 @@ export function normalizeInternalOperationsView(value: string | null): InternalO
 
 /** Banner for nav leaves that reuse an existing module. */
 export function getNavImplementationNotice(
-  view: InternalOperationsView,
+  _view: InternalOperationsView,
 ): "uses-current" | "coming-soon" | null {
-  if (
-    view === "projects-dashboard" ||
-    view === "projects-internal" ||
-    view === "projects-external"
-  ) {
-    return "uses-current";
-  }
   return null;
 }
 
