@@ -947,7 +947,7 @@ export default function ExecutiveAssistantPanel({
     >
       {hideSidebar ? null : sidebar}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div
           className={cn(
             "flex shrink-0 items-start justify-between gap-3 border-b border-white/10",
@@ -1458,7 +1458,9 @@ export default function ExecutiveAssistantPanel({
   );
 
   if (variant === "page") {
-    return <div className="flex min-h-[calc(100dvh-8rem)] flex-col">{panelBody}</div>;
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">{panelBody}</div>
+    );
   }
 
   if (variant === "home") {

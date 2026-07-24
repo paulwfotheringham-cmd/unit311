@@ -164,7 +164,7 @@ export default function ExecutiveOperatingCentre() {
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[12px] border border-[color:var(--platform-card-border,#243347)]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-[color:var(--platform-card-border,#243347)]">
           <ExecutiveAssistantPanel
             variant="page"
             activeView="executive-assistant"
@@ -173,7 +173,7 @@ export default function ExecutiveOperatingCentre() {
             embedded
             seedPrompt={seedPrompt}
             onSeedConsumed={() => setSeedPrompt(null)}
-            className="min-h-full rounded-none border-0"
+            className="h-full min-h-0 rounded-none border-0"
           />
         </div>
       </div>

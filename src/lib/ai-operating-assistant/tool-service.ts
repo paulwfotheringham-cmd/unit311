@@ -42,7 +42,9 @@ import {
 } from "./payroll-tools";
 import {
   listBusinessActionsTool,
+  listPlatformModulesTool,
   proposeBusinessActionPlanTool,
+  searchApplicationsTool,
   searchCapabilitiesTool,
 } from "./actions/discovery-tools";
 import {
@@ -626,15 +628,42 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
     },
   },
   {
+    name: "listPlatformModules",
+    description:
+      "List Unit311 Central PLATFORM modules from the Application Catalogue (Business Central, Financials, HR, …). Use for “What modules exist?” — NOT for “What can you do?” (that is listBusinessActions / Action Registry).",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "searchApplications",
+    description:
+      "Search the Application Catalogue for modules, applications, and pages (e.g. “What is under Financials?”, “Where do I manage suppliers?”, “Open Human Resources”). Platform structure only — never confuses with Action Registry capabilities.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Natural-language platform / navigation question",
+        },
+        question: { type: "string" },
+        module: { type: "string", description: "Optional module name filter" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "listBusinessActions",
     description:
-      "List every capability from the live Capability Graph (actionId, capabilityId, businessObject, required/optional fields, permissions, confirmation policy, relationships, statements like “I can create Clients”). Use for discovery before proposing writes.",
+      "List every EXECUTABLE capability from the live Capability Graph / Action Registry (actionId, businessObject, statements like “I can create Clients”). Use for “What can you do?” — NOT for listing platform modules.",
     parameters: {
       type: "object",
       properties: {
         module: {
           type: "string",
-          description: "Optional module filter (clients, projects, finance, hr, …)",
+          description: "Optional action-module filter (clients, projects, finance, hr, …) — this is Action Registry taxonomy, not sidebar modules",
         },
       },
       additionalProperties: false,
@@ -643,7 +672,7 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
   {
     name: "searchCapabilities",
     description:
-      "Answer “What can you do?” / “Can you create suppliers?” by searching the Capability Graph. Never invent capabilities — only report what is registered.",
+      "Answer “What can you do?” / “Can you create a client?” by searching the Action Registry Capability Graph. Never invent capabilities — only report what is registered. Do not use this for platform module questions.",
     parameters: {
       type: "object",
       properties: {
@@ -744,6 +773,8 @@ const handlers: Record<string, ContextualToolHandler> = {
   queryPayroll,
   createPayrollRun: createPayrollRunTool,
   generatePayrollPdf,
+  listPlatformModules: listPlatformModulesTool,
+  searchApplications: searchApplicationsTool,
   listBusinessActions: listBusinessActionsTool,
   searchCapabilities: searchCapabilitiesTool,
   proposeBusinessActionPlan: proposeBusinessActionPlanTool,

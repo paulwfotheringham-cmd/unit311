@@ -7,6 +7,8 @@ export * from "./tool-result";
 export * from "./tool-implementations";
 export * from "./action-service";
 export * from "./page-registry";
+export * from "./application-catalogue";
+export * from "./knowledge-domains";
 export * from "./guided-learning";
 export * from "./guided-learning-tools";
 export * from "./executive-types";

@@ -386,11 +386,58 @@ export function answerCapabilityQuestion(
       lower,
     );
 
+  const objectScoped = lower.match(
+    /\b(?:what\s+actions?\s+(?:exist|are\s+(?:there|available))\s+(?:for|on|in)|(?:list|show)\s+actions?\s+(?:for|on|in)|capabilities?\s+for|actions?\s+for)\s+(.+?)(?:\?|$)/i,
+  );
+
   const isCanYou =
     !isCatalogue &&
+    !objectScoped &&
     /\b(can\s+you|are\s+you\s+able\s+to|do\s+you\s+support|is\s+it\s+possible\s+to)\b/i.test(lower);
 
-  if (!isCatalogue && !isCanYou) return null;
+  if (!isCatalogue && !isCanYou && !objectScoped) return null;
+
+  if (objectScoped?.[1]) {
+    const objectQuery = objectScoped[1]
+      .replace(/\b(module|object|entity|the|a|an)\b/gi, "")
+      .trim();
+    const capabilities = listCapabilities({ business: filter?.business }).filter((cap) => {
+      const blob = [
+        cap.businessObject,
+        cap.module,
+        cap.title,
+        cap.actionId,
+        ...cap.semanticAliases,
+      ]
+        .join(" ")
+        .toLowerCase();
+      const token = objectQuery.toLowerCase().replace(/s$/, "");
+      return blob.includes(token) || blob.includes(objectQuery.toLowerCase());
+    });
+    if (!capabilities.length) {
+      return {
+        kind: "unsupported",
+        answer: [
+          `No registered Action Registry capabilities match “${objectQuery}”.`,
+          "",
+          "Ask “What can you do?” for the full executable catalogue.",
+          "Ask “What modules exist?” for platform structure (Application Catalogue).",
+        ].join("\n"),
+        capabilities: [],
+        statements: [],
+      };
+    }
+    return {
+      kind: "search",
+      answer: [
+        `Executable actions for ${objectQuery} (Action Registry — not platform modules):`,
+        "",
+        ...capabilities.map((c) => `• ${c.statement} (${c.actionId})`),
+      ].join("\n"),
+      capabilities,
+      statements: capabilities.map((c) => c.statement),
+    };
+  }
 
   if (isCatalogue) {
     const capabilities = listCapabilities({ business: filter?.business });
@@ -410,12 +457,14 @@ export function answerCapabilityQuestion(
     return {
       kind: "catalogue",
       answer: [
-        "Here is what I can do from the live Action Registry:",
+        "Executable business capabilities (Action Registry) — not platform modules:",
         "",
         ...statements.map((s) => `• ${s}`),
         "",
         "By business object:",
         byObject || "• (none registered)",
+        "",
+        "For platform modules (Financials, HR, …) ask “What modules exist?” — that uses the Application Catalogue.",
       ].join("\n"),
       capabilities,
       statements,
@@ -500,9 +549,19 @@ export function answerCapabilityQuestion(
   };
 }
 
-/** Detect capability Q&A without treating it as a write intent. */
+/** Detect capability Q&A without treating it as a write intent or platform question. */
 export function isCapabilityQuestion(message: string): boolean {
   const lower = message.trim().toLowerCase();
+  // Platform structure questions belong to the Application Catalogue.
+  if (
+    /\bmodules?\b/i.test(lower) ||
+    /\b(application\s+catalogue|platform\s+structure|what\s+is\s+under)\b/i.test(lower) ||
+    /\b(open|go\s+to|take\s+me\s+to)\s+(financials|human\s+resources|hr|operations|settings)\b/i.test(
+      lower,
+    )
+  ) {
+    return false;
+  }
   // Executable requests with a concrete entity belong to the write resolver.
   if (/\b(called|named|titled)\b/i.test(lower)) return false;
   if (

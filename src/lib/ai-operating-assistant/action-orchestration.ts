@@ -1,8 +1,11 @@
 /**
- * Executive Assistant orchestration — intent → execute → report.
+ * Executive Assistant orchestration — intent → correct knowledge domain → execute → report.
  *
- * Users speak naturally. Registered actions are discovered from the registry.
- * Workflow/page guidance never overrides an executable business action.
+ * Permanent foundation: three independent knowledge domains (see knowledge-domains.ts).
+ *   PLATFORM   → Application Catalogue
+ *   CAPABILITY → Action Registry
+ *   BUSINESS   → Live data tools
+ * Write requests use the Action Framework (propose → Plan Viewer → execute).
  */
 
 import type { AssistantBusinessContext, AssistantChatMessage } from "./types";
@@ -23,7 +26,13 @@ import {
   primaryWorkflowActionId,
 } from "./capability-workflows";
 import type { EaExecutionCard } from "./execution-cards";
-import { shortCardLead } from "./execution-cards";
+import { buildNavigationCard, shortCardLead } from "./execution-cards";
+import {
+  answerPlatformQuestion,
+  isPlatformQuestion,
+} from "./application-catalogue";
+import { classifyKnowledgeDomain } from "./knowledge-domains";
+import { eaStage } from "./ea-forensic-trace";
 
 export { formatActionSuccess, formatPlanReadyMessage };
 /** @deprecated Prefer formatActionSuccess */
@@ -67,6 +76,11 @@ export type OrchestrationRoute =
       executionCards?: EaExecutionCard[];
     }
   | {
+      kind: "platform_answer";
+      message: string;
+      executionCards?: EaExecutionCard[];
+    }
+  | {
       kind: "workflow_read";
       message: string;
       executionCards: EaExecutionCard[];
@@ -94,7 +108,7 @@ function proposeSteps(
 }
 
 /**
- * Primary orchestration entry: understand intent, map to registered action, propose execution.
+ * Primary orchestration entry: classify knowledge domain, then route.
  */
 export async function resolveOrchestrationRoute(
   message: string,
@@ -103,17 +117,59 @@ export async function resolveOrchestrationRoute(
 ): Promise<OrchestrationRoute> {
   ensureActionModulesRegistered();
 
-  // 0) Capability catalogue / "can you …?" — answered from the Capability Graph only.
-  if (isCapabilityQuestion(message)) {
+  const domain = classifyKnowledgeDomain(message);
+  eaStage("Knowledge domain", {
+    domain: domain.domain,
+    reason: domain.reason,
+    message,
+  });
+
+  // PLATFORM — Application Catalogue only (never Action Registry).
+  if (domain.domain === "platform" || isPlatformQuestion(message)) {
+    const answered = answerPlatformQuestion(message);
+    if (answered) {
+      const cards: EaExecutionCard[] = [];
+      if (answered.navigateHref) {
+        cards.push(
+          buildNavigationCard({
+            title: answered.navigateLabel ?? "Open module",
+            body: "Platform navigation — Application Catalogue",
+            href: answered.navigateHref,
+            label: answered.navigateLabel ?? "Open",
+          }),
+        );
+      }
+      return {
+        kind: "platform_answer",
+        message: answered.answer,
+        executionCards: cards.length ? cards : undefined,
+      };
+    }
+  }
+
+  // CAPABILITY — Action Registry / Capability Graph only (never Application Catalogue).
+  if (domain.domain === "capability" || isCapabilityQuestion(message)) {
     const answered = answerCapabilityQuestion(message, { business });
     if (answered) {
       return { kind: "capability_answer", message: answered.answer };
     }
   }
 
-  // 0b) Multi-step capability workflows (COO orchestration presentation).
+  // BUSINESS — live data tools (deterministic read intents).
+  if (domain.domain === "business") {
+    const direct = resolveDirectIntent(message, history);
+    if (
+      direct &&
+      direct.tool !== "proposeBusinessActionPlan" &&
+      direct.tool !== "planBusinessGoal"
+    ) {
+      return { kind: "tool", intent: direct };
+    }
+  }
+
+  // WRITE / multi-step capability workflows (COO orchestration presentation).
   const workflow = matchCapabilityWorkflow(message);
-  if (workflow) {
+  if (workflow && domain.domain !== "business" && domain.domain !== "platform") {
     const primaryActionId = primaryWorkflowActionId(workflow);
     if (!primaryActionId) {
       const cards = buildReadWorkflowCards(workflow);
@@ -170,38 +226,40 @@ export async function resolveOrchestrationRoute(
     };
   }
 
-  // 1) Semantic write intent against the live action registry (meaning, not phrasing).
-  const businessIntent = await resolveBusinessActionIntent(message, business);
-  if (businessIntent.kind === "need_info") {
-    const cards = buildNeedInfoCards({
-      actionId: businessIntent.actionId,
-      message: businessIntent.question,
-      missingFields: businessIntent.missingFields,
-      prefill: businessIntent.input,
-      business,
-    });
-    return {
-      kind: "need_info",
-      message: shortCardLead(cards) || businessIntent.question,
-      actionId: businessIntent.actionId,
-      missingFields: businessIntent.missingFields,
-      input: businessIntent.input,
-      executionCards: cards,
-    };
-  }
-  if (businessIntent.kind === "propose") {
-    return {
-      kind: "tool",
-      intent: proposeSteps(
-        businessIntent.actionId,
-        businessIntent.input,
-        message,
-        `${businessIntent.reason}|confidence=${businessIntent.confidence}`,
-      ),
-    };
+  // WRITE — registry-driven propose / need_info.
+  if (domain.domain !== "platform" && domain.domain !== "capability") {
+    const businessIntent = await resolveBusinessActionIntent(message, business);
+    if (businessIntent.kind === "need_info") {
+      const cards = buildNeedInfoCards({
+        actionId: businessIntent.actionId,
+        message: businessIntent.question,
+        missingFields: businessIntent.missingFields,
+        prefill: businessIntent.input,
+        business,
+      });
+      return {
+        kind: "need_info",
+        message: shortCardLead(cards) || businessIntent.question,
+        actionId: businessIntent.actionId,
+        missingFields: businessIntent.missingFields,
+        input: businessIntent.input,
+        executionCards: cards,
+      };
+    }
+    if (businessIntent.kind === "propose") {
+      return {
+        kind: "tool",
+        intent: proposeSteps(
+          businessIntent.actionId,
+          businessIntent.input,
+          message,
+          `${businessIntent.reason}|confidence=${businessIntent.confidence}`,
+        ),
+      };
+    }
   }
 
-  // 2) Deterministic read/PDF/email intents (non-write).
+  // BUSINESS / other reads — deterministic tools (PDF, email, search*).
   const direct = resolveDirectIntent(message, history);
   if (direct?.tool === "proposeBusinessActionPlan" || direct?.tool === "planBusinessGoal") {
     return { kind: "tool", intent: direct };

@@ -1,9 +1,15 @@
 /**
- * OpenAI-discoverable tools that expose the Action Framework / Capability Graph.
- * Domain knowledge lives only in registered action capability metadata.
+ * OpenAI-discoverable tools that expose the Action Framework / Capability Graph
+ * and the separate Application Catalogue (platform structure).
  */
 
 import { asString, toolOk, type AssistantToolExecutionContext } from "../tool-result";
+import {
+  answerPlatformQuestion,
+  getPlatformModule,
+  listPlatformModules,
+  searchApplicationCatalogue,
+} from "../application-catalogue";
 import {
   buildActionPlan,
   toConfirmationView,
@@ -16,6 +22,151 @@ import {
   listCapabilities,
   searchCapabilities,
 } from "./capability-service";
+
+export async function listPlatformModulesTool(
+  _args: Record<string, unknown>,
+  _ctx: AssistantToolExecutionContext,
+) {
+  void _args;
+  void _ctx;
+  const modules = listPlatformModules();
+  return toolOk(
+    "listPlatformModules",
+    modules.map((m) => ({
+      id: m.id,
+      label: m.displayName,
+      description: m.description,
+      applicationCount: m.applications.length,
+      applications: m.applications.map((a) => a.label),
+      href: m.navigation.href,
+    })),
+    {
+      source: ["assistant:application-catalogue"],
+      pageSize: modules.length || 1,
+      summary: {
+        kind: "platform_modules",
+        answer: answerPlatformQuestion("What modules exist?")?.answer ?? null,
+        note: "Application Catalogue — platform structure, not Action Registry capabilities.",
+      },
+    },
+  );
+}
+
+export async function searchApplicationsTool(
+  args: Record<string, unknown>,
+  _ctx: AssistantToolExecutionContext,
+) {
+  void _ctx;
+  const query =
+    asString(args.query) || asString(args.question) || asString(args.module) || "";
+  if (!query.trim()) {
+    return listPlatformModulesTool({}, _ctx);
+  }
+
+  const answered = answerPlatformQuestion(query);
+  if (answered) {
+    return toolOk(
+      "searchApplications",
+      (answered.modules ?? []).map((m) => ({
+        id: m.id,
+        label: m.displayName,
+        description: m.description,
+        applications: m.applications.map((a) => ({
+          label: a.label,
+          pages: a.pages.map((p) => p.label),
+          href: a.href,
+        })),
+        href: m.navigation.href,
+      })),
+      {
+        source: ["assistant:application-catalogue"],
+        pageSize: answered.modules?.length || 1,
+        summary: {
+          kind: answered.kind,
+          answer: answered.answer,
+          navigateHref: answered.navigateHref ?? null,
+        },
+        followUpActions: answered.navigateHref
+          ? [
+              {
+                id: "open_platform_location",
+                label: answered.navigateLabel ?? "Open",
+                kind: "navigate" as const,
+                href: answered.navigateHref,
+              },
+            ]
+          : undefined,
+      },
+    );
+  }
+
+  const module = getPlatformModule(query);
+  if (module) {
+    return toolOk(
+      "searchApplications",
+      [
+        {
+          id: module.id,
+          label: module.displayName,
+          description: module.description,
+          applications: module.applications.map((a) => ({
+            label: a.label,
+            pages: a.pages.map((p) => p.label),
+            href: a.href,
+          })),
+          href: module.navigation.href,
+        },
+      ],
+      {
+        source: ["assistant:application-catalogue"],
+        pageSize: 1,
+        summary: {
+          kind: "module_detail",
+          answer: answerPlatformQuestion(`What is under ${module.displayName}`)?.answer,
+        },
+      },
+    );
+  }
+
+  const hits = searchApplicationCatalogue(query, 10);
+  return toolOk(
+    "searchApplications",
+    hits.map((h) => {
+      if (h.entry.kind === "module") {
+        return {
+          kind: "module",
+          module: h.entry.module.displayName,
+          href: h.entry.module.navigation.href,
+        };
+      }
+      if (h.entry.kind === "application") {
+        return {
+          kind: "application",
+          module: h.entry.module.displayName,
+          application: h.entry.application.label,
+          href: h.entry.application.href,
+        };
+      }
+      return {
+        kind: "page",
+        module: h.entry.module.displayName,
+        application: h.entry.application.label,
+        page: h.entry.page.label,
+        href: h.entry.page.href,
+      };
+    }),
+    {
+      source: ["assistant:application-catalogue"],
+      pageSize: hits.length || 1,
+      summary: {
+        kind: hits.length ? "search" : "unsupported",
+        answer: hits.length
+          ? "Matches from the Application Catalogue (platform structure)."
+          : "No matching modules/applications in the Application Catalogue.",
+      },
+    },
+  );
+}
 
 export async function listBusinessActionsTool(
   args: Record<string, unknown>,

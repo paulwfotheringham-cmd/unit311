@@ -187,6 +187,17 @@ export function resolveDirectIntent(
   }
 
   if (
+    /\b(show|list|display)\s+(my\s+|all\s+|our\s+)?clients?\b/i.test(lower) &&
+    !/\b(pdf|export|create|add|register|archive)\b/i.test(lower)
+  ) {
+    return {
+      tool: "searchClients",
+      args: { pageSize: 50 },
+      reason: "list_clients",
+    };
+  }
+
+  if (
     /\b(clients?\s+in\s+[a-z]+|customers?\s+in\s+[a-z]+)\b/i.test(lower) &&
     !/\b(pdf|export)\b/i.test(lower)
   ) {

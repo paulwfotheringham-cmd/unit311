@@ -559,6 +559,51 @@ export async function* runAssistantTurn(input: {
       return;
     }
 
+    if (route.kind === "platform_answer") {
+      eaStage("Intent resolved", {
+        actionId: null,
+        confidence: null,
+        "extracted input": null,
+        kind: "platform_answer",
+      });
+      assistantText = route.message;
+      yield { type: "delta", text: assistantText };
+      const assistantMessage: AssistantChatMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        content: assistantText,
+        createdAt: new Date().toISOString(),
+        executionCards: route.executionCards,
+        followUpActions: route.executionCards
+          ?.flatMap((card) =>
+            (card.actions ?? [])
+              .filter((a) => a.intent === "navigate" && a.href)
+              .map((a) => ({
+                id: a.id,
+                label: a.label,
+                kind: "navigate" as const,
+                href: a.href,
+              })),
+          ),
+      };
+      const saved = await persistTurn({
+        session: input.session,
+        conversationId: resolved.conversationId,
+        history: resolved.history,
+        userMessage,
+        assistantMessage,
+        context,
+        title: resolved.title,
+      });
+      yield {
+        type: "done",
+        message: assistantMessage,
+        conversationId: saved.conversationId,
+        correlationId: getEaCorrelationId(),
+      };
+      return;
+    }
+
     if (route.kind === "capability_answer") {
       eaStage("Intent resolved", {
         actionId: null,
