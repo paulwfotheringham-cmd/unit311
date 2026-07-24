@@ -1,0 +1,11 @@
+export { default as WorkspaceDashboard, renderDashboardWidget } from "./WorkspaceDashboard";
+export { default as DashboardHeaderWidget } from "./widgets/DashboardHeaderWidget";
+export { default as AiSummaryWidget } from "./widgets/AiSummaryWidget";
+export { default as KpiRowWidget, KpiWidget } from "./widgets/KpiWidget";
+export { default as AlertWidget } from "./widgets/AlertWidget";
+export { default as RecentActivityWidget } from "./widgets/RecentActivityWidget";
+export { default as AnalyticsWidget } from "./widgets/AnalyticsWidget";
+export { default as WorkQueueWidget } from "./widgets/WorkQueueWidget";
+export { default as QuickActionsWidget } from "./widgets/QuickActionsWidget";
+export { default as EmptyStateWidget } from "./widgets/EmptyStateWidget";
+export { default as LoadingStateWidget } from "./widgets/LoadingStateWidget";
