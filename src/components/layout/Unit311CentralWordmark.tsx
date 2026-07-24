@@ -59,20 +59,20 @@ export default function Unit311CentralWordmark({
   return (
     <div
       className={cn(
-        "inline-flex max-w-full flex-col items-start justify-center leading-none",
+        "inline-flex max-w-full flex-col items-center justify-center leading-none",
         styles.root,
         className,
       )}
       aria-hidden
     >
-      <p className={cn("font-black", styles.primary)}>
+      <p className={cn("text-center font-black", styles.primary)}>
         <span style={{ color: unitColor }}>UNIT</span>
         <span style={{ color: BRAND_BLUE }}>311</span>
       </p>
 
       <div
         className={cn(
-          "mt-[0.22em] flex max-w-full items-center gap-[0.4em] self-start",
+          "mt-[0.22em] flex max-w-full items-center justify-center gap-[0.4em]",
           styles.secondary,
         )}
       >
