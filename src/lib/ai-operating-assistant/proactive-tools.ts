@@ -106,8 +106,28 @@ export async function queryBusinessTool(
           snapshot.overview.physicalAssetCount ??
           snapshot.assets?.total ??
           null,
+        message: question
+          ? `Live snapshot for: ${question}`
+          : "Live business snapshot ready.",
       },
       dataGaps: snapshot.dataGaps,
+      followUpActions: [
+        {
+          id: "fu_daily_brief",
+          label: "What requires my attention today?",
+          kind: "generate",
+        },
+        {
+          id: "fu_cash",
+          label: "How much cash do we have?",
+          kind: "generate",
+        },
+        {
+          id: "fu_risks",
+          label: "What are the biggest risks?",
+          kind: "generate",
+        },
+      ],
       appliedContext: { activeView: ctx.business.page.activeView },
     });
   } catch (error) {
@@ -151,6 +171,9 @@ export async function getSmartInsightsTool(
     ? insights.filter((entry) => entry.category === category)
     : insights;
 
+  const insightFollowUps = filtered
+    .slice(0, 3)
+    .flatMap((entry) => entry.recommendedActions.slice(0, 1));
   return toolOk("getSmartInsights", filtered.slice(0, limit), {
     source: ["ai:smart-insights", "live-platform"],
     page: 1,
@@ -159,11 +182,27 @@ export async function getSmartInsightsTool(
       total: filtered.length,
       critical: filtered.filter((entry) => entry.severity === "critical").length,
       high: filtered.filter((entry) => entry.severity === "high").length,
+      message:
+        filtered.length === 0
+          ? "No elevated risks in the current analysis pass."
+          : `Found ${filtered.length} operating insight${filtered.length === 1 ? "" : "s"}.`,
     },
     dataGaps,
-    followUpActions: filtered
-      .slice(0, 3)
-      .flatMap((entry) => entry.recommendedActions.slice(0, 1)),
+    followUpActions:
+      insightFollowUps.length > 0
+        ? insightFollowUps
+        : [
+            {
+              id: "fu_attention",
+              label: "What requires my attention today?",
+              kind: "generate",
+            },
+            {
+              id: "fu_delegate",
+              label: "What should I delegate?",
+              kind: "generate",
+            },
+          ],
     explanation: filtered[0]?.explanation,
     appliedContext: { activeView: ctx.business.page.activeView },
   });

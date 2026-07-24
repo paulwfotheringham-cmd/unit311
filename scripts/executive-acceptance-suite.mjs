@@ -306,6 +306,7 @@ async function chat(cookie, message) {
 function isExecutiveQuality(content, maxChars = 2200) {
   const failures = [];
   if (!content.trim()) failures.push("empty_response");
+  if (/^Done\.?\s*$/i.test(content.trim())) failures.push("bare_done");
   if (content.length > maxChars) failures.push(`too_long:${content.length}`);
   if (/as an AI language model|I cannot access your (company|business) data|out of scope/i.test(content)) {
     failures.push("generic_refusal");

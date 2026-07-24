@@ -185,7 +185,141 @@ function formatListedToolReply(
   return `${lead}\n\n${lines.join("\n")}${more}`;
 }
 
+function money(value: unknown, currency = "GBP"): string {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) return "—";
+  return amount.toLocaleString("en-GB", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  });
+}
+
+/** Chief-of-Staff prose for executive intelligence tools (never reply “Done.”). */
+function formatExecutiveIntelligenceReply(
+  toolName: string,
+  result: unknown,
+): string | null {
+  if (!result || typeof result !== "object") return null;
+  const status = String((result as { status?: string }).status ?? "");
+  const summary = (result as { summary?: Record<string, unknown> }).summary;
+  const items = (result as { items?: Array<Record<string, unknown>> }).items;
+  if (status === "error" || status === "forbidden") {
+    return (
+      (typeof (result as { error?: string }).error === "string" &&
+        (result as { error: string }).error) ||
+      "I could not load that operating picture."
+    );
+  }
+
+  if (toolName === "getDailyBrief") {
+    const brief = items?.[0];
+    if (!brief) return "I could not build today’s brief.";
+    const headline =
+      (typeof brief.headline === "string" && brief.headline) ||
+      (typeof summary?.headline === "string" && summary.headline) ||
+      "Today’s operating picture";
+    const priorities = Array.isArray(brief.priorities)
+      ? brief.priorities.map(String).filter(Boolean).slice(0, 5)
+      : [];
+    const insights = Array.isArray(brief.insights)
+      ? brief.insights.slice(0, 4).map((entry) => {
+          const title = String((entry as { title?: string }).title ?? "Insight");
+          const text = String((entry as { summary?: string }).summary ?? "");
+          return text ? `• ${title} — ${text}` : `• ${title}`;
+        })
+      : [];
+    const sections = Array.isArray(brief.sections)
+      ? brief.sections.slice(0, 3).flatMap((section) => {
+          const title = String((section as { title?: string }).title ?? "");
+          const bullets = Array.isArray((section as { bullets?: unknown }).bullets)
+            ? ((section as { bullets: unknown[] }).bullets as unknown[])
+                .map(String)
+                .filter(Boolean)
+                .slice(0, 3)
+            : [];
+          if (!title || bullets.length === 0) return [];
+          return [`${title}:`, ...bullets.map((b) => `• ${b}`)];
+        })
+      : [];
+    const parts = [headline];
+    if (priorities.length) {
+      parts.push("", "Requires attention:", ...priorities.map((p, i) => `${i + 1}. ${p}`));
+    }
+    if (insights.length) {
+      parts.push("", "Live signals:", ...insights);
+    } else if (sections.length) {
+      parts.push("", ...sections);
+    }
+    if (parts.length === 1) {
+      parts.push("", "No elevated overnight issues in the current pass.");
+    }
+    return parts.join("\n");
+  }
+
+  if (toolName === "getSmartInsights") {
+    if (!Array.isArray(items) || items.length === 0) {
+      return "No elevated risks in the current analysis pass.";
+    }
+    const lines = items.slice(0, 8).map((entry, index) => {
+      const severity = String(entry.severity ?? "medium").toUpperCase();
+      const title = String(entry.title ?? "Insight");
+      const text = String(entry.summary ?? "");
+      return text
+        ? `${index + 1}. [${severity}] ${title} — ${text}`
+        : `${index + 1}. [${severity}] ${title}`;
+    });
+    const critical = typeof summary?.critical === "number" ? summary.critical : null;
+    const high = typeof summary?.high === "number" ? summary.high : null;
+    const lead =
+      critical != null || high != null
+        ? `Top operating risks (${critical ?? 0} critical, ${high ?? 0} high):`
+        : "Top operating risks:";
+    return `${lead}\n\n${lines.join("\n")}`;
+  }
+
+  if (toolName === "queryBusiness") {
+    const snapshot = items?.[0] as { overview?: Record<string, unknown> } | undefined;
+    const overview = snapshot?.overview ?? summary ?? {};
+    const currency = String(overview.reportingCurrency ?? "GBP");
+    const lines = [
+      `Active clients: ${overview.activeClients ?? "—"}`,
+      `Live projects: ${overview.liveProjects ?? "—"}`,
+      `Headcount: ${overview.headcount ?? "—"}`,
+      `Cash position: ${money(overview.cashPosition, currency)}`,
+    ];
+    if (overview.overdueInvoices != null) {
+      lines.push(`Overdue invoices: ${overview.overdueInvoices}`);
+    }
+    if (overview.hotLeads != null) {
+      lines.push(`Hot CRM leads: ${overview.hotLeads}`);
+    }
+    const question =
+      (typeof summary?.question === "string" && summary.question) || "Business summary";
+    return `${question.replace(/\?$/, "")}:\n\n${lines.map((l) => `• ${l}`).join("\n")}`;
+  }
+
+  if (toolName === "getBusinessHealth") {
+    const health = items?.[0];
+    if (!health) return "I could not score business health.";
+    const overall = health.overall ?? summary?.overall ?? "—";
+    const risks = Array.isArray(health.risks)
+      ? health.risks.map(String).filter(Boolean).slice(0, 5)
+      : [];
+    const parts = [`Business health: ${overall}/100.`];
+    if (risks.length) {
+      parts.push("", "Elevated risks:", ...risks.map((r, i) => `${i + 1}. ${r}`));
+    }
+    return parts.join("\n");
+  }
+
+  return null;
+}
+
 function formatDirectListReply(toolName: string, result: unknown): string | null {
+  const intelligence = formatExecutiveIntelligenceReply(toolName, result);
+  if (intelligence) return intelligence;
+
   switch (toolName) {
     case "searchEmployees":
       return formatSearchEmployeesReply(result);

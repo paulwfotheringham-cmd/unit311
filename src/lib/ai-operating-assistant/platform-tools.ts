@@ -690,9 +690,34 @@ export async function platformSearch(
           query,
           message:
             hits.length === 0
-              ? `No platform matches for “${query}”.`
+              ? `No employees, clients, or projects matched “${query}”. I can still prepare a meeting brief if you confirm who they are.`
               : `I found ${hits.length} match${hits.length === 1 ? "" : "es"} for “${query}” across Unit311.`,
         },
+        followUpActions:
+          hits.length === 0
+            ? [
+                {
+                  id: "fu_search_employees",
+                  label: "Show employees",
+                  kind: "generate",
+                },
+                {
+                  id: "fu_search_clients",
+                  label: "Show clients",
+                  kind: "generate",
+                },
+                {
+                  id: "fu_crm",
+                  label: "Show my biggest opportunities",
+                  kind: "generate",
+                },
+              ]
+            : hits
+                .slice(0, 3)
+                .filter((hit) => typeof hit.href === "string" && hit.href)
+                .map((hit) =>
+                  nav(String(hit.href), `Open ${String(hit.label ?? "record")}`),
+                ),
       },
     );
   } catch (error) {
