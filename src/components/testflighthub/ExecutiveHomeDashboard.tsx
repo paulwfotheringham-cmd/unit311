@@ -56,7 +56,7 @@ function splitExecutiveHomeConfig(config: WorkspaceDashboardConfig): {
 
 /**
  * Flagship Home experience — Executive Operating Centre.
- * Framework widgets for content; Quick Actions are sticky page chrome.
+ * Quick Actions sit in dashboard flow after the AI summary; sticky only while scrolling the body.
  */
 export default function ExecutiveHomeDashboard() {
   const router = useRouter();
@@ -88,7 +88,7 @@ export default function ExecutiveHomeDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl pb-4">
+    <div className="mx-auto max-w-6xl space-y-4 pb-4">
       <WorkspaceDashboard config={top} audience={AUDIENCE} className="max-w-none space-y-4" />
       <ExecutiveQuickActionsBar actions={actions} onAction={handleAction} />
       <WorkspaceDashboard config={body} audience={AUDIENCE} className="max-w-none space-y-4" />
