@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Communications | Unit311",
-  description: "Unit311 Central communications hub — messaging, voice, and video.",
+  title: "Messaging | Unit311",
+  description: "Persistent messaging for Unit311 — channels, DMs, and chat history.",
   robots: { index: false, follow: false },
 };
 

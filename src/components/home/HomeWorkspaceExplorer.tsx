@@ -231,6 +231,7 @@ const WORKSPACES: Workspace[] = [
       { label: "Email", icon: Mail },
       { label: "Calendar", icon: CalendarDays },
       { label: "Communications", icon: MessageSquare },
+      { label: "Messaging", icon: MessageSquare },
       { label: "Calendar", icon: CalendarDays },
       { label: "Social", icon: Share2 },
       { label: "Support Desk / WhatsApp", icon: Cable },

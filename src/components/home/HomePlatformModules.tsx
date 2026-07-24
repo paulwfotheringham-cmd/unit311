@@ -7,6 +7,7 @@ import {
   Share2,
   Users,
   UsersRound,
+  Video,
   Wallet,
   FolderKanban,
   Contact,
@@ -62,10 +63,16 @@ const MODULES = [
     accent: "#3b82f6",
   },
   {
-    title: "Communications",
-    description: "Internal channels, client messaging, and live collaboration.",
+    title: "Messaging",
+    description: "Channels, DMs, groups, and persistent chat history.",
     icon: MessageSquare,
     accent: "#6366f1",
+  },
+  {
+    title: "Communications",
+    description: "Voice, video, screen share, and live meetings.",
+    icon: Video,
+    accent: "#22c55e",
   },
   {
     title: "Social Media",

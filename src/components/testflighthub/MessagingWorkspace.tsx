@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   buildScheduledCallDateTime,
@@ -18,6 +19,10 @@ import {
   type ScheduledCall,
 } from "@/lib/internal-messaging-data";
 import { CLIENT_MESSAGING_OPTIONS } from "@/lib/client-messaging-config";
+import {
+  getInternalNavHref,
+  resolveInternalOperationsBasePath,
+} from "@/lib/internal-operations-data";
 import { type ManagedUser } from "@/lib/user-management-data";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -26,23 +31,19 @@ import {
   PLATFORM_CACHE_KEYS,
 } from "@/lib/platform-fetch-cache";
 import WorkspaceLoadingFallback from "@/components/testflighthub/WorkspaceLoadingFallback";
-import MessagingCallRoom from "@/components/messaging/MessagingCallRoom";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
 import {
   CalendarClock,
   FolderOpen,
   Hash,
-  Link2,
   Loader2,
   MessageSquare,
   Mic,
-  MoreHorizontal,
   Paperclip,
   Phone,
   Plus,
   Search,
   Send,
-  Sparkles,
   Trash2,
   UserPlus,
   Users,
@@ -50,19 +51,11 @@ import {
   X,
 } from "lucide-react";
 
-type CommunicationsWorkspaceProps = {
+type MessagingWorkspaceProps = {
   users?: ManagedUser[];
 };
 
 type PresenceStatus = "online" | "away" | "busy" | "offline";
-
-type ConversationLinkKind =
-  | ""
-  | "crm-client"
-  | "project"
-  | "opportunity"
-  | "support-ticket"
-  | "internal-task";
 
 function formatOperatorLabel(operator: ManagedUser) {
   const email = operator.email || (operator.username.includes("@") ? operator.username : "");
@@ -143,7 +136,7 @@ function MessageBody({
           className="inline-flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-200 transition-colors hover:bg-sky-500/20"
         >
           <Video className="h-4 w-4" />
-          Join call
+          Open in Communications
         </button>
       </div>
     );
@@ -209,7 +202,19 @@ function MessageBody({
   );
 }
 
-export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceProps) {
+export default function MessagingWorkspace(_props: MessagingWorkspaceProps) {
+  const router = useRouter();
+  const basePath = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? "/"
+        : resolveInternalOperationsBasePath(window.location.hostname),
+    [],
+  );
+
+  function launchCommunications(query: Record<string, string>) {
+    router.push(getInternalNavHref("communications", basePath, query));
+  }
   const [internalUsers, setInternalUsers] = useState<ManagedUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -280,18 +285,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [memberDraft, setMemberDraft] = useState<string[]>([]);
   const [activeCallLink, setActiveCallLink] = useState<string | null>(null);
-  const [activeCallSession, setActiveCallSession] = useState<{
-    mode: "voice" | "video";
-    sessionId: string;
-  } | null>(null);
   const [directoryQuery, setDirectoryQuery] = useState("");
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [aiRecordMeeting, setAiRecordMeeting] = useState(false);
-  const [aiTranscription, setAiTranscription] = useState(false);
-  const [aiSummary, setAiSummary] = useState(false);
-  const [aiActionItems, setAiActionItems] = useState(false);
-  const [conversationLinkKind, setConversationLinkKind] = useState<ConversationLinkKind>("");
-  const [conversationLinkNote, setConversationLinkNote] = useState("");
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
@@ -873,14 +867,20 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
 
       const callLink = createData.callLink;
       await postMessage({
-        content: `Started a live ${type} call in ${activeChannel.name}.`,
+        content: `Started a live ${type} call. Open Communications to join.`,
         messageType: "call",
         callLink,
       });
       setActiveCallLink(callLink);
       const parsed = parseMeetSessionFromLink(callLink);
       if (parsed) {
-        setActiveCallSession(parsed);
+        launchCommunications({
+          call: parsed.sessionId,
+          mode: parsed.mode,
+          channel: activeRoom,
+        });
+      } else {
+        window.open(callLink, "_blank", "noopener,noreferrer");
       }
     } catch (callError) {
       setError(callError instanceof Error ? callError.message : "Failed to start call");
@@ -889,14 +889,26 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
     }
   }
 
-  function openCallInWorkspace(callLink: string) {
+  function openCallInCommunications(callLink: string) {
     const parsed = parseMeetSessionFromLink(callLink);
     if (!parsed) {
       window.open(callLink, "_blank", "noopener,noreferrer");
       return;
     }
     setActiveCallLink(callLink);
-    setActiveCallSession(parsed);
+    launchCommunications({
+      call: parsed.sessionId,
+      mode: parsed.mode,
+      channel: activeRoom,
+    });
+  }
+
+  function openScheduleInCommunications() {
+    launchCommunications({
+      schedule: "1",
+      channel: activeRoom,
+      mode: "video",
+    });
   }
 
   async function handleScheduleCall(event: React.FormEvent) {
@@ -1284,7 +1296,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
         <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-5 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-sky-300" />
-            <h2 className="text-sm font-semibold text-white">Join Communications</h2>
+            <h2 className="text-sm font-semibold text-white">Join Messaging</h2>
           </div>
 
           {!joinedOperator ? (
@@ -1317,7 +1329,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
                     disabled={!pendingOperatorId}
                     className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#2563eb] text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Join Communications
+                    Join Messaging
                   </button>
                 </>
               )}
@@ -1387,7 +1399,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
           )}
 
           {!joinedOperator && (
-            <p className="mt-2 text-xs text-white/40">Join Communications above to create channels.</p>
+            <p className="mt-2 text-xs text-white/40">Join Messaging above to create channels.</p>
           )}
 
           <div className="mt-4 space-y-4">
@@ -1465,7 +1477,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
           </ul>
 
           <form
-            id="communications-schedule"
+            id="messaging-schedule"
             onSubmit={(event) => void handleScheduleCall(event)}
             className="mt-5 border-t border-white/10 pt-4"
           >
@@ -1554,11 +1566,13 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
                   <p className="mt-1 text-white/45">{formatScheduledCallTime(call.scheduledAt)}</p>
                   <a
                     href={call.callLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openCallInCommunications(call.callLink);
+                    }}
                     className="mt-2 inline-flex items-center gap-1 text-sky-300 underline-offset-2 hover:underline"
                   >
-                    Open call link
+                    Join in Communications
                   </a>
                 </div>
               ))}
@@ -1641,14 +1655,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
               <button
                 type="button"
                 disabled={!joinedOperator}
-                onClick={() => {
-                  setScheduleTitle(`Meeting — ${activeChannel.name}`);
-                  setShowMoreOptions(false);
-                  document.getElementById("communications-schedule")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "nearest",
-                  });
-                }}
+                onClick={openScheduleInCommunications}
                 className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
               >
                 <CalendarClock className="h-3.5 w-3.5" />
@@ -1664,142 +1671,22 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
                   onChange={(event) => void handleAttachFile(event)}
                 />
               </label>
-              <button
-                type="button"
-                onClick={() => setShowMoreOptions((current) => !current)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 transition-colors hover:bg-white/[0.06]"
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-                More
-              </button>
             </div>
           </div>
 
-          {showMoreOptions && (
-            <div className="mt-3 grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-2">
-              <div>
-                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                  <Sparkles className="h-3.5 w-3.5 text-violet-300" />
-                  AI meeting options
-                </p>
-                <p className="mb-2 text-[11px] text-white/40">All options default off. Nothing is recorded automatically.</p>
-                <div className="space-y-1.5 text-xs text-white/75">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={aiRecordMeeting}
-                      onChange={(event) => setAiRecordMeeting(event.target.checked)}
-                    />
-                    Record meeting
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={aiTranscription}
-                      onChange={(event) => setAiTranscription(event.target.checked)}
-                    />
-                    AI transcription
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={aiSummary}
-                      onChange={(event) => setAiSummary(event.target.checked)}
-                    />
-                    AI summary
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={aiActionItems}
-                      onChange={(event) => setAiActionItems(event.target.checked)}
-                    />
-                    Action items
-                  </label>
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                  <Link2 className="h-3.5 w-3.5 text-sky-300" />
-                  Optional link
-                </p>
-                <p className="mb-2 text-[11px] text-white/40">Link this conversation only when you choose to.</p>
-                <select
-                  value={conversationLinkKind}
-                  onChange={(event) =>
-                    setConversationLinkKind(event.target.value as ConversationLinkKind)
-                  }
-                  className={inputClassName()}
-                >
-                  <option value="">No link</option>
-                  <option value="crm-client">CRM client</option>
-                  <option value="project">Project</option>
-                  <option value="opportunity">Opportunity</option>
-                  <option value="support-ticket">Support ticket</option>
-                  <option value="internal-task">Internal task</option>
-                </select>
-                {conversationLinkKind ? (
-                  <input
-                    value={conversationLinkNote}
-                    onChange={(event) => setConversationLinkNote(event.target.value)}
-                    placeholder="Reference name or ID"
-                    className={cn(inputClassName(), "mt-2")}
-                  />
-                ) : null}
-              </div>
-            </div>
-          )}
-
-          {activeCallSession && (
-            <div className="mt-3 overflow-hidden rounded-xl border border-sky-400/30 bg-[#020617]">
-              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs text-sky-100">
-                <span className="inline-flex items-center gap-2">
-                  {activeCallSession.mode === "voice" ? (
-                    <Phone className="h-3.5 w-3.5" />
-                  ) : (
-                    <Video className="h-3.5 w-3.5" />
-                  )}
-                  Live {activeCallSession.mode} call in Communications
-                  {(aiRecordMeeting || aiTranscription || aiSummary || aiActionItems) && (
-                    <span className="rounded-md border border-violet-400/30 bg-violet-500/10 px-1.5 py-0.5 text-[10px] text-violet-100">
-                      AI options on
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveCallSession(null);
-                    setActiveCallLink(null);
-                  }}
-                  className="rounded-md px-2 py-1 text-white/60 hover:bg-white/10 hover:text-white"
-                >
-                  Close
-                </button>
-              </div>
-              <div className="h-[min(52vh,520px)] min-h-[320px]">
-                <MessagingCallRoom
-                  sessionId={activeCallSession.sessionId}
-                  expectedMode={activeCallSession.mode}
-                  embedded
-                />
-              </div>
-            </div>
-          )}
-
-          {activeCallLink && !activeCallSession && (
+          {activeCallLink && (
             <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
               <div className="flex items-center gap-2">
                 <Mic className="h-4 w-4" />
-                <span>Live call ready in this conversation</span>
+                <span>Live call ready — continue in Communications</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => openCallInWorkspace(activeCallLink)}
+                  onClick={() => openCallInCommunications(activeCallLink)}
                   className="font-medium underline underline-offset-2"
                 >
-                  Join call
+                  Open Communications
                 </button>
                 <button type="button" onClick={() => setActiveCallLink(null)} aria-label="Dismiss">
                   <X className="h-4 w-4" />
@@ -1891,7 +1778,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
                       <MessageBody
                         message={message}
                         isSelf={isSelf}
-                        onJoinCall={openCallInWorkspace}
+                        onJoinCall={openCallInCommunications}
                       />
                     </div>
                   </div>
@@ -1904,7 +1791,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
 
         {!joinedOperator && (
           <div className="border-t border-amber-400/25 bg-amber-500/10 px-5 py-4">
-            <p className="text-sm font-semibold text-amber-100">Join Communications to send messages</p>
+            <p className="text-sm font-semibold text-amber-100">Join Messaging to send messages</p>
             <p className="mt-1 text-xs text-amber-100/70">
               Pick your name, then join — you can also use the panel on the left.
             </p>
@@ -1978,7 +1865,7 @@ export default function CommunicationsWorkspace(_props: CommunicationsWorkspaceP
               placeholder={
                 joinedOperator
                   ? `Message in ${activeChannel.name}…`
-                  : "Join Communications to send messages"
+                  : "Join Messaging to send messages"
               }
               className="min-h-[52px] flex-1 resize-y rounded-xl border border-white/10 bg-[#0b1524] px-4 py-3 text-sm text-white placeholder:text-white/35 outline-none focus:border-sky-400/50 disabled:opacity-50"
             />

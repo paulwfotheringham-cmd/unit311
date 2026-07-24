@@ -33,6 +33,7 @@ import {
   Share2,
   Truck,
   Users,
+  Video,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -58,6 +59,7 @@ const iconMap: Record<string, LucideIcon> = {
   Landmark,
   GraduationCap,
   Users,
+  Video,
   Settings,
 };
 
@@ -95,7 +97,8 @@ const DEMO_NAV_SECTIONS: InternalNavSection[] = [
       { label: "Calendar", icon: "CalendarDays", view: "calendar" },
       { label: "Logistics", icon: "Truck", view: "logistics" },
       { label: "Email", icon: "Mail", view: "info-email" },
-      { label: "Communications", icon: "MessageSquare", view: "communications" },
+      { label: "Messaging", icon: "MessageSquare", view: "messaging" },
+      { label: "Communications", icon: "Video", view: "communications" },
       { label: "Social", icon: "Share2", view: "social" },
       { label: "Support", icon: "LifeBuoy", view: "support" },
     ],

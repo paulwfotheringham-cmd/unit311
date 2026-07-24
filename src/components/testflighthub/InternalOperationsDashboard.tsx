@@ -96,6 +96,7 @@ import {
   MediaExampleWorkspace,
   MeetingsWorkspace,
   CommunicationsWorkspace,
+  MessagingWorkspace,
   ModuleGoLiveWorkspace,
   PerformanceHubWorkspace,
   PayrollWorkspace,
@@ -371,7 +372,7 @@ export default function InternalOperationsDashboard({
     let cancelled = false;
     const run = () => {
       if (cancelled) return;
-      for (const view of ["crm", "communications", "projects", "calendar", "financials", "clients"] as InternalOperationsView[]) {
+      for (const view of ["crm", "messaging", "communications", "projects", "calendar", "financials", "clients"] as InternalOperationsView[]) {
         const loader = WORKSPACE_CHUNK_LOADERS[view];
         if (loader) void loader();
       }
@@ -722,6 +723,16 @@ export default function InternalOperationsDashboard({
           {activeView === "corporate-cap-table" && <CapTableWorkspace />}
 
           {activeView === "external-client-access" && <ExternalClientAccessWorkspace />}
+
+          {isWarm("messaging") && (
+            <WorkspacePane
+              view="messaging"
+              activeView={activeView}
+              keepMounted={isWarm("messaging")}
+            >
+              <MessagingWorkspace />
+            </WorkspacePane>
+          )}
 
           {isWarm("communications") && (
             <WorkspacePane

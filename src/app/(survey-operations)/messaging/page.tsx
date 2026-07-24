@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function MessagingPage() {
-  redirect("/internaldashboard?view=communications");
+  redirect("/internaldashboard?view=messaging");
 }

@@ -322,7 +322,7 @@ export function normalizeInternalOperationsView(value: string | null): InternalO
   if (value === "debtors") return "accounts-receivable";
   if (value === "creditors") return "accounts-payable";
   if (value === "opex") return "financials";
-  if (value === "messaging" || value === "voice-video" || value === "voice-and-video") {
+  if (value === "voice-video" || value === "voice-and-video") {
     return "communications";
   }
   if (legacyCorporateViewToTab(value)) return "corporate-information";
@@ -501,7 +501,8 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
       },
       { label: "Email", icon: "Mail", view: "info-email" as const },
       { label: "Calendar", icon: "CalendarDays", view: "calendar" as const },
-      { label: "Communications", icon: "MessageSquare", view: "communications" as const },
+      { label: "Messaging", icon: "MessageSquare", view: "messaging" as const },
+      { label: "Communications", icon: "Video", view: "communications" as const },
       { label: "Social", icon: "Share2", view: "social" as const },
       {
         label: "Support Desk",
@@ -670,7 +671,7 @@ export const internalViewTitles: Record<
   grants: { title: "Grants", subtitle: "Projects" },
   "recent-missions": { title: "Recent Missions", subtitle: "Internal Operations" },
   webodm: { title: "WebODM Processing", subtitle: "Internal Operations" },
-  messaging: { title: "Communications", subtitle: "Business Productivity" },
+  messaging: { title: "Messaging", subtitle: "Business Productivity" },
   communications: { title: "Communications", subtitle: "Business Productivity" },
   social: { title: "Social", subtitle: "Business Productivity" },
   settings: { title: "General", subtitle: "Settings" },
@@ -819,12 +820,20 @@ export const internalHomeTileRows = [
   ],
   [
     {
+      id: "messaging",
+      view: "messaging" as const,
+      icon: "messaging" as const,
+      title: "Messaging",
+      description: "Channels, DMs, and chat history.",
+      accent: "from-blue-500/20 to-sky-600/10 border-blue-400/30",
+    },
+    {
       id: "communications",
       view: "communications" as const,
-      icon: "messaging" as const,
+      icon: "testing" as const,
       title: "Communications",
-      description: "Messaging, voice, and video in one hub.",
-      accent: "from-blue-500/20 to-sky-600/10 border-blue-400/30",
+      description: "Voice, video, and live meetings.",
+      accent: "from-emerald-500/20 to-teal-600/10 border-emerald-400/30",
     },
     {
       id: "files",

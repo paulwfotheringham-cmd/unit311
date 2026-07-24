@@ -70,7 +70,7 @@ export const ProjectsWorkspace = lazyWorkspace(() => import("./ProjectsWorkspace
 export const LogisticsWorkspace = lazyWorkspace(() => import("./LogisticsWorkspace"));
 export const MediaExampleWorkspace = lazyWorkspace(() => import("./MediaExampleWorkspace"));
 export const CommunicationsWorkspace = lazyWorkspace(() => import("./CommunicationsWorkspace"));
-export const MessagingWorkspace = lazyWorkspace(() => import("./CommunicationsWorkspace"));
+export const MessagingWorkspace = lazyWorkspace(() => import("./MessagingWorkspace"));
 export const SocialWorkspace = lazyWorkspace(() => import("./SocialWorkspace"));
 export const SettingsWorkspace = lazyWorkspace(() => import("./SettingsWorkspace"));
 export const BillingWorkspace = lazyWorkspace(() => import("./BillingWorkspace"));

@@ -601,7 +601,7 @@ export function legacyViewRedirects(): Record<string, string> {
   return {
     "/crm": "/?view=crm",
     "/financials": "/?view=financials",
-    "/messaging": "/?view=communications",
+    "/messaging": "/?view=messaging",
     "/communications": "/?view=communications",
     "/calendar": "/?view=calendar",
     "/info-email": "/?view=info-email",
