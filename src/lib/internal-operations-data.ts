@@ -536,7 +536,7 @@ export const internalSurveyNavSections: readonly InternalNavSection[] = [
   },
   {
     kind: "workspace",
-    label: "Productivity & Collaboration",
+    label: "Business Productivity",
     icon: "MessageSquare",
     color: "#00B8D9",
     items: [
