@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import type { ManagedClient } from "@/lib/client-management-data";
@@ -24,8 +24,10 @@ import { useInternalOperationsBasePath } from "./InternalOperationsBasePathConte
 
 type ProjectDetailWorkspaceProps = {
   project: InternalProject;
-  onBack: () => void;
+  onBack?: () => void;
   clients?: ManagedClient[];
+  /** When true, omit the back control (used inside master-detail layouts). */
+  embedded?: boolean;
 };
 
 function panelClassName() {
@@ -55,11 +57,16 @@ export default function ProjectDetailWorkspace({
   project,
   onBack,
   clients,
+  embedded = false,
 }: ProjectDetailWorkspaceProps) {
   const basePath = useInternalOperationsBasePath();
   const detail = useMemo(() => getProjectDetail(project.id), [project.id]);
   const portfolio = useMemo(() => getPortfolioProject(project.id), [project.id]);
   const [tasks, setTasks] = useState<ProjectTask[]>(() => detail.tasks.map((task) => ({ ...task })));
+
+  useEffect(() => {
+    setTasks(detail.tasks.map((task) => ({ ...task })));
+  }, [detail]);
 
   const client = useMemo(
     () =>
@@ -104,14 +111,16 @@ export default function ProjectDetailWorkspace({
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="mt-0.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs text-white/60 transition-colors hover:border-white/20 hover:text-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to projects
-          </button>
+          {!embedded && onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mt-0.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 px-3 text-xs text-white/60 transition-colors hover:border-white/20 hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to projects
+            </button>
+          ) : null}
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60a5fa]">
               Project detail
