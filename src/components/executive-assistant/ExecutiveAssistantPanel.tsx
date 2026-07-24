@@ -23,7 +23,6 @@ import type { AiExplanation } from "@/lib/ai-operating-assistant/explainability"
 import { PlanViewer } from "@/components/executive-assistant/PlanViewer";
 import { actionConfirmationToPlanViewer } from "@/lib/ai-operating-assistant/actions/planning/summaries";
 import type { PlanViewerModel } from "@/lib/ai-operating-assistant/actions/planning/types";
-import { formatExecutedClientOutcome } from "@/lib/ai-operating-assistant/action-ui-messages";
 import type { ActionConfirmationView } from "@/components/executive-assistant/ActionConfirmationCard";
 import { requestShowMeAround } from "@/components/executive-assistant/GuidedLearningProvider";
 import {
@@ -926,7 +925,7 @@ export default function ExecutiveAssistantPanel({
               </p>
             ) : (
               <p className="mt-0.5 text-[11px] text-white/45">
-                Context-aware · ask follow-ups or act on the briefing above
+                Context-aware · decisions and follow-ups
               </p>
             )}
           </div>
@@ -963,8 +962,7 @@ export default function ExecutiveAssistantPanel({
         <div ref={threadRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
           {messages.length === 0 && embedded && !sending ? (
             <p className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-3.5 py-3 text-[12px] leading-relaxed text-white/40">
-              Use a suggested action or quick prompt, or type below — the assistant already has
-              live business context from the briefing.
+              Start with a quick prompt, or type below — I already have live business context.
             </p>
           ) : null}
           {messages.map((entry) => (
@@ -1076,6 +1074,10 @@ export default function ExecutiveAssistantPanel({
                       stack?: string | null;
                       correlationId?: string;
                       summary?: string;
+                      outcomeText?: string;
+                      followUpActions?: NonNullable<
+                        import("@/lib/ai-operating-assistant").AssistantChatMessage["followUpActions"]
+                      >;
                       viewer?: PlanViewerModel;
                       confirmation?: ActionConfirmationView;
                       plan?: {
@@ -1114,27 +1116,7 @@ export default function ExecutiveAssistantPanel({
                       setActionConfirmation(null);
                     }
                     showNotice(data?.summary?.split("\n")[0] ?? "Plan completed");
-                    const createdStep = data?.plan?.steps?.find(
-                      (step) =>
-                        step.actionId === "clients.createClient" && step.status === "succeeded",
-                    );
-                    const outcomeText = createdStep
-                      ? formatExecutedClientOutcome({
-                          companyName:
-                            (typeof createdStep.result?.recordLabel === "string" &&
-                              createdStep.result.recordLabel) ||
-                            (typeof createdStep.input?.companyName === "string"
-                              ? createdStep.input.companyName
-                              : "Client"),
-                          location:
-                            typeof createdStep.input?.companyCity === "string"
-                              ? createdStep.input.companyCity
-                              : typeof createdStep.input?.region === "string"
-                                ? String(createdStep.input.region)
-                                : null,
-                          clientId: createdStep.result?.recordId ?? null,
-                        })
-                      : data?.summary;
+                    const outcomeText = data?.outcomeText?.trim() || data?.summary || null;
                     if (outcomeText) {
                       setMessages((current) => [
                         ...current,
@@ -1143,6 +1125,7 @@ export default function ExecutiveAssistantPanel({
                           role: "assistant",
                           content: outcomeText,
                           createdAt: new Date().toISOString(),
+                          followUpActions: data?.followUpActions,
                         },
                       ]);
                     }
@@ -1156,6 +1139,14 @@ export default function ExecutiveAssistantPanel({
                     if (typeof window !== "undefined") {
                       window.dispatchEvent(
                         new CustomEvent("unit311:clients-changed", {
+                          detail: {
+                            planId: planViewer.planId,
+                            correlationId,
+                          },
+                        }),
+                      );
+                      window.dispatchEvent(
+                        new CustomEvent("unit311:projects-changed", {
                           detail: {
                             planId: planViewer.planId,
                             correlationId,

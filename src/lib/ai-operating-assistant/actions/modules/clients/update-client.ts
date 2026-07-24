@@ -34,6 +34,35 @@ export const updateClientAction: AssistantActionDefinition = {
       notes: { type: "string" },
     },
   },
+  capability: {
+    businessObject: "Client",
+    intentExamples: [
+      "Update a client",
+      "Change Acme Ltd's phone number",
+      "Set the email for Orion Holdings",
+      "Edit client details",
+    ],
+    semanticAliases: ["client", "customer", "update", "change", "edit", "amend", "set"],
+    entityExtraction: {
+      primaryNameFields: ["clientName", "companyName"],
+      fields: [
+        { field: "clientName", from: "named_entity" },
+        { field: "companyName", from: "named_entity" },
+        { field: "email", from: "email" },
+        { field: "phone", from: "phone" },
+        { field: "primaryContact", from: "person" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Client updated.\n\nName\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+    suggestedFollowUps: [
+      { label: "Add contact", actionId: "clients.addClientContact" },
+      { label: "Assign account manager", actionId: "clients.assignAccountManager" },
+    ],
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);

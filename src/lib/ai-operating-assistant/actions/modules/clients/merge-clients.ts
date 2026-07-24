@@ -108,6 +108,37 @@ export const mergeDuplicateClientsAction: AssistantActionDefinition = {
       intoClientName: { type: "string" },
     },
   },
+  capability: {
+    businessObject: "Client",
+    intentExamples: [
+      "Merge duplicate clients",
+      "Merge ABC Limited into ABC Ltd",
+      "Combine these two customer records",
+      "Dedupe these clients",
+    ],
+    semanticAliases: [
+      "client",
+      "customer",
+      "merge",
+      "combine",
+      "dedupe",
+      "duplicate",
+    ],
+    entityExtraction: {
+      primaryNameFields: ["sourceClientName", "targetClientName"],
+      fields: [
+        { field: "sourceClientName", from: "named_entity" },
+        { field: "targetClientName", from: "named_entity" },
+        { field: "fromClientName", from: "named_entity" },
+        { field: "intoClientName", from: "named_entity" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Clients merged.\n\nSurvivor\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);

@@ -2,6 +2,7 @@ import {
   createInternalClient,
   deleteInternalClient,
 } from "@/lib/internal-clients-service";
+import { eaRethrow, eaStage, eaStop } from "@/lib/ai-operating-assistant/ea-forensic-trace";
 import type { AssistantActionDefinition } from "../../types";
 import {
   asTrimmedString,
@@ -35,6 +36,66 @@ export const createClientAction: AssistantActionDefinition = {
       notes: { type: "string" },
     },
     required: ["companyName"],
+  },
+  capability: {
+    id: "clients.create",
+    businessObject: "Client",
+    intentExamples: [
+      "Create a client",
+      "Add a customer",
+      "Register a client",
+      "We've signed a new customer",
+      "Create a new client called Acme Engineering Ltd in London",
+      "Onboard a new customer named Orion Ltd",
+    ],
+    semanticAliases: [
+      "client",
+      "customer",
+      "account",
+      "company",
+      "create",
+      "add",
+      "register",
+      "onboard",
+      "signed",
+      "sign",
+      "new",
+    ],
+    entityExtraction: {
+      primaryNameFields: ["companyName"],
+      fields: [
+        { field: "companyName", from: "named_entity" },
+        { field: "companyCity", from: "location" },
+        { field: "email", from: "email" },
+        { field: "phone", from: "phone" },
+        { field: "primaryContact", from: "person" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template:
+        "Client created.\n\nName\n{recordLabel}\n\n{locationBlock}Would you like to add a contact, assign an account manager, or create a project?",
+      fields: [
+        { token: "recordLabel", path: "result.recordLabel" },
+        { token: "locationBlock", path: "input.companyCity" },
+      ],
+    },
+    suggestedFollowUps: [
+      { label: "Add contact", actionId: "clients.addClientContact" },
+      { label: "Assign account manager", actionId: "clients.assignAccountManager" },
+      { label: "Create project", actionId: "projects.createProject" },
+    ],
+    relationships: {
+      suggestedNext: [
+        { label: "Create Project", actionId: "projects.createProject", reason: "Client Created" },
+        { label: "Add Contact", actionId: "clients.addClientContact", reason: "Client Created" },
+        {
+          label: "Assign Account Manager",
+          actionId: "clients.assignAccountManager",
+          reason: "Client Created",
+        },
+      ],
+    },
   },
   handler: {
     async validate(input, ctx) {
@@ -96,45 +157,76 @@ export const createClientAction: AssistantActionDefinition = {
     },
 
     async execute(input, ctx) {
-      console.info(
-        "[clients.createClient] execute",
-        "plan=",
-        ctx.planId,
-        "companyName=",
-        asTrimmedString(input.companyName) || asTrimmedString(input.name),
-        "workspace=",
-        ctx.business.workspace.id,
-      );
       const ws = requireWorkspaceScope(ctx.business);
       if (!ws.ok) {
-        console.error("[clients.createClient] validation", ws.validation.errors);
+        eaStop("Database write", ws.validation.errors.join("; "), {
+          attempted: false,
+          succeeded: false,
+          recordId: null,
+          planId: ctx.planId,
+        });
         return { ok: false, message: ws.validation.errors.join("; "), error: "VALIDATION" };
       }
       const companyName = asTrimmedString(input.companyName) || asTrimmedString(input.name);
       const patch = pickClientPatch({ ...input, companyName });
-      const created = await createInternalClient(
-        {
-          ...patch,
+
+      eaStage("Database write", {
+        attempted: true,
+        succeeded: false,
+        recordId: null,
+        table: "internal_clients",
+        companyName,
+        workspaceId: ws.scope.workspaceId ?? null,
+        planId: ctx.planId,
+        input: patch,
+      });
+
+      try {
+        const created = await createInternalClient(
+          {
+            ...patch,
+            companyName,
+            workspaceId: ws.scope.workspaceId ?? undefined,
+          },
+          ws.scope,
+        );
+
+        eaStage("Database write", {
+          attempted: true,
+          succeeded: true,
+          recordId: created.id,
+          companyName: created.companyName,
+          planId: ctx.planId,
+        });
+
+        const after = clientSnapshot(created);
+        return {
+          ok: true,
+          message: `Created client “${created.companyName}”.`,
+          recordId: created.id,
+          recordLabel: created.companyName,
+          beforeState: null,
+          afterState: {
+            ...after,
+            correlationId: ctx.planId,
+            clientId: created.id,
+          },
+          output: { clientId: created.id, companyName: created.companyName },
+        };
+      } catch (error) {
+        eaStop("Database write", error instanceof Error ? error.message : String(error), {
+          attempted: true,
+          succeeded: false,
+          recordId: null,
+          planId: ctx.planId,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        eaRethrow("Database write", error, {
+          planId: ctx.planId,
           companyName,
-          workspaceId: ws.scope.workspaceId ?? undefined,
-        },
-        ws.scope,
-      );
-      console.info("[clients.createClient] created", created.id, created.companyName);
-      const after = clientSnapshot(created);
-      return {
-        ok: true,
-        message: `Created client “${created.companyName}”.`,
-        recordId: created.id,
-        recordLabel: created.companyName,
-        beforeState: null,
-        afterState: {
-          ...after,
-          correlationId: ctx.planId,
-          clientId: created.id,
-        },
-        output: { clientId: created.id, companyName: created.companyName },
-      };
+          workspaceId: ws.scope.workspaceId ?? null,
+        });
+      }
     },
 
     async rollback(_input, ctx) {
@@ -150,11 +242,7 @@ export const createClientAction: AssistantActionDefinition = {
         await deleteInternalClient(clientId, ws.scope);
         return { ok: true, message: `Deleted newly created client ${clientId}.` };
       } catch (error) {
-        return {
-          ok: false,
-          message: error instanceof Error ? error.message : "Rollback failed",
-          error: "ROLLBACK_FAILED",
-        };
+        eaRethrow("Database write / rollback", error, { clientId });
       }
     },
   },

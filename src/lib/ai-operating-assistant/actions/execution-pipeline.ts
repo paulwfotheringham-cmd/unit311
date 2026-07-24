@@ -5,6 +5,12 @@
  */
 
 import type { AssistantBusinessContext } from "../types";
+import {
+  eaStage,
+  eaStop,
+  getEaCorrelationId,
+  setEaPlanId,
+} from "../ea-forensic-trace";
 import { recordActionAudit } from "./audit-service";
 import { describeMissingPermissions, userHasActionPermissions } from "./permissions";
 import { getActionPlan, saveActionPlan } from "./plan-store";
@@ -57,6 +63,7 @@ export async function buildActionPlan(
   const permissionNotes: string[] = [];
 
   if (!input.steps.length) {
+    eaStop("Plan created", "No actions were provided.", { planId });
     return {
       plan: {
         id: planId,
@@ -170,11 +177,34 @@ export async function buildActionPlan(
     updatedAt: now,
   };
 
-  await saveActionPlan(plan);
+  const { plan: savedPlan, storedSuccessfully } = await saveActionPlan(plan);
+  setEaPlanId(savedPlan.id);
+
+  eaStage("Plan created", {
+    planId: savedPlan.id,
+    steps: savedPlan.steps.map((step) => ({
+      stepId: step.id,
+      actionId: step.actionId,
+      module: step.module,
+      status: step.status,
+      input: step.input,
+    })),
+    "stored successfully": storedSuccessfully,
+  });
+
+  if (!storedSuccessfully) {
+    eaStop("Plan created", "plan not durably stored — Approve must rehydrate from client snapshot", {
+      planId: savedPlan.id,
+    });
+  }
 
   if (anyFailed) {
+    eaStop("Plan created", "One or more steps failed validation or permission checks.", {
+      planId: savedPlan.id,
+      steps: savedPlan.steps.map((s) => ({ actionId: s.actionId, status: s.status, error: s.error })),
+    });
     return {
-      plan,
+      plan: savedPlan,
       blocked: true,
       blockReason: "One or more steps failed validation or permission checks.",
     };
@@ -184,7 +214,7 @@ export async function buildActionPlan(
   // unless caller opts into auto-execute later — Phase 1 always returns a plan.
   void needsConfirmation;
 
-  return { plan, blocked: false };
+  return { plan: savedPlan, blocked: false };
 }
 
 /**
@@ -196,13 +226,23 @@ export async function executeActionPlan(input: {
   business: AssistantBusinessContext;
   confirmed: boolean;
 }): Promise<{ plan: AssistantActionPlan; summary: string }> {
-  console.info("[execution-pipeline] executeActionPlan", input.planId, "confirmed=", input.confirmed);
+  eaStage("executeActionPlan entered", {
+    planId: input.planId,
+    confirmed: input.confirmed,
+    correlationId: getEaCorrelationId(),
+  });
+  setEaPlanId(input.planId);
+
   const existing = await getActionPlan(input.planId, input.business.user.id);
   if (!existing) {
-    console.error("[execution-pipeline] plan not found", input.planId);
+    eaStop("executeActionPlan entered", "Action plan not found.", { planId: input.planId });
     throw new Error("Action plan not found.");
   }
   if (existing.status !== "proposed" && existing.status !== "confirmed") {
+    eaStop("executeActionPlan entered", `Plan cannot be executed from status “${existing.status}”.`, {
+      planId: input.planId,
+      status: existing.status,
+    });
     throw new Error(`Plan cannot be executed from status “${existing.status}”.`);
   }
   if (!input.confirmed) {
@@ -223,6 +263,9 @@ export async function executeActionPlan(input: {
       result: "cancelled",
       aiRequest: cancelled.aiRequest,
     });
+    eaStop("executeActionPlan entered", "User cancelled (confirmed=false)", {
+      planId: cancelled.id,
+    });
     return { plan: cancelled, summary: "Action plan cancelled." };
   }
 
@@ -240,6 +283,10 @@ export async function executeActionPlan(input: {
     const step = plan.steps[index]!;
     const definition = getAssistantAction(step.actionId);
     if (!definition) {
+      eaStop("Executing action", `Unknown action: ${step.actionId}`, {
+        planId: plan.id,
+        actionId: step.actionId,
+      });
       plan = markStepFailed(plan, step.id, `Unknown action: ${step.actionId}`);
       break;
     }
@@ -249,6 +296,10 @@ export async function executeActionPlan(input: {
         input.business,
         definition.requiredPermissions,
       );
+      eaStop("Executing action", missing.join("; "), {
+        planId: plan.id,
+        actionId: definition.id,
+      });
       plan = markStepFailed(plan, step.id, missing.join("; "));
       await recordActionAudit({
         planId: plan.id,
@@ -269,6 +320,14 @@ export async function executeActionPlan(input: {
     plan = updateStep(plan, step.id, { status: "executing" });
     await saveActionPlan(plan);
 
+    eaStage("Executing action", {
+      actionId: definition.id,
+      module: definition.module,
+      input: step.input,
+      planId: plan.id,
+      stepId: step.id,
+    });
+
     try {
       const ctx = {
         business: input.business,
@@ -281,25 +340,7 @@ export async function executeActionPlan(input: {
         throw new Error(validation.errors.join("; ") || "Validation failed");
       }
 
-      console.info(
-        "[execution-pipeline] execute step",
-        step.actionId,
-        "plan=",
-        plan.id,
-        "workspace=",
-        input.business.workspace.id,
-      );
       const result = await definition.handler.execute(step.input, ctx);
-      console.info(
-        "[execution-pipeline] step result",
-        step.actionId,
-        "ok=",
-        result.ok,
-        "recordId=",
-        result.recordId,
-        "message=",
-        result.message,
-      );
       const durationMs = Date.now() - started;
 
       if (!result.ok) {
@@ -339,6 +380,17 @@ export async function executeActionPlan(input: {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Action failed";
+      const stack = error instanceof Error ? error.stack : undefined;
+      eaStop("Executing action", message, {
+        planId: plan.id,
+        actionId: definition.id,
+        module: definition.module,
+        input: step.input,
+        stack,
+      });
+      if (error instanceof Error && error.stack) {
+        console.error(error.stack);
+      }
       plan = markStepFailed(plan, step.id, message);
       await recordActionAudit({
         planId: plan.id,
@@ -387,6 +439,10 @@ export async function executeActionPlan(input: {
             error: rollbackResult.ok ? null : rollbackResult.error ?? rollbackResult.message,
           });
         } catch (rollbackError) {
+          console.error(
+            "[EA] rollback EXCEPTION",
+            rollbackError instanceof Error ? rollbackError.stack : rollbackError,
+          );
           await recordActionAudit({
             planId: plan.id,
             stepId: done.id,
@@ -421,6 +477,18 @@ export async function executeActionPlan(input: {
     completedAt: new Date().toISOString(),
   };
   await saveActionPlan(plan);
+
+  if (failed) {
+    eaStop("executeActionPlan entered", `Plan finished with status ${plan.status}`, {
+      planId: plan.id,
+      steps: plan.steps.map((s) => ({
+        actionId: s.actionId,
+        status: s.status,
+        error: s.error,
+        recordId: s.result?.recordId ?? null,
+      })),
+    });
+  }
 
   return { plan, summary: summarisePlan(plan) };
 }
@@ -470,6 +538,7 @@ export function summarisePlan(plan: AssistantActionPlan): string {
 export function toConfirmationView(plan: AssistantActionPlan) {
   return {
     planId: plan.id,
+    correlationId: getEaCorrelationId(),
     title: plan.title,
     summary: plan.summary,
     status: plan.status,

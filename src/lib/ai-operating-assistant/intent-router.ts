@@ -26,6 +26,7 @@ export type DirectAssistantIntent = {
     | "queryPayroll"
     | "proposeBusinessActionPlan"
     | "listBusinessActions"
+    | "searchCapabilities"
     | "planBusinessGoal";
   args: Record<string, unknown>;
   reason: string;
@@ -77,131 +78,6 @@ function intentForReportType(reportType: AssistantReportType, reason: string): D
   };
 }
 
-function proposeClientAction(
-  actionId: string,
-  input: Record<string, unknown>,
-  request: string,
-  reason: string,
-): DirectAssistantIntent {
-  return {
-    tool: "proposeBusinessActionPlan",
-    args: {
-      request,
-      title: actionId,
-      steps: [{ actionId, input }],
-    },
-    reason,
-  };
-}
-
-/**
- * Map clear natural-language client ops onto registered Action Framework ids.
- * Discovery still comes from the registry — this only selects known actionIds.
- */
-function resolveClientMutationIntent(
-  text: string,
-  lower: string,
-): DirectAssistantIntent | null {
-  const mergeMatch = text.match(
-    /merge\s+(.+?)\s+into\s+(.+?)(?:\.|$)/i,
-  );
-  if (mergeMatch) {
-    return proposeClientAction(
-      "clients.mergeDuplicateClients",
-      {
-        sourceClientName: mergeMatch[1]!.trim().replace(/[.“”"]/g, ""),
-        targetClientName: mergeMatch[2]!.trim().replace(/[.“”"]/g, ""),
-      },
-      text,
-      "clients_merge",
-    );
-  }
-
-  const createMatch = text.match(
-    /(?:create|add|new)\s+(?:a\s+)?(?:new\s+)?client(?:\s+(?:called|named|for))?\s+(.+?)(?:\.|$)/i,
-  );
-  if (createMatch && !/\b(contact|location|manager)\b/i.test(lower)) {
-    const companyName = createMatch[1]!
-      .trim()
-      .replace(/[.“”"]/g, "")
-      .replace(/\s+in\s+[A-Za-z][A-Za-z\s-]{0,40}$/i, "")
-      .trim();
-    return proposeClientAction(
-      "clients.createClient",
-      { companyName },
-      text,
-      "clients_create",
-    );
-  }
-
-  const restoreMatch = text.match(/restore\s+(.+?)(?:\.|$)/i);
-  if (restoreMatch && /\b(client|ltd|limited|holdings|inc|plc|co)\b/i.test(lower)) {
-    return proposeClientAction(
-      "clients.restoreClient",
-      { clientName: restoreMatch[1]!.trim().replace(/[.“”"]/g, "") },
-      text,
-      "clients_restore",
-    );
-  }
-
-  const archiveMatch = text.match(/archive\s+(.+?)(?:\.|$)/i);
-  if (archiveMatch && !/\b(email|file|document|project)\b/i.test(lower)) {
-    return proposeClientAction(
-      "clients.archiveClient",
-      { clientName: archiveMatch[1]!.trim().replace(/[.“”"]/g, "") },
-      text,
-      "clients_archive",
-    );
-  }
-
-  const assignMatch = text.match(
-    /assign\s+(.+?)\s+as\s+(?:the\s+)?account\s+manager\s+for\s+(.+?)(?:\.|$)/i,
-  );
-  if (assignMatch) {
-    return proposeClientAction(
-      "clients.assignAccountManager",
-      {
-        accountManagerName: assignMatch[1]!.trim().replace(/[.“”"]/g, ""),
-        clientName: assignMatch[2]!.trim().replace(/[.“”"]/g, ""),
-      },
-      text,
-      "clients_assign_manager",
-    );
-  }
-
-  const phoneMatch = text.match(
-    /(?:change|update|set)\s+(.+?)(?:'s|’s)?\s+phone(?:\s+number)?\s+to\s+(.+?)(?:\.|$)/i,
-  );
-  if (phoneMatch) {
-    return proposeClientAction(
-      "clients.updateClient",
-      {
-        clientName: phoneMatch[1]!.trim().replace(/[.“”"]/g, ""),
-        phone: phoneMatch[2]!.trim().replace(/[.“”"]/g, ""),
-      },
-      text,
-      "clients_update_phone",
-    );
-  }
-
-  const emailMatch = text.match(
-    /(?:change|update|set)\s+(.+?)(?:'s|’s)?\s+email\s+to\s+(.+?)(?:\.|$)/i,
-  );
-  if (emailMatch) {
-    return proposeClientAction(
-      "clients.updateClient",
-      {
-        clientName: emailMatch[1]!.trim().replace(/[.“”"]/g, ""),
-        email: emailMatch[2]!.trim().replace(/[.“”"]/g, ""),
-      },
-      text,
-      "clients_update_email",
-    );
-  }
-
-  return null;
-}
-
 /**
  * Goal-shaped requests → Planning Engine (discovers actions from registry).
  */
@@ -213,13 +89,8 @@ function resolveGoalPlanningIntent(
     /^(open|set\s*up|setup|launch|establish)\s+(a\s+|an\s+|the\s+)?(new\s+)?(office|branch|location|site)\b/i.test(
       lower,
     ) ||
-    /^(onboard|set\s*up|setup)\s+(a\s+|an\s+|the\s+)?(new\s+)?(customer|client|account)\b/i.test(
-      lower,
-    ) ||
     /^(hire|recruit)\s+(a\s+|an\s+)?/i.test(lower) ||
-    /\b(open\s+a\s+new\s+office|onboard\s+a\s+new\s+(customer|client)|hire\s+a\s+)/i.test(
-      lower,
-    )
+    /\b(open\s+a\s+new\s+office|hire\s+a\s+)/i.test(lower)
   ) {
     return {
       tool: "planBusinessGoal",
@@ -233,6 +104,7 @@ function resolveGoalPlanningIntent(
 /**
  * Deterministic short-circuit for clear executive follow-ups.
  * Prefer executing tools over asking the model what the user meant.
+ * Write mutations are NOT resolved here — only via Action Registry capability matching.
  */
 export function resolveDirectIntent(
   message: string,
@@ -241,10 +113,6 @@ export function resolveDirectIntent(
   const text = message.trim();
   const lower = text.toLowerCase();
   const hasPdf = historyHasPdfArtifact(history);
-
-  // —— Client Action Framework mutations (registry actionIds) ——
-  const clientMutation = resolveClientMutationIntent(text, lower);
-  if (clientMutation) return clientMutation;
 
   // —— Goal-oriented Planning Engine ——
   const goalIntent = resolveGoalPlanningIntent(text, lower);

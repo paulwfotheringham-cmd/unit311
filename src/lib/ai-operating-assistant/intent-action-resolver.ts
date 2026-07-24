@@ -1,8 +1,9 @@
 /**
- * Semantic business-action intent resolver.
+ * Registry-driven business-action intent resolver.
  *
- * Maps natural language → registered Action Framework actions using the
- * live action registry (descriptions + inputSchema). No hard-coded command phrases.
+ * Maps natural language → registered Action Framework capabilities using only
+ * descriptor metadata (intentExamples, semanticAliases, entityExtraction, inputSchema).
+ * No module-specific hardcoding.
  */
 
 import {
@@ -39,18 +40,15 @@ export type ResolvedBusinessActionIntent =
       reason: string;
     };
 
-/** Lightweight domain synonyms for scoring — not full utterance templates. */
-const SEMANTIC_ALIASES: Record<string, string[]> = {
-  client: ["client", "customer", "account", "company", "organisation", "organization"],
-  create: ["create", "add", "register", "setup", "set up", "onboard", "new", "signed", "sign"],
+/** Tiny generic verb list only — domain nouns come from capability metadata. */
+const GENERIC_VERBS: Record<string, string[]> = {
+  create: ["create", "add", "register", "setup", "set up", "onboard", "new", "signed", "sign", "start", "launch"],
   update: ["update", "change", "edit", "set", "amend"],
   archive: ["archive", "close", "deactivate", "retire"],
   restore: ["restore", "reactivate", "unarchive", "reopen"],
   assign: ["assign", "appoint", "give"],
   merge: ["merge", "combine", "dedupe", "duplicate"],
-  contact: ["contact", "person", "stakeholder"],
-  location: ["location", "office", "address", "site"],
-  manager: ["manager", "account manager", "owner"],
+  remove: ["remove", "delete"],
 };
 
 function tokenize(text: string): string[] {
@@ -68,25 +66,20 @@ function stripLocationSuffix(name: string): string {
     .trim();
 }
 
-function extractLocation(message: string): string | null {
-  const match = message.match(/\bin\s+([A-Za-z][A-Za-z\s-]{1,40})(?:\.|$)/i);
-  return match?.[1]?.trim() || null;
+function extractQuoted(message: string): string | null {
+  const quoted = message.match(/[“"']([^”"']{2,80})[”"']/);
+  return quoted?.[1] ? stripLocationSuffix(quoted[1].trim()) : null;
 }
 
-/**
- * Extract a likely entity / company name without requiring fixed command grammar.
- */
-export function extractBusinessEntity(message: string): string | null {
+function extractNamedEntity(message: string): string | null {
   const text = message.trim();
-  const quoted = text.match(/[“"']([^”"']{2,80})[”"']/);
-  if (quoted?.[1]) return stripLocationSuffix(quoted[1].trim());
+  const quoted = extractQuoted(text);
+  if (quoted) return quoted;
 
   const patterns = [
     /(?:called|named|titled)\s+(.+?)(?:\s+in\s+[A-Za-z].*)?(?:\.|$)/i,
     /(?:signed|signing)\s+(.+?)(?:\s+in\s+[A-Za-z].*)?(?:\.|$)/i,
-    /(?:customer|client|company|account)\s+(?:called|named)?\s*(.+?)(?:\s+in\s+[A-Za-z].*)?(?:\.|$)/i,
-    /(?:register|onboard|setup|set\s*up)\s+(.+?)(?:\s+as\s+(?:a\s+)?(?:client|customer).*)?(?:\.|$)/i,
-    /(?:as\s+(?:a\s+)?(?:client|customer))\s+(.+?)(?:\.|$)/i,
+    /(?:for)\s+(.+?)(?:\.|$)/i,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -94,22 +87,52 @@ export function extractBusinessEntity(message: string): string | null {
       const cleaned = stripLocationSuffix(
         match[1]
           .replace(/^(a|an|the|new)\s+/i, "")
-          .replace(/\s+as\s+(a\s+)?(client|customer|account).*$/i, "")
           .trim(),
       );
       if (cleaned.length >= 2) return cleaned;
     }
   }
 
-  // Capitalised multi-word company-like span
   const caps = text.match(
     /\b([A-Z][A-Za-z0-9&'.-]+(?:\s+[A-Z][A-Za-z0-9&'.-]+){0,5}(?:\s+(?:Ltd|Limited|LLC|Inc|PLC|LLP))?)\b/,
   );
-  if (caps?.[1] && !/^(Create|Add|Register|Please|We|I|Set|Open)$/i.test(caps[1])) {
+  if (caps?.[1] && !/^(Create|Add|Register|Please|We|I|Set|Open|Start|Launch)$/i.test(caps[1])) {
     return stripLocationSuffix(caps[1]);
   }
-
   return null;
+}
+
+function extractLocation(message: string): string | null {
+  const match = message.match(/\bin\s+([A-Za-z][A-Za-z\s-]{1,40})(?:\.|$)/i);
+  return match?.[1]?.trim() || null;
+}
+
+function extractEmail(message: string): string | null {
+  const match = message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match?.[0] ?? null;
+}
+
+function extractPhone(message: string): string | null {
+  const match = message.match(
+    /(?:\+?\d[\d\s().-]{6,}\d)/,
+  );
+  return match?.[0]?.trim() ?? null;
+}
+
+function extractPerson(message: string): string | null {
+  const assign = message.match(
+    /(?:assign|appoint)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+as\b/i,
+  );
+  if (assign?.[1]) return assign[1].trim();
+  const contact = message.match(
+    /(?:contact|person)\s+(?:called|named)?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+  );
+  return contact?.[1]?.trim() ?? null;
+}
+
+function extractUrl(message: string): string | null {
+  const match = message.match(/https?:\/\/\S+/i);
+  return match?.[0] ?? null;
 }
 
 function requiredFieldsFromSchema(descriptor: AssistantActionDescriptor): string[] {
@@ -121,32 +144,83 @@ function requiredFieldsFromSchema(descriptor: AssistantActionDescriptor): string
     : [];
 }
 
+function optionalFieldsFromSchema(descriptor: AssistantActionDescriptor): string[] {
+  const schema = descriptor.inputSchema;
+  if (!schema || typeof schema !== "object") return [];
+  const props = (schema as { properties?: Record<string, unknown> }).properties;
+  if (!props) return [];
+  const required = new Set(requiredFieldsFromSchema(descriptor));
+  return Object.keys(props).filter((key) => !required.has(key));
+}
+
 function scoreDescriptor(message: string, descriptor: AssistantActionDescriptor): number {
   const lower = message.toLowerCase();
   const tokens = tokenize(message);
-  const hay = `${descriptor.id} ${descriptor.name} ${descriptor.description} ${descriptor.module}`.toLowerCase();
+  const cap = descriptor.capability;
+  const hay = [
+    descriptor.id,
+    descriptor.name,
+    descriptor.description,
+    descriptor.module,
+    cap.businessObject,
+    ...(cap.intentExamples ?? []),
+    ...(cap.semanticAliases ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
 
   let score = 0;
   for (const token of tokens) {
     if (hay.includes(token)) score += 2;
   }
 
-  for (const [concept, aliases] of Object.entries(SEMANTIC_ALIASES)) {
+  for (const example of cap.intentExamples ?? []) {
+    const exampleTokens = tokenize(example);
+    const overlap = exampleTokens.filter((t) => lower.includes(t)).length;
+    if (overlap >= 2) score += 6;
+    if (overlap >= 3) score += 4;
+  }
+
+  for (const alias of cap.semanticAliases ?? []) {
+    if (lower.includes(alias.toLowerCase())) score += 3;
+  }
+
+  for (const [verb, aliases] of Object.entries(GENERIC_VERBS)) {
     const messageHas = aliases.some((alias) => lower.includes(alias));
     const actionHas =
-      hay.includes(concept) || aliases.some((alias) => hay.includes(alias));
+      hay.includes(verb) ||
+      aliases.some((alias) => hay.includes(alias)) ||
+      descriptor.id.toLowerCase().includes(verb);
     if (messageHas && actionHas) score += 4;
   }
 
-  // Prefer create* when message expresses creation/signing/new relationship
-  if (
-    /\b(signed|signing|new\s+customer|new\s+client|register|onboard|set\s*up)\b/i.test(lower) &&
-    /create/i.test(descriptor.id)
-  ) {
-    score += 5;
-  }
-
   return score;
+}
+
+function valueForExtraction(
+  from: NonNullable<
+    NonNullable<AssistantActionDescriptor["capability"]["entityExtraction"]>["fields"]
+  >[number]["from"],
+  message: string,
+): string | null {
+  switch (from) {
+    case "quoted":
+      return extractQuoted(message);
+    case "named_entity":
+      return extractNamedEntity(message);
+    case "location":
+      return extractLocation(message);
+    case "email":
+      return extractEmail(message);
+    case "phone":
+      return extractPhone(message);
+    case "person":
+      return extractPerson(message);
+    case "url":
+      return extractUrl(message);
+    default:
+      return null;
+  }
 }
 
 function buildInputForAction(
@@ -155,37 +229,31 @@ function buildInputForAction(
   llmInput?: Record<string, unknown> | null,
 ): Record<string, unknown> {
   const input: Record<string, unknown> = { ...(llmInput ?? {}) };
-  const entity = extractBusinessEntity(message);
-  const location = extractLocation(message);
   const definition = getAssistantAction(actionId);
-  const schema = definition?.inputSchema;
+  if (!definition) return input;
+
+  const schema = definition.inputSchema;
   const props =
     schema && typeof schema === "object" && "properties" in schema
       ? ((schema as { properties?: Record<string, unknown> }).properties ?? {})
       : {};
 
-  if (entity) {
-    if ("companyName" in props && input.companyName == null) input.companyName = entity;
-    if ("clientName" in props && input.clientName == null) input.clientName = entity;
-    if ("name" in props && input.name == null && !("companyName" in props)) input.name = entity;
-    if (!Object.keys(props).length) {
-      input.companyName = entity;
-      input.clientName = entity;
+  const extraction = definition.capability.entityExtraction;
+  const primaryFields = extraction?.primaryNameFields ?? [];
+  const named = extractNamedEntity(message);
+
+  if (named) {
+    for (const field of primaryFields) {
+      if (field in props && input[field] == null) {
+        input[field] = named;
+      }
     }
   }
 
-  if (location) {
-    // Cities belong in companyCity — region is a constrained ClientRegion enum, not free text.
-    if ("companyCity" in props && input.companyCity == null) input.companyCity = location;
-    if ("region" in props && input.region == null) {
-      if (
-        /\b(london|manchester|birmingham|oxford|cambridge|edinburgh|glasgow|bristol|leeds)\b/i.test(
-          location,
-        )
-      ) {
-        input.region = "United Kingdom";
-      }
-    }
+  for (const rule of extraction?.fields ?? []) {
+    if (!(rule.field in props) || input[rule.field] != null) continue;
+    const value = valueForExtraction(rule.from, message);
+    if (value) input[rule.field] = value;
   }
 
   return input;
@@ -200,17 +268,42 @@ function missingRequired(
   const required = requiredFieldsFromSchema(definition);
   return required.filter((field) => {
     const value = input[field];
-    return value == null || (typeof value === "string" && !value.trim());
+    if (value != null && !(typeof value === "string" && !value.trim())) return false;
+    // Accept alternate primary name fields from capability.
+    const primaries = definition.capability.entityExtraction?.primaryNameFields ?? [];
+    if (primaries.includes(field)) {
+      const filled = primaries.some((alt) => {
+        const altVal = input[alt];
+        return altVal != null && !(typeof altVal === "string" && !altVal.trim());
+      });
+      if (filled) {
+        // Promote first filled primary into the required field.
+        if (input[field] == null) {
+          const donor = primaries.find((alt) => {
+            const altVal = input[alt];
+            return altVal != null && !(typeof altVal === "string" && !altVal.trim());
+          });
+          if (donor) input[field] = input[donor];
+        }
+        return false;
+      }
+    }
+    return true;
   });
 }
 
 function questionForMissing(actionId: string, missing: string[]): string {
   const definition = getAssistantAction(actionId);
   const name = definition?.name ?? actionId;
-  if (missing.includes("companyName") || missing.includes("clientName") || missing.includes("name")) {
-    return `I can ${name.toLowerCase()} — what is the company name?`;
+  const object = definition?.capability.businessObject ?? "record";
+  const primary = definition?.capability.entityExtraction?.primaryNameFields?.[0];
+  if (primary && missing.includes(primary)) {
+    return `I can ${name.toLowerCase()} — what is the ${object.toLowerCase()} name?`;
   }
-  return `I can ${name.toLowerCase()}, but I still need: ${missing.join(", ")}.`;
+  const labels = missing.map((field) =>
+    field.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim(),
+  );
+  return `I can ${name.toLowerCase()}, but I still need: ${labels.join(", ")}.`;
 }
 
 async function classifyWithLlm(
@@ -224,20 +317,24 @@ async function classifyWithLlm(
     id: d.id,
     name: d.name,
     module: d.module,
+    businessObject: d.capability.businessObject,
     description: d.description,
+    intentExamples: d.capability.intentExamples,
     required: requiredFieldsFromSchema(d),
-    properties: d.inputSchema && typeof d.inputSchema === "object"
-      ? (d.inputSchema as { properties?: unknown }).properties ?? null
-      : null,
+    optional: optionalFieldsFromSchema(d),
+    properties:
+      d.inputSchema && typeof d.inputSchema === "object"
+        ? ((d.inputSchema as { properties?: unknown }).properties ?? null)
+        : null,
   }));
 
   try {
     const response = await createAssistantResponse({
       model: getAssistantModel(),
       instructions: `You are the Unit311 Executive Assistant intent classifier.
-Map the user's natural-language request to ONE registered business action from the catalogue, or null if it is not an executable write.
+Map the user's natural-language request to ONE registered business capability from the catalogue, or null if it is not an executable write.
 Rules:
-- Choose by meaning, not exact wording (e.g. "signed Acme", "new customer Acme", "register Acme" → create client when that action exists).
+- Choose by meaning using businessObject, description, and intentExamples — never invent actionIds.
 - Only use actionIds from the catalogue.
 - Fill input fields from the message when possible.
 - confidence 0-1.
@@ -314,7 +411,7 @@ export async function resolveBusinessActionIntent(
   // Pure read / report asks are not write intents.
   if (
     /\b(pdf|report|export|list|show|how many|what is|who is|brief|dashboard)\b/i.test(text) &&
-    !/\b(create|add|register|update|assign|archive|restore|merge|signed|onboard|set\s*up)\b/i.test(
+    !/\b(create|add|register|update|assign|archive|restore|merge|signed|onboard|set\s*up|start|launch)\b/i.test(
       text,
     )
   ) {
@@ -364,19 +461,7 @@ export async function resolveBusinessActionIntent(
   };
 }
 
-export function formatActionOutcomeMessage(input: {
-  title: string;
-  fields: Array<{ label: string; value: string }>;
-  followUpQuestion?: string | null;
-}): string {
-  const lines = [`✓ ${input.title}`, ""];
-  for (const field of input.fields) {
-    lines.push(field.label);
-    lines.push(field.value);
-    lines.push("");
-  }
-  if (input.followUpQuestion) {
-    lines.push(input.followUpQuestion);
-  }
-  return lines.join("\n").trim();
+/** @deprecated Prefer capability.entityExtraction via resolveBusinessActionIntent */
+export function extractBusinessEntity(message: string): string | null {
+  return extractNamedEntity(message);
 }

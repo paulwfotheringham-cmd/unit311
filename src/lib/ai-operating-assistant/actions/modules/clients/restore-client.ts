@@ -28,6 +28,28 @@ export const restoreClientAction: AssistantActionDefinition = {
       clientName: { type: "string" },
     },
   },
+  capability: {
+    businessObject: "Client",
+    intentExamples: [
+      "Restore a client",
+      "Restore ABC Ltd",
+      "Reactivate an archived customer",
+      "Unarchive this client",
+    ],
+    semanticAliases: ["client", "customer", "restore", "reactivate", "unarchive", "reopen"],
+    entityExtraction: {
+      primaryNameFields: ["clientName"],
+      fields: [{ field: "clientName", from: "named_entity" }],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Client restored.\n\nName\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+    suggestedFollowUps: [
+      { label: "Assign account manager", actionId: "clients.assignAccountManager" },
+    ],
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);

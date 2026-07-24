@@ -41,6 +41,39 @@ export const createClientLocationAction: AssistantActionDefinition = {
       makePrimary: { type: "boolean" },
     },
   },
+  capability: {
+    businessObject: "ClientLocation",
+    intentExamples: [
+      "Add a client location",
+      "Create an office address for Acme Ltd",
+      "Add a site for this customer",
+      "Set the company address",
+    ],
+    semanticAliases: [
+      "client",
+      "customer",
+      "location",
+      "office",
+      "address",
+      "site",
+      "create",
+      "add",
+    ],
+    entityExtraction: {
+      primaryNameFields: ["clientName", "label"],
+      fields: [
+        { field: "clientName", from: "named_entity" },
+        { field: "city", from: "location" },
+        { field: "companyCity", from: "location" },
+        { field: "address", from: "named_entity" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Client location created.\n\nLocation\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);

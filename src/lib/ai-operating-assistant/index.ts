@@ -24,6 +24,7 @@ export * from "./explainability";
 export * from "./feedback-service";
 export * from "./conversation-service";
 export * from "./assistant-runtime";
+export * from "./ea-forensic-trace";
 export * from "./artifact-store";
 export * from "./artifact-tools";
 export * from "./report-intent";

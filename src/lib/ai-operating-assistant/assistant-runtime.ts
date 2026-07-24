@@ -1,10 +1,12 @@
-import { topicHintFromHistory } from "./intent-router";
 import {
   ensureActionModulesRegistered,
   formatPlanReadyMessage,
   redirectManualGuidanceToActionPlan,
   resolveOrchestrationRoute,
 } from "./action-orchestration";
+import { getAssistantAction } from "./actions/registry";
+import { eaStage, eaStop, getEaCorrelationId, setEaConversationId } from "./ea-forensic-trace";
+import { topicHintFromHistory } from "./intent-router";
 import {
   createAssistantResponse,
   formatOpenAIError,
@@ -446,6 +448,7 @@ export async function* runAssistantTurn(input: {
     type: "meta",
     conversationId: resolved.conversationId ?? "pending",
     title: resolved.title,
+    correlationId: getEaCorrelationId(),
   };
 
   const instructions = [
@@ -481,7 +484,19 @@ export async function* runAssistantTurn(input: {
 
     // Intent → registered action → propose/execute. Never fall through to workflow teaching.
     const route = await resolveOrchestrationRoute(message, resolved.history, context);
+    setEaConversationId(resolved.conversationId);
+
     if (route.kind === "need_info") {
+      eaStage("Intent resolved", {
+        actionId: route.actionId,
+        confidence: null,
+        "extracted input": null,
+        kind: "need_info",
+      });
+      eaStop("Intent resolved", "missing required fields — asking user before plan", {
+        actionId: route.actionId,
+        question: route.message,
+      });
       assistantText = route.message;
       yield { type: "delta", text: assistantText };
       const assistantMessage: AssistantChatMessage = {
@@ -503,12 +518,76 @@ export async function* runAssistantTurn(input: {
         type: "done",
         message: assistantMessage,
         conversationId: saved.conversationId,
+        correlationId: getEaCorrelationId(),
       };
       return;
     }
 
+    if (route.kind === "capability_answer") {
+      eaStage("Intent resolved", {
+        actionId: null,
+        confidence: null,
+        "extracted input": null,
+        kind: "capability_answer",
+      });
+      assistantText = route.message;
+      yield { type: "delta", text: assistantText };
+      const assistantMessage: AssistantChatMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        content: assistantText,
+        createdAt: new Date().toISOString(),
+      };
+      const saved = await persistTurn({
+        session: input.session,
+        conversationId: resolved.conversationId,
+        history: resolved.history,
+        userMessage,
+        assistantMessage,
+        context,
+        title: resolved.title,
+      });
+      yield {
+        type: "done",
+        message: assistantMessage,
+        conversationId: saved.conversationId,
+        correlationId: getEaCorrelationId(),
+      };
+      return;
+    }
+
+    if (route.kind === "none") {
+      eaStage("Intent resolved", {
+        actionId: null,
+        confidence: null,
+        "extracted input": null,
+        kind: "none",
+      });
+      eaStop("Intent resolved", "no executable business action matched — continuing to model tools", {
+        message,
+      });
+    }
+
     if (route.kind === "tool") {
       const directIntent = route.intent;
+      const intentSteps = Array.isArray(directIntent.args.steps)
+        ? (directIntent.args.steps as Array<{ actionId?: string; input?: Record<string, unknown> }>)
+        : [];
+      const intentFirst = intentSteps[0];
+      eaStage("Intent resolved", {
+        actionId:
+          typeof intentFirst?.actionId === "string" ? intentFirst.actionId : directIntent.tool,
+        confidence: (() => {
+          const match =
+            typeof directIntent.reason === "string"
+              ? directIntent.reason.match(/confidence=([0-9.]+)/)
+              : null;
+          return match ? Number(match[1]) : directIntent.reason ?? null;
+        })(),
+        "extracted input": intentFirst?.input ?? directIntent.args,
+        tool: directIntent.tool,
+        reason: directIntent.reason,
+      });
       const toolArgs =
         directIntent.tool === "emailAssistantArtifact" && activeArtifact
           ? {
@@ -547,29 +626,41 @@ export async function* runAssistantTurn(input: {
           : [];
         const first = steps[0];
         const actionId = typeof first?.actionId === "string" ? first.actionId : "";
-        const companyName =
-          typeof first?.input?.companyName === "string"
-            ? first.input.companyName
-            : typeof first?.input?.clientName === "string"
-              ? first.input.clientName
-              : null;
-        const location =
-          typeof first?.input?.companyCity === "string"
-            ? first.input.companyCity
-            : typeof first?.input?.region === "string"
-              ? String(first.input.region)
-              : null;
+        const definition = actionId ? getAssistantAction(actionId) : null;
+        const primaryFields =
+          definition?.capability.entityExtraction?.primaryNameFields ?? [];
+        let entityLabel: string | null = null;
+        let detail: string | null = null;
+        if (first?.input) {
+          for (const field of primaryFields) {
+            const value = first.input[field];
+            if (typeof value === "string" && value.trim()) {
+              entityLabel = value.trim();
+              break;
+            }
+          }
+          for (const rule of definition?.capability.entityExtraction?.fields ?? []) {
+            if (rule.from === "location") {
+              const value = first.input[rule.field];
+              if (typeof value === "string" && value.trim()) {
+                detail = value.trim();
+                break;
+              }
+            }
+          }
+        }
         const actionName =
           (typeof (result as { items?: Array<{ confirmation?: { title?: string } }> }).items?.[0]
             ?.confirmation?.title === "string" &&
             (result as { items: Array<{ confirmation: { title: string } }> }).items[0].confirmation
               .title) ||
+          definition?.name ||
           actionId ||
           "complete that";
         assistantText = formatPlanReadyMessage({
           actionName,
-          companyName,
-          location,
+          entityLabel,
+          detail,
         });
       } else {
         assistantText =
@@ -602,6 +693,7 @@ export async function* runAssistantTurn(input: {
         type: "done",
         message: assistantMessage,
         conversationId: saved.conversationId,
+        correlationId: getEaCorrelationId(),
       };
       return;
     }
@@ -897,11 +989,18 @@ export function createAssistantSseResponse(
           controller.enqueue(encoder.encode(encodeSse(event)));
         }
       } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error("[EA] EXCEPTION — SSE stream");
+        console.error(`- correlationId: ${getEaCorrelationId()}`);
+        console.error(`- message: ${err.message}`);
+        console.error(`- stack: ${err.stack ?? "(no stack)"}`);
+        if (err.stack) console.error(err.stack);
         controller.enqueue(
           encoder.encode(
             encodeSse({
               type: "error",
-              error: formatOpenAIError(error),
+              error: err.message,
+              stack: err.stack ?? null,
               retryable: isRetryableOpenAIError(error),
             }),
           ),

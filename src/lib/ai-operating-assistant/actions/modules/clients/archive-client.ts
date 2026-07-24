@@ -28,6 +28,26 @@ export const archiveClientAction: AssistantActionDefinition = {
       clientName: { type: "string" },
     },
   },
+  capability: {
+    businessObject: "Client",
+    intentExamples: [
+      "Archive a client",
+      "Archive XYZ Holdings",
+      "Deactivate this customer",
+      "Close the Acme account",
+    ],
+    semanticAliases: ["client", "customer", "archive", "deactivate", "retire", "close"],
+    entityExtraction: {
+      primaryNameFields: ["clientName"],
+      fields: [{ field: "clientName", from: "named_entity" }],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Client archived.\n\nName\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+    suggestedFollowUps: [{ label: "Restore client", actionId: "clients.restoreClient" }],
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);

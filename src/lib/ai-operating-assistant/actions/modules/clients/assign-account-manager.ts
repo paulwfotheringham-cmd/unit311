@@ -41,6 +41,41 @@ export const assignAccountManagerAction: AssistantActionDefinition = {
       managerId: { type: "string" },
     },
   },
+  capability: {
+    businessObject: "Client",
+    intentExamples: [
+      "Assign an account manager",
+      "Assign Sarah as account manager for Acme Ltd",
+      "Give this client an account owner",
+      "Appoint a manager for Orion",
+    ],
+    semanticAliases: [
+      "client",
+      "customer",
+      "assign",
+      "appoint",
+      "manager",
+      "account manager",
+      "owner",
+    ],
+    entityExtraction: {
+      primaryNameFields: ["clientName"],
+      fields: [
+        { field: "clientName", from: "named_entity" },
+        { field: "accountManagerName", from: "person" },
+        { field: "managerName", from: "person" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Account manager assigned.\n\nClient\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+    suggestedFollowUps: [
+      { label: "Add contact", actionId: "clients.addClientContact" },
+      { label: "Create project", actionId: "projects.createProject" },
+    ],
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);

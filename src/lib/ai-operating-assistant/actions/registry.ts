@@ -65,6 +65,7 @@ export function toActionDescriptor(definition: AssistantActionDefinition): Assis
     auditRequired: definition.auditRequired,
     undoCapable: definition.undoCapable,
     inputSchema: definition.inputSchema,
+    capability: definition.capability,
   };
 }
 

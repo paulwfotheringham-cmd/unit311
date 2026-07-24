@@ -8,6 +8,14 @@ import {
   type AssistantPageSelection,
 } from "@/lib/ai-operating-assistant";
 import {
+  createEaCorrelationId,
+  eaStage,
+  eaStop,
+  getEaCorrelationId,
+  resolveIncomingCorrelationId,
+  runWithEaTraceAsync,
+} from "@/lib/ai-operating-assistant/ea-forensic-trace";
+import {
   completeExecutiveAssistantChat,
   type ExecutiveAssistantChatTurn,
 } from "@/lib/executive-assistant-ai";
@@ -93,7 +101,6 @@ function parseOperatingMessages(raw: unknown): AssistantChatMessage[] | undefine
     });
 }
 
-
 function parseLegacyMessages(raw: unknown): ExecutiveAssistantChatTurn[] | null {
   if (!Array.isArray(raw)) return null;
 
@@ -133,6 +140,7 @@ async function handleLegacyChat(messages: ExecutiveAssistantChatTurn[]) {
 async function handleOperatingAssistantChat(
   body: Record<string, unknown>,
   session: NonNullable<Awaited<ReturnType<typeof getPlatformSession>>>,
+  correlationId: string,
 ) {
   const chatRequest: AssistantChatRequest = {
     conversationId: typeof body.conversationId === "string" ? body.conversationId : null,
@@ -147,36 +155,64 @@ async function handleOperatingAssistantChat(
   };
 
   if (!chatRequest.message.trim()) {
-    return NextResponse.json({ error: "message is required." }, { status: 400 });
+    eaStop("Chat request received", "message is required.", { correlationId });
+    return NextResponse.json(
+      { error: "message is required.", correlationId },
+      { status: 400 },
+    );
   }
 
-  const generator = runAssistantTurn({ session, request: chatRequest });
+  return runWithEaTraceAsync(
+    {
+      correlationId,
+      conversationId: chatRequest.conversationId,
+    },
+    async () => {
+      eaStage("Chat request received", {
+        conversationId: chatRequest.conversationId,
+        "user message": chatRequest.message,
+      });
 
-  if (chatRequest.stream === false) {
-    let finalText = "";
-    let conversationId = chatRequest.conversationId ?? "";
-    let error: string | null = null;
+      const generator = runAssistantTurn({ session, request: chatRequest });
 
-    for await (const event of generator) {
-      if (event.type === "delta") finalText += event.text;
-      if (event.type === "done") {
-        finalText = event.message.content;
-        conversationId = event.conversationId;
+      if (chatRequest.stream === false) {
+        let finalText = "";
+        let conversationId = chatRequest.conversationId ?? "";
+        let error: string | null = null;
+        let errorStack: string | null = null;
+
+        for await (const event of generator) {
+          if (event.type === "delta") finalText += event.text;
+          if (event.type === "done") {
+            finalText = event.message.content;
+            conversationId = event.conversationId;
+          }
+          if (event.type === "error") {
+            error = event.error;
+            errorStack = event.stack ?? null;
+          }
+        }
+
+        if (error) {
+          eaStop("Chat request received", error, { stack: errorStack });
+          return NextResponse.json(
+            { error, stack: errorStack, correlationId: getEaCorrelationId() },
+            { status: 502 },
+          );
+        }
+
+        return NextResponse.json({
+          reply: finalText,
+          conversationId,
+          correlationId: getEaCorrelationId(),
+        });
       }
-      if (event.type === "error") error = event.error;
-    }
 
-    if (error) {
-      return NextResponse.json({ error }, { status: 502 });
-    }
-
-    return NextResponse.json({
-      reply: finalText,
-      conversationId,
-    });
-  }
-
-  return createAssistantSseResponse(generator);
+      const response = createAssistantSseResponse(generator);
+      response.headers.set("x-ea-correlation-id", getEaCorrelationId());
+      return response;
+    },
+  );
 }
 
 /**
@@ -185,37 +221,65 @@ async function handleOperatingAssistantChat(
  * - Operating Assistant: `{ message, ... }` → SSE stream or `{ reply, conversationId }`
  */
 export async function POST(request: NextRequest) {
+  const correlationId = resolveIncomingCorrelationId({
+    header: request.headers.get("x-ea-correlation-id"),
+    body: null,
+  });
+
   try {
     const session = await getPlatformSession();
     if (!session) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+      eaStop("Chat request received", "Authentication required.", { correlationId });
+      return NextResponse.json(
+        { error: "Authentication required.", correlationId },
+        { status: 401 },
+      );
     }
 
     const body = (await request.json()) as Record<string, unknown>;
     const operatingMessage =
       typeof body.message === "string" ? body.message.trim() : "";
+    const bodyCorrelation =
+      typeof body.correlationId === "string" ? body.correlationId.trim() : null;
+    const effectiveCorrelation = bodyCorrelation || correlationId || createEaCorrelationId();
 
     if (operatingMessage) {
-      return handleOperatingAssistantChat(body, session);
+      return handleOperatingAssistantChat(body, session, effectiveCorrelation);
     }
 
     const legacyMessages = parseLegacyMessages(body.messages);
     if (!legacyMessages) {
       return NextResponse.json(
-        { error: "message is required, or provide a legacy messages array." },
+        {
+          error: "message is required, or provide a legacy messages array.",
+          correlationId: effectiveCorrelation,
+        },
         { status: 400 },
       );
     }
 
     if (legacyMessages[legacyMessages.length - 1]?.role !== "user") {
-      return NextResponse.json({ error: "Last message must be from the user." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Last message must be from the user.", correlationId: effectiveCorrelation },
+        { status: 400 },
+      );
     }
 
     return handleLegacyChat(legacyMessages);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to generate reply";
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error("[EA] EXCEPTION — Chat POST");
+    console.error(`- correlationId: ${correlationId}`);
+    console.error(`- message: ${err.message}`);
+    console.error(`- stack: ${err.stack ?? "(no stack)"}`);
+    if (err.stack) console.error(err.stack);
     const status =
-      message.includes("not configured") || message.includes("OPENAI_API_KEY") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+      err.message.includes("not configured") || err.message.includes("OPENAI_API_KEY")
+        ? 503
+        : 500;
+    return NextResponse.json(
+      { error: err.message, stack: err.stack ?? null, correlationId },
+      { status },
+    );
   }
 }

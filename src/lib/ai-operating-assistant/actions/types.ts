@@ -116,6 +116,51 @@ export type AssistantActionHandler = {
   ) => Promise<AssistantActionRollbackResult>;
 };
 
+/**
+ * Declarative NL / discovery metadata for a registered action.
+ * Intent resolution, entity extraction, success copy, follow-ups, and relationships
+ * must come from this object — never from module-specific prompts.
+ */
+export type AssistantCapabilityRelationship = {
+  /** Target action id (preferred) or capability id. */
+  actionId?: string;
+  capabilityId?: string;
+  label: string;
+  /** Why this follows (optional, for graph / explanations). */
+  reason?: string;
+};
+
+export type AssistantActionCapability = {
+  /** Stable capability id; defaults to action id when omitted. */
+  id?: string;
+  businessObject: string;
+  intentExamples: string[];
+  semanticAliases?: string[];
+  entityExtraction?: {
+    primaryNameFields: string[];
+    fields?: Array<{
+      field: string;
+      from: "quoted" | "named_entity" | "location" | "email" | "phone" | "person" | "url";
+    }>;
+  };
+  confirmationPolicy: "always" | "never" | "if_warnings";
+  successFormatter: {
+    /** Template with tokens like {recordLabel}, {recordId}, or custom field tokens. */
+    template: string;
+    fields?: Array<{ token: string; path: string }>;
+  };
+  /**
+   * Suggested next steps after success (labels + actionIds).
+   * Prefer `relationships.suggestedNext` for the Capability Graph; both are merged.
+   */
+  suggestedFollowUps?: Array<{ label: string; actionId?: string }>;
+  /** Explicit capability graph edges. */
+  relationships?: {
+    suggestedNext?: AssistantCapabilityRelationship[];
+    related?: AssistantCapabilityRelationship[];
+  };
+};
+
 export type AssistantActionDefinition = {
   id: string;
   name: string;
@@ -127,6 +172,8 @@ export type AssistantActionDefinition = {
   undoCapable: boolean;
   /** JSON-schema-like parameter hints for discovery / planning. */
   inputSchema?: Record<string, unknown>;
+  /** Required for NL discovery — validated at module bootstrap. */
+  capability: AssistantActionCapability;
   handler: AssistantActionHandler;
 };
 
@@ -141,6 +188,7 @@ export type AssistantActionDescriptor = {
   auditRequired: boolean;
   undoCapable: boolean;
   inputSchema?: Record<string, unknown>;
+  capability: AssistantActionCapability;
 };
 
 export type AssistantActionPlanStep = {

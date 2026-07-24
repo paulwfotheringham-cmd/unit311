@@ -8,24 +8,24 @@
 import type { AssistantBusinessContext, AssistantChatMessage } from "./types";
 import type { DirectAssistantIntent } from "./intent-router";
 import { resolveDirectIntent } from "./intent-router";
-import { registerClientsActions } from "./actions/modules/clients/register";
+import { registerAllActionModules } from "./actions/register-all-modules";
 import { getAssistantAction } from "./actions/registry";
 import {
-  extractBusinessEntity,
-  resolveBusinessActionIntent,
-} from "./intent-action-resolver";
-import {
-  formatExecutedClientOutcome,
-  formatPlanReadyMessage,
-} from "./action-ui-messages";
+  answerCapabilityQuestion,
+  isCapabilityQuestion,
+} from "./actions/capability-service";
+import { resolveBusinessActionIntent } from "./intent-action-resolver";
+import { formatActionSuccess, formatPlanReadyMessage } from "./action-ui-messages";
 
-export { formatExecutedClientOutcome, formatPlanReadyMessage };
+export { formatActionSuccess, formatPlanReadyMessage };
+/** @deprecated Prefer formatActionSuccess */
+export { formatExecutedClientOutcome } from "./action-ui-messages";
 
 let modulesBootstrapped = false;
 
 /** Idempotent — safe on every turn / serverless invoke. */
 export function ensureActionModulesRegistered() {
-  registerClientsActions();
+  registerAllActionModules();
   modulesBootstrapped = true;
   return modulesBootstrapped;
 }
@@ -48,6 +48,10 @@ export type OrchestrationRoute =
       kind: "need_info";
       message: string;
       actionId: string;
+    }
+  | {
+      kind: "capability_answer";
+      message: string;
     }
   | {
       kind: "none";
@@ -81,6 +85,14 @@ export async function resolveOrchestrationRoute(
 ): Promise<OrchestrationRoute> {
   ensureActionModulesRegistered();
 
+  // 0) Capability catalogue / "can you …?" — answered from the Capability Graph only.
+  if (isCapabilityQuestion(message)) {
+    const answered = answerCapabilityQuestion(message, { business });
+    if (answered) {
+      return { kind: "capability_answer", message: answered.answer };
+    }
+  }
+
   // 1) Semantic write intent against the live action registry (meaning, not phrasing).
   const businessIntent = await resolveBusinessActionIntent(message, business);
   if (businessIntent.kind === "need_info") {
@@ -97,7 +109,7 @@ export async function resolveOrchestrationRoute(
         businessIntent.actionId,
         businessIntent.input,
         message,
-        businessIntent.reason,
+        `${businessIntent.reason}|confidence=${businessIntent.confidence}`,
       ),
     };
   }
@@ -105,7 +117,6 @@ export async function resolveOrchestrationRoute(
   // 2) Deterministic read/PDF/email intents (non-write).
   const direct = resolveDirectIntent(message, history);
   if (direct?.tool === "proposeBusinessActionPlan" || direct?.tool === "planBusinessGoal") {
-    // Legacy phrase matchers — still valid, but semantic path above should usually win.
     return { kind: "tool", intent: direct };
   }
   if (direct) {
@@ -115,32 +126,13 @@ export async function resolveOrchestrationRoute(
   return { kind: "none" };
 }
 
-/** @deprecated Prefer resolveOrchestrationRoute */
+/** @deprecated Prefer resolveOrchestrationRoute — writes are registry-only. */
 export function resolveExecutableActionRoute(
   message: string,
   history: AssistantChatMessage[],
 ): DirectAssistantIntent | null {
   ensureActionModulesRegistered();
-  const direct = resolveDirectIntent(message, history);
-  if (direct) return direct;
-  // Sync fallback: entity + createClient when present
-  const entity = extractBusinessEntity(message);
-  if (entity && getAssistantAction("clients.createClient")) {
-    const lower = message.toLowerCase();
-    if (
-      /\b(client|customer|account|company|signed|register|onboard|setup|set\s*up)\b/i.test(
-        lower,
-      )
-    ) {
-      return proposeSteps(
-        "clients.createClient",
-        { companyName: entity },
-        message,
-        "sync_fallback_create_client",
-      );
-    }
-  }
-  return null;
+  return resolveDirectIntent(message, history);
 }
 
 export function isManualGuidanceTool(toolName: string): boolean {

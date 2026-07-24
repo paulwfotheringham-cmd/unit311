@@ -43,13 +43,14 @@ import {
 import {
   listBusinessActionsTool,
   proposeBusinessActionPlanTool,
+  searchCapabilitiesTool,
 } from "./actions/discovery-tools";
 import {
   executeGoalPlanTool,
   planBusinessGoalTool,
 } from "./actions/planning/planning-tools";
 // Ensure Clients Action Framework handlers are registered for discovery.
-import "./actions/modules/clients/register";
+import "./actions/register-all-modules";
 import {
   getCashPosition,
   getMonthlyPayrollObligation,
@@ -627,7 +628,7 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
   {
     name: "listBusinessActions",
     description:
-      "Discover registered business Action Framework operations available to the current user (module, permissions, confirmation/audit flags, inputSchema). Clients module is registered (createClient, updateClient, archiveClient, restoreClient, assignAccountManager, contacts, locations, merge). Always call this (or use known clients.* actionIds) before proposeBusinessActionPlan for writes.",
+      "List every capability from the live Capability Graph (actionId, capabilityId, businessObject, required/optional fields, permissions, confirmation policy, relationships, statements like “I can create Clients”). Use for discovery before proposing writes.",
     parameters: {
       type: "object",
       properties: {
@@ -640,9 +641,25 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
     },
   },
   {
+    name: "searchCapabilities",
+    description:
+      "Answer “What can you do?” / “Can you create suppliers?” by searching the Capability Graph. Never invent capabilities — only report what is registered.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Natural-language capability question or keywords",
+        },
+        question: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "proposeBusinessActionPlan",
     description:
-      "Build a multi-step Action Framework plan with permission checks and previews. Does NOT execute writes. Returns a planId for the Plan Viewer. After the user Approves, the client calls POST /api/executive-assistant/actions/plans/{id} → executeActionPlan. Use registered actionIds from listBusinessActions.",
+      "Build a multi-step Action Framework plan with permission checks and previews. Does NOT execute writes. Returns a planId for the Plan Viewer. After the user Approves, the client calls POST /api/executive-assistant/actions/plans/{id} → executeActionPlan. Use registered actionIds from listBusinessActions / searchCapabilities.",
     parameters: {
       type: "object",
       properties: {
@@ -728,6 +745,7 @@ const handlers: Record<string, ContextualToolHandler> = {
   createPayrollRun: createPayrollRunTool,
   generatePayrollPdf,
   listBusinessActions: listBusinessActionsTool,
+  searchCapabilities: searchCapabilitiesTool,
   proposeBusinessActionPlan: proposeBusinessActionPlanTool,
   planBusinessGoal: planBusinessGoalTool,
   executeGoalPlan: executeGoalPlanTool,

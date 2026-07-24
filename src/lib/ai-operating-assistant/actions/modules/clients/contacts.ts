@@ -62,6 +62,34 @@ export const addClientContactAction: AssistantActionDefinition = {
     },
     required: ["contactName"],
   },
+  capability: {
+    businessObject: "ClientContact",
+    intentExamples: [
+      "Add a contact to a client",
+      "Add Jane Doe as a contact for Acme Ltd",
+      "Create a client contact",
+      "Add a stakeholder to this customer",
+    ],
+    semanticAliases: ["client", "customer", "contact", "person", "stakeholder", "add", "create"],
+    entityExtraction: {
+      primaryNameFields: ["contactName", "name"],
+      fields: [
+        { field: "contactName", from: "person" },
+        { field: "name", from: "person" },
+        { field: "clientName", from: "named_entity" },
+        { field: "email", from: "email" },
+        { field: "phone", from: "phone" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Contact added.\n\nName\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
+    },
+    suggestedFollowUps: [
+      { label: "Assign account manager", actionId: "clients.assignAccountManager" },
+    ],
+  },
   handler: {
     async validate(input, ctx) {
       const ws = requireWorkspaceScope(ctx.business);
@@ -232,6 +260,29 @@ export const updateClientContactAction: AssistantActionDefinition = {
       email: { type: "string" },
       phone: { type: "string" },
       role: { type: "string" },
+    },
+  },
+  capability: {
+    businessObject: "ClientContact",
+    intentExamples: [
+      "Update a client contact",
+      "Change Jane's email on Acme Ltd",
+      "Edit a contact phone number",
+    ],
+    semanticAliases: ["client", "contact", "update", "change", "edit"],
+    entityExtraction: {
+      primaryNameFields: ["contactName", "name"],
+      fields: [
+        { field: "contactName", from: "person" },
+        { field: "clientName", from: "named_entity" },
+        { field: "email", from: "email" },
+        { field: "phone", from: "phone" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Contact updated.\n\nName\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
     },
   },
   handler: {
@@ -414,6 +465,27 @@ export const removeClientContactAction: AssistantActionDefinition = {
       clientName: { type: "string" },
       contactId: { type: "string" },
       contactName: { type: "string" },
+    },
+  },
+  capability: {
+    businessObject: "ClientContact",
+    intentExamples: [
+      "Remove a client contact",
+      "Delete Jane from Acme Ltd contacts",
+      "Remove this stakeholder",
+    ],
+    semanticAliases: ["client", "contact", "remove", "delete"],
+    entityExtraction: {
+      primaryNameFields: ["contactName"],
+      fields: [
+        { field: "contactName", from: "person" },
+        { field: "clientName", from: "named_entity" },
+      ],
+    },
+    confirmationPolicy: "always",
+    successFormatter: {
+      template: "Contact removed.\n\nName\n{recordLabel}",
+      fields: [{ token: "recordLabel", path: "result.recordLabel" }],
     },
   },
   handler: {

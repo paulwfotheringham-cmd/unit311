@@ -165,7 +165,13 @@ function planHeuristic(
 
 function extractLooseInput(
   goal: string,
-  descriptor: { id: string; inputSchema?: Record<string, unknown> },
+  descriptor: {
+    id: string;
+    inputSchema?: Record<string, unknown>;
+    capability?: {
+      entityExtraction?: { primaryNameFields?: string[] };
+    };
+  },
 ): Record<string, unknown> {
   const input: Record<string, unknown> = {};
   const quoted = goal.match(/[“"']([^”"']+)[”"']/);
@@ -181,11 +187,19 @@ function extractLooseInput(
       : {};
 
   if (entity) {
-    if ("companyName" in props) input.companyName = entity;
-    else if ("clientName" in props) input.clientName = entity;
-    else if ("name" in props) input.name = entity;
-    else if ("title" in props) input.title = entity;
-    else input.goalEntity = entity;
+    const primary =
+      descriptor.capability?.entityExtraction?.primaryNameFields?.filter(
+        (field) => field in props,
+      ) ?? [];
+    if (primary.length) {
+      for (const field of primary) input[field] = entity;
+    } else if ("name" in props) {
+      input.name = entity;
+    } else if ("title" in props) {
+      input.title = entity;
+    } else {
+      input.goalEntity = entity;
+    }
   }
 
   // Pass full goal for handlers that accept free-text notes/request.

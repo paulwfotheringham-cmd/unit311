@@ -6,14 +6,18 @@ import {
   createSupabaseServiceRoleClient,
   isSupabaseServiceRoleConfigured,
 } from "@/lib/supabase/server";
+import { eaStop, getEaCorrelationId } from "../ea-forensic-trace";
 import type { AssistantActionPlan } from "./types";
 
 const TABLE = "executive_assistant_action_plans";
 const memory = new Map<string, AssistantActionPlan>();
 const MAX_MEMORY = 80;
 
-const log = (...args: unknown[]) => {
-  console.info("[action-plan-store]", ...args);
+export type PlanLoadSource = "memory" | "database" | "rehydrated" | "miss";
+
+export type SaveActionPlanResult = {
+  plan: AssistantActionPlan;
+  storedSuccessfully: boolean;
 };
 
 function touchMemory(plan: AssistantActionPlan) {
@@ -49,16 +53,15 @@ function mapRow(row: Record<string, unknown>): AssistantActionPlan {
   };
 }
 
-export async function saveActionPlan(plan: AssistantActionPlan): Promise<AssistantActionPlan> {
+export async function saveActionPlan(plan: AssistantActionPlan): Promise<SaveActionPlanResult> {
   touchMemory(plan);
-  log("save", plan.id, "status=", plan.status, "steps=", plan.steps.length);
 
   if (!isSupabaseServiceRoleConfigured()) {
-    log(
-      "WARN durable store unavailable (service role not configured) — plan is memory-only and will be lost across serverless isolates",
-      plan.id,
-    );
-    return plan;
+    eaStop("Plan created / store", "service role not configured — memory-only", {
+      planId: plan.id,
+      storedSuccessfully: false,
+    });
+    return { plan, storedSuccessfully: false };
   }
 
   try {
@@ -82,43 +85,46 @@ export async function saveActionPlan(plan: AssistantActionPlan): Promise<Assista
     });
 
     if (error) {
-      // Do not hard-fail propose — confirmation UI still needs the in-memory plan.
-      // Execute MUST rehydrate from the client snapshot when durable get misses
-      // (serverless isolate boundary / missing migration 109).
-      console.error(
-        "[action-plan-store] upsert failed — plan is memory-only until approve rehydrates",
-        plan.id,
-        error.message,
-        error.code,
-      );
-      return plan;
+      eaStop("Plan created / store", `durable upsert failed: ${error.message}`, {
+        planId: plan.id,
+        code: error.code,
+        storedSuccessfully: false,
+        correlationId: getEaCorrelationId(),
+      });
+      return { plan, storedSuccessfully: false };
     }
-    log("save durable ok", plan.id);
-  } catch (error) {
-    console.error(
-      "[action-plan-store] upsert exception — plan is memory-only until approve rehydrates",
-      plan.id,
-      error,
-    );
-    return plan;
-  }
 
-  return plan;
+    return { plan, storedSuccessfully: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    eaStop("Plan created / store", `durable upsert exception: ${message}`, {
+      planId: plan.id,
+      storedSuccessfully: false,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { plan, storedSuccessfully: false };
+  }
 }
 
 export async function getActionPlan(
   planId: string,
   userId: string,
 ): Promise<AssistantActionPlan | null> {
+  const loaded = await loadActionPlan(planId, userId);
+  return loaded.plan;
+}
+
+export async function loadActionPlan(
+  planId: string,
+  userId: string,
+): Promise<{ plan: AssistantActionPlan | null; source: PlanLoadSource }> {
   const cached = memory.get(planId);
   if (cached && cached.userId === userId) {
-    log("get memory hit", planId);
-    return cached;
+    return { plan: cached, source: "memory" };
   }
 
   if (!isSupabaseServiceRoleConfigured()) {
-    log("get miss — no durable store", planId);
-    return null;
+    return { plan: null, source: "miss" };
   }
   try {
     const supabase = createSupabaseServiceRoleClient();
@@ -129,22 +135,27 @@ export async function getActionPlan(
       .eq("user_id", userId)
       .maybeSingle();
     if (error) {
-      console.error("[action-plan-store] get failed", planId, error.message);
-      return null;
+      eaStop("Plan loaded", `database get failed: ${error.message}`, {
+        planId,
+        userId,
+      });
+      return { plan: null, source: "miss" };
     }
     if (!data) {
-      log("get durable miss", planId, "user=", userId);
-      return null;
+      return { plan: null, source: "miss" };
     }
-    log("get durable hit", planId);
-    return touchMemory(mapRow(data as Record<string, unknown>));
+    return { plan: touchMemory(mapRow(data as Record<string, unknown>)), source: "database" };
   } catch (error) {
-    console.error("[action-plan-store] get exception", planId, error);
-    return null;
+    eaStop("Plan loaded", `database get exception: ${error instanceof Error ? error.message : String(error)}`, {
+      planId,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { plan: null, source: "miss" };
   }
 }
 
 /** Rehydrate a proposed plan into memory + durable store (approve fallback). */
 export async function putActionPlan(plan: AssistantActionPlan): Promise<AssistantActionPlan> {
-  return saveActionPlan(plan);
+  const { plan: saved } = await saveActionPlan(plan);
+  return saved;
 }
