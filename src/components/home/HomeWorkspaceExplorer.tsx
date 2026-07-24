@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useId, useState, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
-  ArrowUpRight,
   Banknote,
   Boxes,
   Briefcase,
@@ -17,11 +15,9 @@ import {
   ClipboardList,
   Cloud,
   Database,
-  FileStack,
   FileText,
   FolderKanban,
   Gauge,
-  GitBranch,
   GraduationCap,
   Handshake,
   HardDrive,
@@ -34,7 +30,6 @@ import {
   Scale,
   Share2,
   ShieldCheck,
-  Sparkles,
   Target,
   Truck,
   UserCog,
@@ -46,29 +41,36 @@ import {
 
 type Capability = {
   label: string;
+  detail: string;
   icon: LucideIcon;
 };
 
-type QuickAction = {
-  label: string;
-  href: string;
-};
+type WorkspaceVisual =
+  | "central"
+  | "clients"
+  | "finance"
+  | "people"
+  | "engineering"
+  | "corporate"
+  | "assets"
+  | "productivity"
+  | "integrations";
 
-type WorkspaceVisual = "central" | "clients" | "finance" | "people" | "engineering" | "corporate" | "assets" | "productivity" | "integrations";
+type WorkspaceAccent = {
+  /** Comma-separated RGB for CSS variables */
+  rgb: string;
+  label: string;
+};
 
 type Workspace = {
   id: string;
   title: string;
   descriptor: string;
   description: string;
-  aiSummary: string;
   icon: LucideIcon;
   visual: WorkspaceVisual;
-  accent: string;
+  accent: WorkspaceAccent;
   capabilities: Capability[];
-  highlights?: string[];
-  quickActions?: QuickAction[];
-  footnote?: string;
 };
 
 const WORKSPACES: Workspace[] = [
@@ -78,18 +80,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Executive oversight",
     description:
       "Executive oversight, strategic planning, AI-powered decision making and enterprise-wide business management.",
-    aiSummary:
-      "Surfaces what needs attention across the organisation — priorities, approvals and strategic signals — so leadership can act without chasing updates.",
     icon: LayoutDashboard,
     visual: "central",
-    accent: "rgba(125, 211, 252, 0.55)",
+    accent: { rgb: "59, 130, 246", label: "blue" },
     capabilities: [
-      { label: "Role-Based Executive Dashboard", icon: Gauge },
-      { label: "Client Management", icon: Users },
-      { label: "Sales Pipeline, Discovery & Client Onboarding", icon: Handshake },
-      { label: "Executive Project Dashboard", icon: ChartColumn },
-      { label: "Project Management", icon: FolderKanban },
-      { label: "Grant Management", icon: FileText },
+      {
+        label: "Role-Based Executive Dashboard",
+        detail: "Live executive KPIs, operational insights and strategic reporting.",
+        icon: Gauge,
+      },
+      {
+        label: "Client Management",
+        detail: "Organisation-wide client visibility with relationships and account context.",
+        icon: Users,
+      },
+      {
+        label: "Sales Pipeline, Discovery & Client Onboarding",
+        detail: "Move opportunities from discovery through structured onboarding.",
+        icon: Handshake,
+      },
+      {
+        label: "Executive Project Dashboard",
+        detail: "Portfolio health, delivery risk and progress in one executive view.",
+        icon: ChartColumn,
+      },
+      {
+        label: "Project Management",
+        detail: "Plan, track and govern delivery across internal and external work.",
+        icon: FolderKanban,
+      },
+      {
+        label: "Grant Management",
+        detail: "Track funding programmes, milestones and compliance obligations.",
+        icon: FileText,
+      },
     ],
   },
   {
@@ -98,18 +122,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Relationships & delivery",
     description:
       "Manage client relationships, pipeline, onboarding and project delivery in one connected workspace.",
-    aiSummary:
-      "Keeps commercial and delivery teams aligned — from first conversation through onboarding to live project progress.",
     icon: Briefcase,
     visual: "clients",
-    accent: "rgba(147, 197, 253, 0.55)",
+    accent: { rgb: "20, 184, 166", label: "teal" },
     capabilities: [
-      { label: "Client Directory", icon: Users },
-      { label: "CRM & Pipeline", icon: Handshake },
-      { label: "Client Onboarding", icon: ClipboardList },
-      { label: "Internal Projects", icon: FolderKanban },
-      { label: "External Projects", icon: Briefcase },
-      { label: "Quality Management", icon: ShieldCheck },
+      {
+        label: "Client Directory",
+        detail: "A structured directory of accounts, contacts and commercial history.",
+        icon: Users,
+      },
+      {
+        label: "CRM & Pipeline",
+        detail: "Qualify demand and advance opportunities with clear stage ownership.",
+        icon: Handshake,
+      },
+      {
+        label: "Client Onboarding",
+        detail: "Standardise kickoff so every new client starts with the same quality.",
+        icon: ClipboardList,
+      },
+      {
+        label: "Internal Projects",
+        detail: "Coordinate internal initiatives with milestones, owners and status.",
+        icon: FolderKanban,
+      },
+      {
+        label: "External Projects",
+        detail: "Deliver client work with visibility from kickoff through close-out.",
+        icon: Briefcase,
+      },
+      {
+        label: "Quality Management",
+        detail: "Embed quality checks into delivery without slowing the team down.",
+        icon: ShieldCheck,
+      },
     ],
   },
   {
@@ -118,19 +164,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Finance & reporting",
     description:
       "Run finance operations, banking connections and reporting from a unified financial command centre.",
-    aiSummary:
-      "Gives finance a single operating picture — cash, receivables, payables and reporting — without jumping between systems.",
     icon: Wallet,
     visual: "finance",
-    accent: "rgba(110, 231, 183, 0.45)",
+    accent: { rgb: "16, 185, 129", label: "emerald" },
     capabilities: [
-      { label: "Financial Dashboard", icon: ChartColumn },
-      { label: "General Ledger", icon: FileText },
-      { label: "Accounts Receivable", icon: Banknote },
-      { label: "Accounts Payable", icon: Wallet },
-      { label: "Expenses", icon: ClipboardList },
-      { label: "Banking Integration", icon: Building2 },
-      { label: "Financial Reporting", icon: Activity },
+      {
+        label: "Financial Dashboard",
+        detail: "Cash, runway and performance signals in a single operating picture.",
+        icon: ChartColumn,
+      },
+      {
+        label: "General Ledger",
+        detail: "Maintain a clean ledger with journal control and account structure.",
+        icon: FileText,
+      },
+      {
+        label: "Accounts Receivable",
+        detail: "Track invoices, collections and customer balances with clarity.",
+        icon: Banknote,
+      },
+      {
+        label: "Accounts Payable",
+        detail: "Control supplier obligations, approvals and payment timing.",
+        icon: Wallet,
+      },
+      {
+        label: "Expenses",
+        detail: "Capture and review spend with policy-aware workflows.",
+        icon: ClipboardList,
+      },
+      {
+        label: "Financial Reporting",
+        detail: "Produce board-ready reporting without spreadsheet sprawl.",
+        icon: Activity,
+      },
     ],
   },
   {
@@ -139,20 +206,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Workforce management",
     description:
       "Coordinate workforce management across people, leave, performance, payroll and training.",
-    aiSummary:
-      "Helps people leaders see capacity, leave risk and performance signals in one place before issues become operational friction.",
     icon: UsersRound,
     visual: "people",
-    accent: "rgba(196, 181, 253, 0.5)",
+    accent: { rgb: "168, 85, 247", label: "purple" },
     capabilities: [
-      { label: "HR Dashboard", icon: Gauge },
-      { label: "Employees", icon: Users },
-      { label: "Leave", icon: CalendarDays },
-      { label: "Performance", icon: Target },
-      { label: "Recruitment", icon: UserCog },
-      { label: "Payroll", icon: Banknote },
-      { label: "Training", icon: GraduationCap },
-      { label: "Representatives & Distributors", icon: Handshake },
+      {
+        label: "HR Dashboard",
+        detail: "See headcount, capacity and people risk before it becomes friction.",
+        icon: Gauge,
+      },
+      {
+        label: "Employees",
+        detail: "Maintain employee records, roles and organisational structure.",
+        icon: Users,
+      },
+      {
+        label: "Leave",
+        detail: "Balance time-off requests with operational coverage.",
+        icon: CalendarDays,
+      },
+      {
+        label: "Performance",
+        detail: "Track goals, reviews and development conversations.",
+        icon: Target,
+      },
+      {
+        label: "Recruitment",
+        detail: "Run hiring pipelines from requisition through offer.",
+        icon: UserCog,
+      },
+      {
+        label: "Training",
+        detail: "Plan learning paths and keep workforce skills current.",
+        icon: GraduationCap,
+      },
     ],
   },
   {
@@ -161,19 +248,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Engineering delivery",
     description:
       "Plan capacity, deliver engineering projects and maintain technical quality and compliance.",
-    aiSummary:
-      "Connects utilisation, capacity and delivery risk so engineering leads can balance commitments with quality and compliance.",
     icon: Wrench,
     visual: "engineering",
-    accent: "rgba(125, 211, 252, 0.5)",
+    accent: { rgb: "249, 115, 22", label: "orange" },
     capabilities: [
-      { label: "Engineering Dashboard", icon: Gauge },
-      { label: "Resource Utilisation", icon: Activity },
-      { label: "Capacity Planning", icon: ChartColumn },
-      { label: "Engineering Projects", icon: FolderKanban },
-      { label: "Technical Documentation", icon: FileText },
-      { label: "Quality & Compliance", icon: ShieldCheck },
-      { label: "Risks & Issues", icon: ClipboardCheck },
+      {
+        label: "Engineering Dashboard",
+        detail: "Utilisation, delivery risk and technical priorities in one view.",
+        icon: Gauge,
+      },
+      {
+        label: "Resource Utilisation",
+        detail: "Balance people load across active and upcoming commitments.",
+        icon: Activity,
+      },
+      {
+        label: "Capacity Planning",
+        detail: "Forecast capacity so commitments stay realistic and deliverable.",
+        icon: ChartColumn,
+      },
+      {
+        label: "Engineering Projects",
+        detail: "Govern technical delivery from scope through release.",
+        icon: FolderKanban,
+      },
+      {
+        label: "Technical Documentation",
+        detail: "Keep specs, decisions and system knowledge accessible.",
+        icon: FileText,
+      },
+      {
+        label: "Quality & Compliance",
+        detail: "Protect standards with structured quality and compliance controls.",
+        icon: ShieldCheck,
+      },
     ],
   },
   {
@@ -182,19 +290,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Governance & compliance",
     description:
       "Govern company structure, contracts, compliance and advisory relationships from one place.",
-    aiSummary:
-      "Centralises the records and relationships that keep the company governed — structure, contracts, licences and advisers.",
     icon: Scale,
     visual: "corporate",
-    accent: "rgba(186, 230, 253, 0.5)",
+    accent: { rgb: "148, 163, 184", label: "slate" },
     capabilities: [
-      { label: "Company Information", icon: Building2 },
-      { label: "Cap Table & Shareholder Management", icon: ChartColumn },
-      { label: "Software & Licences", icon: HardDrive },
-      { label: "Contracts", icon: FileText },
-      { label: "Bank Accounts", icon: Banknote },
-      { label: "Professional Advisers", icon: Users },
-      { label: "Compliance & Governance", icon: ShieldCheck },
+      {
+        label: "Company Information",
+        detail: "Centralise legal entity details and corporate records.",
+        icon: Building2,
+      },
+      {
+        label: "Cap Table & Shareholder Management",
+        detail: "Maintain ownership structure with audit-ready clarity.",
+        icon: ChartColumn,
+      },
+      {
+        label: "Software & Licences",
+        detail: "Track software estate, renewals and licence exposure.",
+        icon: HardDrive,
+      },
+      {
+        label: "Contracts",
+        detail: "Store and govern commercial agreements with clear ownership.",
+        icon: FileText,
+      },
+      {
+        label: "Bank Accounts",
+        detail: "Keep banking relationships and account references organised.",
+        icon: Banknote,
+      },
+      {
+        label: "Compliance & Governance",
+        detail: "Coordinate governance obligations and compliance evidence.",
+        icon: ShieldCheck,
+      },
     ],
   },
   {
@@ -203,16 +332,30 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Inventory & procurement",
     description:
       "Track assets, inventory, logistics movements and procurement across your organisation.",
-    aiSummary:
-      "Gives operations clarity on where assets and stock sit, what is moving, and what needs procurement attention.",
     icon: Package,
     visual: "assets",
-    accent: "rgba(253, 224, 71, 0.35)",
+    accent: { rgb: "6, 182, 212", label: "cyan" },
     capabilities: [
-      { label: "Asset Register", icon: Boxes },
-      { label: "Inventory", icon: Package },
-      { label: "Logistics", icon: Truck },
-      { label: "Procurement", icon: ClipboardList },
+      {
+        label: "Asset Register",
+        detail: "Know what you own, where it sits and who is accountable.",
+        icon: Boxes,
+      },
+      {
+        label: "Inventory",
+        detail: "Monitor stock levels and movement across locations.",
+        icon: Package,
+      },
+      {
+        label: "Logistics",
+        detail: "Coordinate shipments, transfers and operational flow.",
+        icon: Truck,
+      },
+      {
+        label: "Procurement",
+        detail: "Run purchasing with visibility from request to receipt.",
+        icon: ClipboardList,
+      },
     ],
   },
   {
@@ -221,20 +364,40 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Communication & knowledge",
     description:
       "Centralise communication, knowledge, calendar and support across your organisation.",
-    aiSummary:
-      "Pulls messaging, knowledge, calendar and support into one collaboration layer so work stays visible and searchable.",
     icon: MessageSquare,
     visual: "productivity",
-    accent: "rgba(165, 180, 252, 0.5)",
+    accent: { rgb: "99, 102, 241", label: "indigo" },
     capabilities: [
-      { label: "Information Repository", icon: Database },
-      { label: "Email", icon: Mail },
-      { label: "Calendar", icon: CalendarDays },
-      { label: "Communications", icon: MessageSquare },
-      { label: "Messaging", icon: MessageSquare },
-      { label: "Calendar", icon: CalendarDays },
-      { label: "Social", icon: Share2 },
-      { label: "Support Desk / WhatsApp", icon: Cable },
+      {
+        label: "Information Repository",
+        detail: "Keep institutional knowledge searchable and structured.",
+        icon: Database,
+      },
+      {
+        label: "Email",
+        detail: "Operate shared inboxes with context tied to the business.",
+        icon: Mail,
+      },
+      {
+        label: "Calendar",
+        detail: "Coordinate schedules, meetings and operational availability.",
+        icon: CalendarDays,
+      },
+      {
+        label: "Communications",
+        detail: "Connect teams through organised channels and threads.",
+        icon: MessageSquare,
+      },
+      {
+        label: "Social",
+        detail: "Publish and monitor social presence from one place.",
+        icon: Share2,
+      },
+      {
+        label: "Support Desk / WhatsApp",
+        detail: "Handle support conversations with clear ownership and history.",
+        icon: Cable,
+      },
     ],
   },
   {
@@ -243,42 +406,174 @@ const WORKSPACES: Workspace[] = [
     descriptor: "Connect your existing systems",
     description:
       "Connect Unit311 Central to the specialist systems your business already relies on—integrate rather than replace.",
-    aiSummary:
-      "Designed to sit alongside your stack — connecting Microsoft, finance, CRM and delivery tools without forcing rip-and-replace.",
     icon: Plug,
     visual: "integrations",
-    accent: "rgba(56, 189, 248, 0.5)",
+    accent: { rgb: "100, 116, 139", label: "blue-grey" },
     capabilities: [
-      { label: "Microsoft 365", icon: Cloud },
-      { label: "Outlook", icon: Mail },
-      { label: "Teams", icon: MessageSquare },
-      { label: "SharePoint", icon: FileStack },
-      { label: "OneDrive", icon: HardDrive },
-      { label: "Power BI", icon: ChartColumn },
-      { label: "Dynamics 365", icon: Building2 },
-      { label: "SAP", icon: Database },
-      { label: "Oracle", icon: Database },
-      { label: "Xero", icon: Wallet },
-      { label: "Sage", icon: Wallet },
-      { label: "QuickBooks", icon: Wallet },
-      { label: "Salesforce", icon: Target },
-      { label: "HubSpot", icon: Handshake },
-      { label: "Jira", icon: ClipboardCheck },
-      { label: "GitHub", icon: GitBranch },
-      { label: "Monday.com", icon: LayoutDashboard },
-      { label: "Asana", icon: FolderKanban },
-      { label: "Google Workspace", icon: Cloud },
-      { label: "Dropbox", icon: HardDrive },
-      { label: "REST APIs", icon: Link2 },
-      { label: "Webhooks", icon: Cable },
-      { label: "Custom Integrations", icon: Plug },
+      {
+        label: "Microsoft 365",
+        detail: "Connect identity, documents and collaboration into the workspace.",
+        icon: Cloud,
+      },
+      {
+        label: "Finance Systems",
+        detail: "Sync accounting platforms without forcing a rip-and-replace.",
+        icon: Wallet,
+      },
+      {
+        label: "CRM Platforms",
+        detail: "Bridge commercial systems so pipeline data stays current.",
+        icon: Target,
+      },
+      {
+        label: "Delivery Tools",
+        detail: "Link project and engineering tools into operating workflows.",
+        icon: FolderKanban,
+      },
+      {
+        label: "REST APIs",
+        detail: "Extend Unit311 Central through secure, composable interfaces.",
+        icon: Link2,
+      },
+      {
+        label: "Custom Integrations",
+        detail: "Wire specialist systems into one coherent operating layer.",
+        icon: Plug,
+      },
     ],
-    footnote:
-      "Unit311 Central is designed to integrate with the business systems you already use, connecting data and workflows without forcing a rip-and-replace approach.",
   },
 ];
 
-function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
+function accentStyle(accent: WorkspaceAccent): CSSProperties {
+  return {
+    "--ws-accent-rgb": accent.rgb,
+    "--tile-accent": `rgba(${accent.rgb}, 0.55)`,
+  } as CSSProperties;
+}
+
+function PanelAtmosphere({ visual }: { visual: WorkspaceVisual }) {
+  switch (visual) {
+    case "central":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <circle cx="210" cy="150" r="18" stroke="currentColor" strokeWidth="1.2" />
+          <circle cx="110" cy="90" r="10" stroke="currentColor" strokeWidth="1" />
+          <circle cx="310" cy="88" r="10" stroke="currentColor" strokeWidth="1" />
+          <circle cx="90" cy="210" r="9" stroke="currentColor" strokeWidth="1" />
+          <circle cx="330" cy="208" r="9" stroke="currentColor" strokeWidth="1" />
+          <circle cx="210" cy="250" r="11" stroke="currentColor" strokeWidth="1" />
+          <path
+            d="M120 96L194 140M300 96L226 140M100 202L194 162M320 202L226 162M210 168V239"
+            stroke="currentColor"
+            strokeWidth="1"
+          />
+          <rect x="158" y="118" width="104" height="64" rx="12" stroke="currentColor" strokeWidth="1.1" />
+          <path d="M172 138H248M172 152H228M172 166H238" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      );
+    case "clients":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <path d="M70 170C120 90 180 80 210 120C240 80 300 90 350 170" stroke="currentColor" strokeWidth="1.1" />
+          <circle cx="100" cy="150" r="8" stroke="currentColor" strokeWidth="1" />
+          <circle cx="170" cy="110" r="8" stroke="currentColor" strokeWidth="1" />
+          <circle cx="250" cy="112" r="8" stroke="currentColor" strokeWidth="1" />
+          <circle cx="320" cy="148" r="8" stroke="currentColor" strokeWidth="1" />
+          <circle cx="210" cy="190" r="12" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M108 156L198 184M178 118L204 178M242 120L220 178M312 154L222 184" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      );
+    case "finance":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <path d="M60 240L120 190L170 210L230 140L290 170L360 90" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M60 260L120 220L170 235L230 180L290 200L360 130" stroke="currentColor" strokeWidth="1" opacity="0.55" />
+          <rect x="80" y="70" width="18" height="70" rx="4" stroke="currentColor" strokeWidth="1" />
+          <rect x="120" y="95" width="18" height="45" rx="4" stroke="currentColor" strokeWidth="1" />
+          <rect x="160" y="55" width="18" height="85" rx="4" stroke="currentColor" strokeWidth="1" />
+          <circle cx="230" cy="140" r="3.5" fill="currentColor" />
+          <circle cx="290" cy="170" r="3.5" fill="currentColor" />
+          <circle cx="360" cy="90" r="3.5" fill="currentColor" />
+        </svg>
+      );
+    case "people":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <circle cx="210" cy="150" r="58" stroke="currentColor" strokeWidth="1" />
+          <circle cx="210" cy="150" r="96" stroke="currentColor" strokeWidth="1" opacity="0.55" />
+          <circle cx="150" cy="120" r="11" stroke="currentColor" strokeWidth="1.1" />
+          <circle cx="270" cy="118" r="11" stroke="currentColor" strokeWidth="1.1" />
+          <circle cx="210" cy="180" r="13" stroke="currentColor" strokeWidth="1.2" />
+          <circle cx="130" cy="200" r="9" stroke="currentColor" strokeWidth="1" />
+          <circle cx="290" cy="198" r="9" stroke="currentColor" strokeWidth="1" />
+          <path d="M160 128L200 170M260 126L220 170M140 194L198 184M280 192L222 184" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      );
+    case "engineering":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <path d="M50 60H370M50 110H370M50 160H370M50 210H370M50 260H370" stroke="currentColor" strokeWidth="0.8" />
+          <path d="M90 40V280M150 40V280M210 40V280M270 40V280M330 40V280" stroke="currentColor" strokeWidth="0.8" />
+          <path d="M80 250L170 100L250 190L340 120" stroke="currentColor" strokeWidth="1.3" />
+          <rect x="140" y="70" width="70" height="48" rx="6" stroke="currentColor" strokeWidth="1.1" />
+          <circle cx="170" cy="100" r="3.5" fill="currentColor" />
+        </svg>
+      );
+    case "corporate":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <rect x="90" y="70" width="90" height="180" rx="10" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="210" y="100" width="110" height="150" rx="10" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="112" y="100" width="28" height="18" rx="3" stroke="currentColor" strokeWidth="1" />
+          <rect x="112" y="136" width="28" height="18" rx="3" stroke="currentColor" strokeWidth="1" />
+          <rect x="112" y="172" width="28" height="18" rx="3" stroke="currentColor" strokeWidth="1" />
+          <rect x="236" y="130" width="40" height="24" rx="4" stroke="currentColor" strokeWidth="1" />
+          <rect x="236" y="174" width="40" height="24" rx="4" stroke="currentColor" strokeWidth="1" />
+          <path d="M70 260H350" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      );
+    case "assets":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <rect x="70" y="180" width="70" height="50" rx="8" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="160" y="150" width="70" height="80" rx="8" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="250" y="120" width="70" height="110" rx="8" stroke="currentColor" strokeWidth="1.1" />
+          <path d="M60 100C120 80 170 120 220 95C270 70 310 70 360 95" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M60 124C130 110 170 145 230 120C280 100 320 100 360 118" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+          <circle cx="105" cy="98" r="3" fill="currentColor" />
+          <circle cx="220" cy="95" r="3" fill="currentColor" />
+          <circle cx="330" cy="88" r="3" fill="currentColor" />
+        </svg>
+      );
+    case "productivity":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <path d="M70 190C130 100 290 100 350 190" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M90 220C145 145 275 145 330 220" stroke="currentColor" strokeWidth="1" opacity="0.7" />
+          <path d="M110 245C160 185 260 185 310 245" stroke="currentColor" strokeWidth="1" opacity="0.45" />
+          <circle cx="140" cy="120" r="16" stroke="currentColor" strokeWidth="1.1" />
+          <circle cx="280" cy="118" r="14" stroke="currentColor" strokeWidth="1.1" />
+          <circle cx="210" cy="155" r="10" stroke="currentColor" strokeWidth="1.1" />
+          <path d="M156 128L200 150M264 128L220 150" stroke="currentColor" strokeWidth="1" />
+        </svg>
+      );
+    case "integrations":
+      return (
+        <svg viewBox="0 0 420 320" fill="none" aria-hidden className="h-full w-full">
+          <rect x="70" y="80" width="48" height="48" rx="12" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="300" y="78" width="48" height="48" rx="12" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="186" y="136" width="48" height="48" rx="12" stroke="currentColor" strokeWidth="1.2" />
+          <rect x="90" y="220" width="42" height="42" rx="11" stroke="currentColor" strokeWidth="1.1" />
+          <rect x="290" y="218" width="42" height="42" rx="11" stroke="currentColor" strokeWidth="1.1" />
+          <path d="M118 104L186 150M300 102L234 150M210 184L132 230M210 184L290 230" stroke="currentColor" strokeWidth="1.1" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+function TileAtmosphere({ visual }: { visual: WorkspaceVisual }) {
   switch (visual) {
     case "central":
       return (
@@ -288,7 +583,6 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
           <rect x="18" y="84" width="124" height="38" rx="10" fill="currentColor" opacity="0.06" />
           <rect x="18" y="132" width="58" height="34" rx="9" fill="currentColor" opacity="0.08" />
           <rect x="84" y="132" width="58" height="34" rx="9" fill="currentColor" opacity="0.05" />
-          <rect x="18" y="176" width="124" height="8" rx="4" fill="currentColor" opacity="0.05" />
         </svg>
       );
     case "clients":
@@ -296,13 +590,10 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
           <path d="M42 70C58 92 78 98 104 86" stroke="currentColor" strokeWidth="1.2" opacity="0.22" />
           <path d="M36 128C62 112 96 118 124 146" stroke="currentColor" strokeWidth="1.2" opacity="0.18" />
-          <path d="M78 56C86 88 88 120 74 162" stroke="currentColor" strokeWidth="1.1" opacity="0.14" />
           <circle cx="42" cy="70" r="5" fill="currentColor" opacity="0.28" />
           <circle cx="104" cy="86" r="4.5" fill="currentColor" opacity="0.22" />
           <circle cx="36" cy="128" r="4" fill="currentColor" opacity="0.2" />
           <circle cx="124" cy="146" r="5" fill="currentColor" opacity="0.18" />
-          <circle cx="78" cy="56" r="3.5" fill="currentColor" opacity="0.16" />
-          <circle cx="74" cy="162" r="3.5" fill="currentColor" opacity="0.14" />
         </svg>
       );
     case "finance":
@@ -315,12 +606,6 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
             strokeWidth="1.4"
             opacity="0.28"
           />
-          <path
-            d="M16 172C40 166 52 148 70 146C92 143 98 168 120 162C134 157 142 142 148 132"
-            stroke="currentColor"
-            strokeWidth="1"
-            opacity="0.12"
-          />
           <circle cx="62" cy="112" r="2.5" fill="currentColor" opacity="0.3" />
           <circle cx="112" cy="136" r="2.5" fill="currentColor" opacity="0.24" />
           <circle cx="148" cy="96" r="2.5" fill="currentColor" opacity="0.28" />
@@ -330,23 +615,16 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
       return (
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
           <circle cx="80" cy="108" r="34" stroke="currentColor" strokeWidth="1" opacity="0.1" />
-          <circle cx="80" cy="108" r="54" stroke="currentColor" strokeWidth="1" opacity="0.06" />
           <circle cx="54" cy="88" r="7" fill="currentColor" opacity="0.18" />
           <circle cx="104" cy="84" r="6" fill="currentColor" opacity="0.16" />
           <circle cx="80" cy="128" r="7.5" fill="currentColor" opacity="0.2" />
-          <circle cx="48" cy="132" r="5" fill="currentColor" opacity="0.12" />
-          <circle cx="116" cy="126" r="5.5" fill="currentColor" opacity="0.14" />
-          <path d="M54 88L80 128L104 84M48 132L80 128L116 126" stroke="currentColor" strokeWidth="1" opacity="0.14" />
         </svg>
       );
     case "engineering":
       return (
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
           <path d="M24 48H136M24 78H136M24 108H136M24 138H136M24 168H136" stroke="currentColor" strokeWidth="0.8" opacity="0.08" />
-          <path d="M40 40V180M70 40V180M100 40V180M130 40V180" stroke="currentColor" strokeWidth="0.8" opacity="0.07" />
           <path d="M34 164L78 72L118 128L142 92" stroke="currentColor" strokeWidth="1.2" opacity="0.22" />
-          <path d="M52 52H92V84H52V52Z" stroke="currentColor" strokeWidth="1" opacity="0.16" />
-          <circle cx="78" cy="72" r="3" fill="currentColor" opacity="0.28" />
         </svg>
       );
     case "corporate":
@@ -354,12 +632,6 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
           <rect x="28" y="48" width="44" height="132" rx="8" stroke="currentColor" strokeWidth="1" opacity="0.14" />
           <rect x="80" y="68" width="52" height="112" rx="8" stroke="currentColor" strokeWidth="1" opacity="0.1" />
-          <rect x="40" y="64" width="20" height="14" rx="3" fill="currentColor" opacity="0.08" />
-          <rect x="40" y="90" width="20" height="14" rx="3" fill="currentColor" opacity="0.06" />
-          <rect x="40" y="116" width="20" height="14" rx="3" fill="currentColor" opacity="0.07" />
-          <rect x="92" y="88" width="28" height="18" rx="4" fill="currentColor" opacity="0.07" />
-          <rect x="92" y="120" width="28" height="18" rx="4" fill="currentColor" opacity="0.05" />
-          <path d="M28 180H132" stroke="currentColor" strokeWidth="1" opacity="0.12" />
         </svg>
       );
     case "assets":
@@ -368,25 +640,14 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
           <rect x="30" y="148" width="36" height="28" rx="5" fill="currentColor" opacity="0.1" />
           <rect x="72" y="132" width="36" height="44" rx="5" fill="currentColor" opacity="0.12" />
           <rect x="114" y="116" width="28" height="60" rx="5" fill="currentColor" opacity="0.08" />
-          <path
-            className="workspace-atmosphere-flow"
-            d="M24 96C48 88 68 104 88 92C108 80 124 70 144 78"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            opacity="0.22"
-          />
-          <path d="M24 112C52 106 70 118 92 110C112 103 128 94 144 100" stroke="currentColor" strokeWidth="1" opacity="0.1" />
         </svg>
       );
     case "productivity":
       return (
         <svg className="workspace-atmosphere" viewBox="0 0 160 220" fill="none" aria-hidden>
           <path d="M20 120C48 72 112 72 140 120" stroke="currentColor" strokeWidth="1.2" opacity="0.16" />
-          <path d="M28 140C54 100 106 100 132 140" stroke="currentColor" strokeWidth="1.1" opacity="0.12" />
-          <path d="M36 158C58 128 102 128 124 158" stroke="currentColor" strokeWidth="1" opacity="0.09" />
           <circle cx="52" cy="78" r="10" stroke="currentColor" strokeWidth="1" opacity="0.14" />
           <circle cx="108" cy="74" r="8" stroke="currentColor" strokeWidth="1" opacity="0.12" />
-          <circle cx="80" cy="98" r="6" fill="currentColor" opacity="0.14" />
         </svg>
       );
     case "integrations":
@@ -395,9 +656,7 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
           <rect x="28" y="64" width="22" height="22" rx="6" stroke="currentColor" strokeWidth="1" opacity="0.18" />
           <rect x="110" y="58" width="22" height="22" rx="6" stroke="currentColor" strokeWidth="1" opacity="0.14" />
           <rect x="68" y="108" width="24" height="24" rx="7" stroke="currentColor" strokeWidth="1" opacity="0.2" />
-          <rect x="34" y="148" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1" opacity="0.12" />
-          <rect x="108" y="146" width="20" height="20" rx="6" stroke="currentColor" strokeWidth="1" opacity="0.12" />
-          <path d="M50 75L68 118M110 69L92 118M80 132L44 158M80 132L118 156" stroke="currentColor" strokeWidth="1" opacity="0.16" />
+          <path d="M50 75L68 118M110 69L92 118" stroke="currentColor" strokeWidth="1" opacity="0.16" />
         </svg>
       );
     default:
@@ -405,44 +664,63 @@ function Atmosphere({ visual }: { visual: WorkspaceVisual }) {
   }
 }
 
-function BusinessCentralPanel({ workspace }: { workspace: Workspace }) {
+function WorkspaceOverviewPanel({ workspace }: { workspace: Workspace }) {
+  const Icon = workspace.icon;
+  const featured = workspace.capabilities.slice(0, 6);
+
   return (
-    <div className="relative space-y-8 sm:space-y-9">
-      <div className="max-w-3xl">
-        <h3 className="text-[1.35rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.55rem] lg:text-[1.7rem]">
-          {workspace.title}
-        </h3>
-        <p className="mt-1.5 text-[13px] font-medium text-white/45 sm:text-[14px]">
-          {workspace.descriptor}
-        </p>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/68 sm:mt-5 sm:text-[16px] sm:leading-relaxed">
-          {workspace.description}
-        </p>
+    <div className="relative min-h-[17rem]">
+      <div
+        className="workspace-panel-atmosphere pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] lg:block"
+        aria-hidden
+      >
+        <PanelAtmosphere visual={workspace.visual} />
       </div>
 
-      <section>
-        <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-          Key capabilities
-        </h4>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {workspace.capabilities.map((capability) => {
-            const CapIcon = capability.icon;
-            return (
-              <li
-                key={capability.label}
-                className="flex items-start gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5 sm:py-4"
-              >
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sky-300/85">
-                  <CapIcon className="h-4 w-4" strokeWidth={1.55} aria-hidden />
-                </span>
-                <span className="min-w-0 pt-1.5 text-[13.5px] font-medium leading-snug text-white/80 sm:text-[14px]">
-                  {capability.label}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <div className="relative z-[1] space-y-8 sm:space-y-9 lg:max-w-[62%] xl:max-w-[58%]">
+        <div className="flex items-start gap-4 sm:gap-5">
+          <span className="workspace-hero-icon shrink-0">
+            <Icon className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={1.45} aria-hidden />
+          </span>
+          <div className="min-w-0 pt-1">
+            <h3 className="text-[1.55rem] font-semibold tracking-[-0.035em] text-white sm:text-[1.8rem] lg:text-[2rem]">
+              {workspace.title}
+            </h3>
+            <p className="workspace-panel-kicker mt-1.5 text-[13px] font-semibold tracking-[0.01em] sm:text-[14px]">
+              {workspace.descriptor}
+            </p>
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/68 sm:mt-5 sm:text-[16px] sm:leading-relaxed">
+              {workspace.description}
+            </p>
+          </div>
+        </div>
+
+        <section>
+          <h4 className="workspace-panel-section-label text-[11px] font-semibold uppercase tracking-[0.14em]">
+            Key capabilities
+          </h4>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {featured.map((capability) => {
+              const CapIcon = capability.icon;
+              return (
+                <li key={capability.label} className="workspace-feature-card">
+                  <span className="workspace-feature-icon">
+                    <CapIcon className="h-4 w-4" strokeWidth={1.55} aria-hidden />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13.5px] font-semibold leading-snug text-white/90 sm:text-[14px]">
+                      {capability.label}
+                    </span>
+                    <span className="mt-1 block text-[12.5px] leading-relaxed text-white/48 sm:text-[13px]">
+                      {capability.detail}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }
@@ -454,17 +732,6 @@ function ExpandedPanel({
   panelId: string;
   workspace: Workspace | null;
 }) {
-  const Icon = workspace?.icon;
-  const isBusinessCentral = workspace?.id === "business-central";
-  const keyCapabilities = workspace?.capabilities.slice(0, 6) ?? [];
-  const highlights =
-    workspace?.highlights ??
-    (workspace?.footnote ? [workspace.footnote] : []);
-  const quickActions: QuickAction[] = workspace?.quickActions ?? [
-    { label: "Book a founder session", href: "/book" },
-    { label: "Create your workspace", href: "/signup" },
-  ];
-
   return (
     <div
       id={panelId}
@@ -472,143 +739,17 @@ function ExpandedPanel({
       aria-labelledby={workspace ? `${panelId}-${workspace.id}` : undefined}
       aria-hidden={!workspace}
       className={[
-        "workspace-panel relative overflow-hidden border border-white/[0.1] px-5 pb-6 pt-5 sm:px-7 sm:pb-7 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-6",
-        isBusinessCentral
-          ? "is-detached rounded-[22px] sm:rounded-[26px] lg:rounded-[28px]"
-          : "rounded-b-[22px] rounded-t-none sm:rounded-b-[26px] lg:rounded-b-[28px]",
+        "workspace-panel is-detached relative overflow-hidden border px-5 pb-6 pt-5 sm:px-7 sm:pb-7 sm:pt-6 lg:px-8 lg:pb-8 lg:pt-6",
+        "rounded-[22px] sm:rounded-[26px] lg:rounded-[28px]",
         workspace ? "" : "pointer-events-none",
       ].join(" ")}
-      style={
-        workspace
-          ? ({ "--tile-accent": workspace.accent } as CSSProperties)
-          : undefined
-      }
+      style={workspace ? accentStyle(workspace.accent) : undefined}
+      data-workspace={workspace?.id}
     >
-      {!isBusinessCentral ? <div className="workspace-panel-bridge" aria-hidden /> : null}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.07] via-transparent to-transparent" aria-hidden />
-      <div
-        className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full blur-3xl"
-        style={{ background: workspace ? workspace.accent : "transparent", opacity: 0.14 }}
-        aria-hidden
-      />
+      <div className="workspace-panel-glow" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-transparent" aria-hidden />
 
-      {workspace && Icon ? (
-        isBusinessCentral ? (
-          <BusinessCentralPanel workspace={workspace} />
-        ) : (
-          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-8 xl:gap-10">
-            <div className="min-w-0 space-y-5 sm:space-y-6">
-              <div className="flex items-start gap-3.5 sm:gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-white/12 bg-white/[0.05] text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:h-12 sm:w-12 sm:rounded-[17px]">
-                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.5} aria-hidden />
-                </span>
-                <div className="min-w-0 pt-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300/75">
-                    Workspace overview
-                  </p>
-                  <h3 className="mt-1 text-[1.25rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.45rem] lg:text-[1.6rem]">
-                    {workspace.title}
-                  </h3>
-                  <p className="mt-1 text-[12.5px] font-medium text-white/42 sm:text-[13px]">
-                    {workspace.descriptor}
-                  </p>
-                </div>
-              </div>
-
-              <section>
-                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                  What this workspace is for
-                </h4>
-                <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-white/68 sm:text-[15px] sm:leading-relaxed">
-                  {workspace.description}
-                </p>
-              </section>
-
-              <section className="rounded-2xl border border-sky-400/15 bg-sky-500/[0.06] px-4 py-3.5 sm:px-5 sm:py-4">
-                <div className="flex items-center gap-2 text-sky-200/90">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} aria-hidden />
-                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em]">
-                    AI summary
-                  </h4>
-                </div>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-white/72 sm:text-[14.5px]">
-                  {workspace.aiSummary}
-                </p>
-              </section>
-
-              {highlights.length > 0 ? (
-                <section>
-                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                    Important information
-                  </h4>
-                  <ul className="mt-2.5 space-y-2">
-                    {highlights.map((item) => (
-                      <li
-                        key={item}
-                        className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-2.5 text-[13px] leading-relaxed text-white/58 sm:text-[13.5px]"
-                      >
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-            </div>
-
-            <div className="min-w-0 space-y-5 sm:space-y-6">
-              <section>
-                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                  Key capabilities
-                </h4>
-                <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                  {keyCapabilities.map((capability) => {
-                    const CapIcon = capability.icon;
-                    return (
-                      <li
-                        key={capability.label}
-                        className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5"
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sky-300/85">
-                          <CapIcon className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
-                        </span>
-                        <span className="min-w-0 text-[13px] font-medium leading-snug text-white/78">
-                          {capability.label}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {workspace.capabilities.length > keyCapabilities.length ? (
-                  <p className="mt-2.5 text-[12px] text-white/35">
-                    Plus {workspace.capabilities.length - keyCapabilities.length} more modules inside
-                    the live workspace.
-                  </p>
-                ) : null}
-              </section>
-
-              <section>
-                <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
-                  Quick actions
-                </h4>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  {quickActions.map((action) => (
-                    <Link
-                      key={action.label}
-                      href={action.href}
-                      className="inline-flex items-center justify-between gap-3 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2.5 text-[13px] font-semibold text-white/85 transition-colors hover:border-sky-300/35 hover:bg-sky-500/10 hover:text-white sm:min-w-[12.5rem]"
-                    >
-                      <span>{action.label}</span>
-                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-sky-300/80" aria-hidden />
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </div>
-        )
-      ) : (
-        <div className="h-24" aria-hidden />
-      )}
+      {workspace ? <WorkspaceOverviewPanel workspace={workspace} /> : <div className="h-24" aria-hidden />}
     </div>
   );
 }
@@ -625,7 +766,6 @@ function WorkspaceTile({
   onToggle: () => void;
 }) {
   const Icon = workspace.icon;
-  const isDetachedOpen = isOpen && workspace.id === "business-central";
 
   return (
     <button
@@ -638,23 +778,21 @@ function WorkspaceTile({
       onClick={onToggle}
       className={[
         "workspace-tile group relative flex flex-col overflow-hidden rounded-[16px] text-left sm:rounded-[18px]",
-        // Balanced selector height — ~15–20% taller than ultra-compact, still content-led.
         "min-h-[9.25rem] sm:min-h-[9.75rem] xl:min-h-[8.85rem] xl:rounded-[14px] 2xl:min-h-[9.35rem] 2xl:rounded-[16px]",
         "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050816]",
-        isOpen ? "is-open" : "",
-        isDetachedOpen ? "is-detached" : "",
+        isOpen ? "is-open is-detached" : "",
       ].join(" ")}
-      style={{ "--tile-accent": workspace.accent } as CSSProperties}
+      style={accentStyle(workspace.accent)}
     >
       <span className="workspace-tile-sheen" aria-hidden />
       <span className="workspace-tile-glow" aria-hidden />
 
       <span
-        className="pointer-events-none absolute inset-0 text-sky-200/80"
-        style={{ color: workspace.accent }}
+        className="pointer-events-none absolute inset-0"
+        style={{ color: `rgba(${workspace.accent.rgb}, 0.85)` }}
         aria-hidden
       >
-        <Atmosphere visual={workspace.visual} />
+        <TileAtmosphere visual={workspace.visual} />
       </span>
 
       <span className="relative z-[1] flex h-full flex-col justify-between gap-2.5 p-3.5 sm:gap-3 sm:p-4 md:p-4 lg:gap-3 lg:p-4 xl:gap-2.5 xl:p-3 2xl:gap-3 2xl:p-3.5">
@@ -683,7 +821,6 @@ export default function HomeWorkspaceExplorer() {
   const [openId, setOpenId] = useState<string | null>(null);
   const panelId = useId();
   const openWorkspace = WORKSPACES.find((workspace) => workspace.id === openId) ?? null;
-  const isBusinessCentralOpen = openWorkspace?.id === "business-central";
 
   function toggleWorkspace(id: string) {
     setOpenId((current) => (current === id ? null : id));
@@ -729,11 +866,7 @@ export default function HomeWorkspaceExplorer() {
       <div
         className={[
           "grid transition-[grid-template-rows,margin-top] duration-150 ease-out",
-          openWorkspace
-            ? isBusinessCentralOpen
-              ? "mt-7 grid-rows-[1fr] sm:mt-8"
-              : "mt-0 grid-rows-[1fr]"
-            : "mt-0 grid-rows-[0fr]",
+          openWorkspace ? "mt-7 grid-rows-[1fr] sm:mt-8" : "mt-0 grid-rows-[0fr]",
         ].join(" ")}
       >
         <div className="min-h-0 overflow-hidden">
