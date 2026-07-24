@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type WordmarkVariant = "hero" | "nav" | "menu" | "sidebar";
+type WordmarkVariant = "hero" | "nav" | "menu" | "sidebar" | "footer";
 
 type Unit311CentralWordmarkProps = {
   variant?: WordmarkVariant;
@@ -9,6 +9,7 @@ type Unit311CentralWordmarkProps = {
 
 const BRAND_BLUE = "#60a5fa";
 const BRAND_BLUE_DEEP = "#2563eb";
+const FOOTER_INK = "#0b2d63";
 
 const VARIANTS: Record<
   WordmarkVariant,
@@ -38,6 +39,12 @@ const VARIANTS: Record<
     secondary: "text-[0.625rem] leading-none",
     line: "w-2.5",
   },
+  footer: {
+    root: "h-14 sm:h-[5rem]",
+    primary: "text-[1.75rem] sm:text-[2.35rem]",
+    secondary: "text-[0.625rem] sm:text-[0.75rem]",
+    line: "w-4 sm:w-6",
+  },
 };
 
 export default function Unit311CentralWordmark({
@@ -45,6 +52,9 @@ export default function Unit311CentralWordmark({
   className,
 }: Unit311CentralWordmarkProps) {
   const styles = VARIANTS[variant];
+  const isFooter = variant === "footer";
+  const unitColor = isFooter ? FOOTER_INK : "#ffffff";
+  const centralColor = isFooter ? FOOTER_INK : BRAND_BLUE;
 
   return (
     <div
@@ -56,7 +66,7 @@ export default function Unit311CentralWordmark({
       aria-hidden
     >
       <p className={cn("font-black", styles.primary)}>
-        <span className="text-white">UNIT</span>
+        <span style={{ color: unitColor }}>UNIT</span>
         <span style={{ color: BRAND_BLUE }}>311</span>
       </p>
 
@@ -72,7 +82,7 @@ export default function Unit311CentralWordmark({
             background: `linear-gradient(to right, ${BRAND_BLUE_DEEP}, ${BRAND_BLUE})`,
           }}
         />
-        <span className="font-bold tracking-[0.28em]" style={{ color: BRAND_BLUE }}>
+        <span className="font-bold tracking-[0.28em]" style={{ color: centralColor }}>
           CENTRAL
         </span>
         <span

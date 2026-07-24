@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { CONTACT, SITE_HERO_LINE } from "@/lib/site";
-import Logo, { LOGO_FOOTER_HEIGHT } from "./Logo";
+import { CONTACT, SITE_HERO_LINE, SITE_NAME } from "@/lib/site";
+import Unit311CentralWordmark from "./Unit311CentralWordmark";
 
 type FooterSection = {
   id: string;
@@ -137,18 +137,9 @@ export default function Footer() {
     <footer className="bg-white text-[#1a2b4a]">
       <div className="mx-auto max-w-[1280px] px-4 pb-6 pt-6 sm:px-8 sm:pb-[32px] sm:pt-[56px]">
         <div className="mb-5 sm:mb-0">
-          <Logo
-            height={56}
-            href="/"
-            className="block origin-left object-left sm:hidden"
-          />
-          <div className="hidden sm:block">
-            <Logo
-              height={LOGO_FOOTER_HEIGHT}
-              href="/"
-              className="block origin-left object-left"
-            />
-          </div>
+          <Link href="/" aria-label={SITE_NAME} className="inline-flex shrink-0 items-center">
+            <Unit311CentralWordmark variant="footer" />
+          </Link>
           <p className="mt-3 max-w-[320px] text-[12px] font-medium leading-relaxed text-[#1a2b4a]/65 sm:mt-[14px] sm:text-[13px]">
             {SITE_HERO_LINE}
           </p>
