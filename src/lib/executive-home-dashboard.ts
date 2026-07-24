@@ -233,23 +233,5 @@ export const executiveHomeDashboardConfig: WorkspaceDashboardConfig = {
         },
       ],
     },
-    {
-      id: "actions",
-      slot: "quick-actions",
-      widgets: [
-        {
-          id: "home-actions",
-          type: "quick-actions",
-          title: "Quick Actions",
-          actions: [
-            { id: "create-client", label: "Create Client", action: "create-client", icon: "users" },
-            { id: "create-project", label: "Create Project", action: "create-project", icon: "plus" },
-            { id: "board-report", label: "Generate Board Report", action: "generate-board-report", icon: "file" },
-            { id: "executive-assistant", label: "Executive Assistant", action: "open-executive-assistant", icon: "mail" },
-            { id: "export-dashboard", label: "Export Dashboard", action: "export-dashboard", icon: "upload" },
-          ],
-        },
-      ],
-    },
   ],
 };

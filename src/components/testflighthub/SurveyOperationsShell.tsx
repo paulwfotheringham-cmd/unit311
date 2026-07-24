@@ -30,8 +30,12 @@ import {
 import PlatformFloatingAiAssistant from "./PlatformFloatingAiAssistant";
 import PlatformThemeProvider from "./PlatformThemeProvider";
 import SurveyOperationsSidebar from "./SurveyOperationsSidebar";
+import ExecutiveQuickActionsBar, {
+  type ExecutiveQuickAction,
+} from "./ExecutiveQuickActionsBar";
 import { WorkspaceBreadcrumb } from "./workspace-chrome";
 import { prefetchViewOnIntent } from "@/lib/workspace-prefetch";
+import { cn } from "@/lib/utils";
 
 type SurveyOperationsShellProps = {
   children: React.ReactNode;
@@ -56,6 +60,15 @@ export default function SurveyOperationsShell({
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const pathname = usePathname() ?? "";
+  const isExecutiveHome = mode === "internal" && activeView === "home";
+
+  function handleQuickAction(item: ExecutiveQuickAction) {
+    if (item.view && onViewChange) {
+      onViewChange(item.view);
+      return;
+    }
+    // export-dashboard and other non-nav actions — hook up later
+  }
   const [isInternalHost] = useState(() => {
     if (typeof window === "undefined") return true;
     const host = window.location.hostname;
@@ -180,7 +193,12 @@ export default function SurveyOperationsShell({
             background: "color-mix(in srgb, var(--platform-surface, #08111F) 82%, transparent)",
           }}
         >
-          <div className="flex h-14 shrink-0 items-center justify-between gap-3 lg:h-14 xl:h-16">
+          <div
+            className={cn(
+              "relative flex shrink-0 items-center gap-3",
+              isExecutiveHome ? "min-h-14 py-2 lg:min-h-14 xl:min-h-16" : "h-14 lg:h-14 xl:h-16",
+            )}
+          >
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <button
                 type="button"
@@ -218,7 +236,15 @@ export default function SurveyOperationsShell({
               </div>
             </div>
 
-            <div className="relative flex shrink-0 items-center gap-2">
+            {isExecutiveHome ? (
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-center px-40 lg:flex xl:px-48">
+                <div className="pointer-events-auto max-w-[min(100%,42rem)]">
+                  <ExecutiveQuickActionsBar onAction={handleQuickAction} />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="relative z-10 flex shrink-0 items-center justify-end gap-2">
               {showPlatformAi ? (
                 <>
                   <button
@@ -251,6 +277,12 @@ export default function SurveyOperationsShell({
               ) : null}
             </div>
           </div>
+
+          {isExecutiveHome ? (
+            <div className="border-t border-white/[0.06] pb-2 pt-2 lg:hidden">
+              <ExecutiveQuickActionsBar onAction={handleQuickAction} />
+            </div>
+          ) : null}
         </header>
 
         <div
