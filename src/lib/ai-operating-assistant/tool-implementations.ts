@@ -722,6 +722,10 @@ export async function searchCRM(
             Won: filtered.filter((lead) => lead.status === "Won").length,
             Lost: filtered.filter((lead) => lead.status === "Lost").length,
           },
+          message:
+            filtered.length === 0
+              ? "There are currently no CRM opportunities matching that request."
+              : `Biggest opportunities — ${filtered.length} lead${filtered.length === 1 ? "" : "s"} · open pipeline ${Math.round(openPipelineValue).toLocaleString("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 })}.`,
         },
         followUpActions: [
           nav("/internaldashboard?view=crm", "View CRM"),

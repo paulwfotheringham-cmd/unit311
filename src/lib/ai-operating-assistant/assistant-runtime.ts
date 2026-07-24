@@ -343,6 +343,23 @@ function formatDirectListReply(toolName: string, result: unknown): string | null
         line: (item, index) =>
           `${index + 1}. ${String(item.companyName ?? "—")} — ${String(item.accountStatus ?? "—")} — ${String(item.region ?? item.companyCountry ?? "—")} — ${String(item.activeProjects ?? 0)} active projects`,
       });
+    case "searchCRM":
+      return formatListedToolReply(result, {
+        emptyFallback: "There are currently no CRM opportunities matching that request.",
+        line: (item, index) => {
+          const value =
+            typeof item.estimatedValue === "number"
+              ? Number(item.estimatedValue).toLocaleString("en-GB", {
+                  style: "currency",
+                  currency: "GBP",
+                  maximumFractionDigits: 0,
+                })
+              : "—";
+          return `${index + 1}. ${String(item.companyName ?? "—")} — ${String(item.status ?? "—")} — ${value}${
+            item.nextAction ? ` — next: ${String(item.nextAction)}` : ""
+          }`;
+        },
+      });
     case "searchProjects":
       return formatListedToolReply(result, {
         emptyFallback: "There are currently no projects matching that request.",
