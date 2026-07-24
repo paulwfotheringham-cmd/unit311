@@ -13,7 +13,7 @@ import { getClientMessagingOption } from "@/lib/client-messaging-config";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import ResponsiveMasterDetail, { useMobileDetailPanel } from "@/components/ui/ResponsiveMasterDetail";
-import { Hash, Loader2, MessageSquare, Send } from "lucide-react";
+import { Hash, Loader2, MessageSquare, Paperclip, Send } from "lucide-react";
 
 const CLIENT_KEY = "venturi";
 
@@ -49,6 +49,7 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "live" | "polling">(
     "connecting",
@@ -56,6 +57,7 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
   const { showDetail: showChat, openDetail: openChat, closeDetail: closeChat } =
     useMobileDetailPanel();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeChannel = channels.find((channel) => channel.room === activeRoom) ?? null;
   const unreadTotal = channels.reduce((sum, channel) => sum + (channel.unreadCount ?? 0), 0);
@@ -200,6 +202,10 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
                 username: string;
                 content: string;
                 message_type?: string | null;
+                attachment_name?: string | null;
+                attachment_url?: string | null;
+                attachment_mime?: string | null;
+                call_link?: string | null;
                 created_at: string;
               };
 
@@ -220,10 +226,10 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
                       row.message_type === "system"
                         ? row.message_type
                         : "text",
-                    attachmentName: null,
-                    attachmentUrl: null,
-                    attachmentMime: null,
-                    callLink: null,
+                    attachmentName: row.attachment_name ?? null,
+                    attachmentUrl: row.attachment_url ?? null,
+                    attachmentMime: row.attachment_mime ?? null,
+                    callLink: row.call_link ?? null,
                     createdAt: row.created_at,
                   },
                 ];
@@ -336,6 +342,62 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
       setError(sendError instanceof Error ? sendError.message : "Failed to send message");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleAttachFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !activeRoom) return;
+
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("room", activeRoom);
+
+      const uploadResponse = await fetch("/api/messaging/attachments", {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await readApiJson<{
+        attachment?: { name: string; url: string; mimeType: string };
+        error?: string;
+      }>(uploadResponse);
+      if (!uploadResponse.ok || !uploadData.attachment) {
+        throw new Error(uploadData.error ?? "Failed to upload attachment");
+      }
+
+      const response = await fetch("/api/messaging/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operatorId: senderId,
+          operatorName: senderName,
+          username: senderUsername,
+          room: activeRoom,
+          content: draft.trim() || `Shared ${uploadData.attachment.name}`,
+          messageType: "file",
+          attachmentName: uploadData.attachment.name,
+          attachmentUrl: uploadData.attachment.url,
+          attachmentMime: uploadData.attachment.mimeType,
+        }),
+      });
+      const data = await readApiJson<{ message?: ChatMessage; error?: string }>(response);
+      if (!response.ok || !data.message) {
+        throw new Error(data.error ?? "Failed to send attachment");
+      }
+      setMessages((current) =>
+        current.some((message) => message.id === data.message!.id)
+          ? current
+          : [...current, data.message!],
+      );
+      setDraft("");
+    } catch (attachError) {
+      setError(attachError instanceof Error ? attachError.message : "Failed to attach file");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -479,9 +541,36 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
                                 {formatMessageTime(message.createdAt)}
                               </p>
                             </div>
-                            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
-                              {message.content}
-                            </p>
+                            {message.messageType === "file" && message.attachmentUrl ? (
+                              <div className="mt-2 space-y-2">
+                                {message.content &&
+                                message.content !== message.attachmentName ? (
+                                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/80">
+                                    {message.content}
+                                  </p>
+                                ) : null}
+                                <a
+                                  href={message.attachmentUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={cn(
+                                    "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+                                    isSelf
+                                      ? "border-sky-400/30 bg-sky-500/10 text-sky-100 hover:bg-sky-500/20"
+                                      : "border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08]",
+                                  )}
+                                >
+                                  <Paperclip className="h-4 w-4 shrink-0" />
+                                  <span className="truncate">
+                                    {message.attachmentName ?? "Attachment"}
+                                  </span>
+                                </a>
+                              </div>
+                            ) : (
+                              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
+                                {message.content}
+                              </p>
+                            )}
                           </div>
                         </div>
                       );
@@ -493,10 +582,29 @@ export default function ClientMessagingWorkspace({ onUnreadChange }: ClientMessa
 
               <form onSubmit={(event) => void handleSend(event)} className="border-t border-white/10 px-5 py-4">
                 <div className="flex gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => void handleAttachFile(event)}
+                  />
+                  <button
+                    type="button"
+                    disabled={!activeRoom || uploading || sending}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-white/70 transition-colors hover:bg-white/[0.06] disabled:opacity-50"
+                    aria-label="Attach file"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-4 w-4" />
+                    )}
+                  </button>
                   <textarea
                     rows={2}
                     value={draft}
-                    disabled={sending}
+                    disabled={sending || uploading}
                     onChange={(event) => setDraft(event.target.value)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {

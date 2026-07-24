@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import { useExecutiveCallWebRtc } from "@/hooks/useExecutiveCallWebRtc";
 import type { MessagingCallSessionPayload } from "@/lib/messaging-call-service";
 import { cn } from "@/lib/utils";
-import { Loader2, Mic, MicOff, MonitorUp, PhoneOff, ScreenShareOff, Video, VideoOff } from "lucide-react";
+import { Loader2, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, ScreenShareOff, Video, VideoOff } from "lucide-react";
 
 type MessagingCallRoomProps = {
   sessionId: string;
@@ -56,6 +56,9 @@ export default function MessagingCallRoom({
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [sharingScreen, setSharingScreen] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [fileStatus, setFileStatus] = useState<string | null>(null);
+  const [sharingFile, setSharingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -305,6 +308,65 @@ export default function MessagingCallRoom({
     }
   }
 
+  async function handleShareFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !payload) return;
+
+    setSharingFile(true);
+    setFileStatus(null);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("room", payload.room.channelRoom);
+
+      const uploadResponse = await fetch("/api/messaging/attachments", {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await readApiJson<{
+        attachment?: { name: string; url: string; mimeType: string };
+        error?: string;
+      }>(uploadResponse);
+      if (!uploadResponse.ok || !uploadData.attachment) {
+        throw new Error(uploadData.error ?? "Failed to upload file");
+      }
+
+      const username =
+        payload.viewer.displayName.includes("@")
+          ? payload.viewer.displayName.split("@")[0] || payload.viewer.operatorId
+          : payload.viewer.displayName.replace(/\s+/g, ".").toLowerCase() ||
+            payload.viewer.operatorId;
+
+      const messageResponse = await fetch("/api/messaging/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operatorId: payload.viewer.operatorId,
+          operatorName: payload.viewer.displayName,
+          username,
+          room: payload.room.channelRoom,
+          content: `Shared ${uploadData.attachment.name} during live ${payload.room.callType} call`,
+          messageType: "file",
+          attachmentName: uploadData.attachment.name,
+          attachmentUrl: uploadData.attachment.url,
+          attachmentMime: uploadData.attachment.mimeType,
+        }),
+      });
+      const messageData = await readApiJson<{ error?: string }>(messageResponse);
+      if (!messageResponse.ok) {
+        throw new Error(messageData.error ?? "Failed to post shared file");
+      }
+
+      setFileStatus(`${uploadData.attachment.name} sent to Messaging`);
+    } catch (shareError) {
+      setError(shareError instanceof Error ? shareError.message : "Failed to share file");
+    } finally {
+      setSharingFile(false);
+    }
+  }
+
   if (loading) {
     return (
       <section
@@ -424,9 +486,12 @@ export default function MessagingCallRoom({
             {error || mediaError || signalingError}
           </p>
         )}
+        {fileStatus ? (
+          <p className="max-w-xl text-center text-sm text-emerald-300">{fileStatus}</p>
+        ) : null}
       </div>
 
-      <footer className="flex items-center justify-center gap-3 border-t border-white/10 px-5 py-5">
+      <footer className="flex flex-wrap items-center justify-center gap-3 border-t border-white/10 px-5 py-5">
         {!joined ? (
           <button
             type="button"
@@ -439,6 +504,12 @@ export default function MessagingCallRoom({
           </button>
         ) : (
           <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(event) => void handleShareFile(event)}
+            />
             <button
               type="button"
               onClick={toggleAudio}
@@ -473,6 +544,16 @@ export default function MessagingCallRoom({
                 {sharingScreen ? "Stop share" : "Share"}
               </button>
             )}
+            <button
+              type="button"
+              disabled={sharingFile}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-4 text-sm text-sky-100 disabled:opacity-50"
+              aria-label="Send file to Messaging"
+            >
+              {sharingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              File
+            </button>
             <button
               type="button"
               disabled={busy}
