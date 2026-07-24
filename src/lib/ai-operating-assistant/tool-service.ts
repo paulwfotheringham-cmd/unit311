@@ -41,6 +41,16 @@ import {
   queryPayroll,
 } from "./payroll-tools";
 import {
+  listBusinessActionsTool,
+  proposeBusinessActionPlanTool,
+} from "./actions/discovery-tools";
+import {
+  executeGoalPlanTool,
+  planBusinessGoalTool,
+} from "./actions/planning/planning-tools";
+// Ensure Clients Action Framework handlers are registered for discovery.
+import "./actions/modules/clients/register";
+import {
   getCashPosition,
   getMonthlyPayrollObligation,
   platformSearch,
@@ -614,6 +624,63 @@ export const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "listBusinessActions",
+    description:
+      "Discover registered business Action Framework operations available to the current user (module, permissions, confirmation/audit flags, inputSchema). Clients module is registered (createClient, updateClient, archiveClient, restoreClient, assignAccountManager, contacts, locations, merge). Always call this (or use known clients.* actionIds) before proposeBusinessActionPlan for writes.",
+    parameters: {
+      type: "object",
+      properties: {
+        module: {
+          type: "string",
+          description: "Optional module filter (clients, projects, finance, hr, …)",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "proposeBusinessActionPlan",
+    description:
+      "Build a multi-step Action Framework plan with permission checks and previews. Does NOT execute writes. Returns a planId for the confirmation UI. After the user Approves, the client calls the execute API. Use registered actionIds from listBusinessActions — e.g. clients.createClient with { companyName }, clients.updateClient with { clientName, phone }, clients.assignAccountManager with { clientName, accountManagerName }, clients.archiveClient, clients.restoreClient, clients.mergeDuplicateClients with { sourceClientName, targetClientName }. Prefer planBusinessGoal for open-ended business goals that may need many coordinated actions.",
+    parameters: {
+      type: "object",
+      properties: {
+        request: { type: "string", description: "Original user request" },
+        title: { type: "string" },
+        conversationId: { type: "string" },
+        steps: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              actionId: { type: "string" },
+              input: { type: "object" },
+              dependsOnStepIds: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+      required: ["steps"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "planBusinessGoal",
+    description:
+      "Planning Engine: turn a natural-language business GOAL into a coordinated execution graph of registered actions (dependencies, parallel groups, conditions, retries). Use for goals like “open a new office”, “onboard a new customer”, “hire a software engineer”, or any multi-action objective. Discovers actions from the registry — do not hardcode workflows. Returns a goalId + Plan Viewer model. Wait for user Approve before execution.",
+    parameters: {
+      type: "object",
+      properties: {
+        goal: { type: "string", description: "Natural language business objective" },
+        request: { type: "string" },
+        title: { type: "string" },
+        conversationId: { type: "string" },
+      },
+      required: ["goal"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 type ContextualToolHandler = (
@@ -660,6 +727,10 @@ const handlers: Record<string, ContextualToolHandler> = {
   queryPayroll,
   createPayrollRun: createPayrollRunTool,
   generatePayrollPdf,
+  listBusinessActions: listBusinessActionsTool,
+  proposeBusinessActionPlan: proposeBusinessActionPlanTool,
+  planBusinessGoal: planBusinessGoalTool,
+  executeGoalPlan: executeGoalPlanTool,
 };
 
 /** @deprecated Prefer contextual handlers — kept for registerAssistantTool compatibility. */

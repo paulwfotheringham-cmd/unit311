@@ -1,8 +1,13 @@
 import type { AssistantFollowUpAction } from "./tool-result";
 
 /**
- * Safe action catalogue — definitions only.
- * No writes execute automatically; UI/runtime must require explicit confirmation.
+ * Legacy safe action catalogue — definitions + confirmation gate.
+ *
+ * Phase 1 Action Framework (`./actions`) is the path forward for real writes:
+ * register handlers with `registerAssistantAction`, propose via
+ * `proposeBusinessActionPlan`, confirm in UI, execute via `/api/.../actions/plans/[id]`.
+ *
+ * These catalogue kinds remain for older follow-up buttons until modules migrate.
  */
 
 export type AssistantPendingActionKind =
@@ -91,13 +96,20 @@ export function actionFollowUps(
   });
 }
 
-/** Execution is intentionally unimplemented — confirmation gate only. */
+/**
+ * Legacy catalogue execution remains blocked.
+ * Real writes must go through Action Framework plans (`./actions`).
+ */
 export async function executeConfirmedAction(_action: AssistantPendingAction) {
   try {
     const { recordQualityEvent } = await import("./feedback-service");
     void recordQualityEvent({
       kind: "confirmation_blocked",
-      meta: { actionKind: _action.kind, status: "blocked" },
+      meta: {
+        actionKind: _action.kind,
+        status: "blocked",
+        hint: "Use Action Framework registerAssistantAction + proposeBusinessActionPlan",
+      },
     });
   } catch {
     // optional
@@ -105,6 +117,6 @@ export async function executeConfirmedAction(_action: AssistantPendingAction) {
   return {
     status: "blocked" as const,
     message:
-      "AI recommends — you decide. This action was not executed. Explicit confirmation is required and write execution is intentionally blocked until you approve a future confirmed write path.",
+      "This legacy action catalogue entry is not executable. Domain modules must register Action Framework handlers (validate/preview/execute/rollback) and run through the confirmation pipeline.",
   };
 }

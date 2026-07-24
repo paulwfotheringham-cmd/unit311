@@ -25,6 +25,11 @@ import {
   proposeAction,
   type AssistantPendingActionKind,
 } from "@/lib/ai-operating-assistant/action-service";
+import { PlanViewer } from "@/components/executive-assistant/PlanViewer";
+import { actionConfirmationToPlanViewer } from "@/lib/ai-operating-assistant/actions/planning/summaries";
+import type { PlanViewerModel } from "@/lib/ai-operating-assistant/actions/planning/types";
+import { formatExecutedClientOutcome } from "@/lib/ai-operating-assistant/action-ui-messages";
+import type { ActionConfirmationView } from "@/components/executive-assistant/ActionConfirmationCard";
 import { requestShowMeAround } from "@/components/executive-assistant/GuidedLearningProvider";
 import {
   HOME_SUGGESTED_ACTIONS,
@@ -34,6 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   fetchCachedJson,
+  invalidateCachedJson,
   PLATFORM_CACHE_KEYS,
 } from "@/lib/platform-fetch-cache";
 import {
@@ -187,6 +193,12 @@ export default function ExecutiveAssistantPanel({
     kind: AssistantPendingActionKind;
     label: string;
   } | null>(null);
+  const [planViewer, setPlanViewer] = useState<PlanViewerModel | null>(null);
+  /** Keep raw confirmation (with step inputs) for approve-time plan rehydration. */
+  const [actionConfirmation, setActionConfirmation] = useState<ActionConfirmationView | null>(
+    null,
+  );
+  const [actionConfirmBusy, setActionConfirmBusy] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
@@ -481,6 +493,43 @@ export default function ExecutiveAssistantPanel({
     }
 
     if (action.kind === "confirm_action" && action.actionId) {
+      if (action.actionId.startsWith("goal_")) {
+        void (async () => {
+          try {
+            const response = await fetch(
+              `/api/executive-assistant/planning/goals/${action.actionId}`,
+              { cache: "no-store" },
+            );
+            if (!response.ok) throw new Error("Could not load goal plan");
+            const data = (await response.json()) as { viewer?: PlanViewerModel };
+            if (data.viewer) setPlanViewer(data.viewer);
+          } catch (error) {
+            showNotice(error instanceof Error ? error.message : "Could not load goal plan");
+          }
+        })();
+        return;
+      }
+      if (action.actionId.startsWith("plan_")) {
+        void (async () => {
+          try {
+            const response = await fetch(
+              `/api/executive-assistant/actions/plans/${action.actionId}`,
+              { cache: "no-store" },
+            );
+            if (!response.ok) throw new Error("Could not load action plan");
+            const data = (await response.json()) as {
+              confirmation?: ActionConfirmationView;
+            };
+            if (data.confirmation) {
+              setActionConfirmation(data.confirmation);
+              setPlanViewer(actionConfirmationToPlanViewer(data.confirmation));
+            }
+          } catch (error) {
+            showNotice(error instanceof Error ? error.message : "Could not load plan");
+          }
+        })();
+        return;
+      }
       setPendingConfirm({
         kind: action.actionId as AssistantPendingActionKind,
         label: action.label,
@@ -570,6 +619,29 @@ export default function ExecutiveAssistantPanel({
           if (event.type === "tool_result") {
             applyGuidedToolResult(event.result);
             applyProactiveToolResult(event.name, event.result);
+            if (event.name === "proposeBusinessActionPlan" && event.result) {
+              const result = event.result as {
+                items?: Array<{ confirmation?: ActionConfirmationView; blocked?: boolean }>;
+                summary?: { requiresConfirmation?: boolean; blocked?: boolean };
+              };
+              const confirmation = result.items?.[0]?.confirmation;
+              // Always surface the Plan Viewer when a plan confirmation payload exists.
+              if (confirmation) {
+                setActionConfirmation(confirmation);
+                setPlanViewer(actionConfirmationToPlanViewer(confirmation));
+              }
+            }
+            if (event.name === "planBusinessGoal" && event.result) {
+              const result = event.result as {
+                items?: Array<{ viewer?: PlanViewerModel }>;
+                summary?: { requiresConfirmation?: boolean };
+              };
+              const viewer = result.items?.[0]?.viewer;
+              if (viewer) {
+                setActionConfirmation(null);
+                setPlanViewer(viewer);
+              }
+            }
           }
           if (event.type === "delta") {
             setMessages((current) =>
@@ -889,6 +961,181 @@ export default function ExecutiveAssistantPanel({
             <p className="rounded-lg border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[11px] text-sky-100">
               {notice}
             </p>
+          ) : null}
+          {planViewer ? (
+            <PlanViewer
+              plan={planViewer}
+              busy={actionConfirmBusy}
+              onApprove={() => {
+                void (async () => {
+                  setActionConfirmBusy(true);
+                  console.info(
+                    "[EA PlanViewer] approve clicked",
+                    planViewer.planId,
+                    planViewer.kind,
+                  );
+                  try {
+                    const isGoal =
+                      planViewer.kind === "goal_plan" || planViewer.planId.startsWith("goal_");
+                    const url = isGoal
+                      ? `/api/executive-assistant/planning/goals/${planViewer.planId}`
+                      : `/api/executive-assistant/actions/plans/${planViewer.planId}`;
+                    const response = await fetch(url, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        confirmed: true,
+                        activeView,
+                        roleView,
+                        selection,
+                        title: planViewer.title,
+                        summary: planViewer.businessImpact,
+                        aiRequest: planViewer.goal,
+                        steps:
+                          actionConfirmation?.actions.map((action) => ({
+                            stepId: action.stepId,
+                            actionId: action.actionId,
+                            name: action.name,
+                            module: action.module,
+                            input: action.input ?? {},
+                            status: action.status,
+                          })) ??
+                          planViewer.steps.map((step) => ({
+                            stepId: step.stepId,
+                            actionId: step.actionId,
+                            name: step.name,
+                            module: step.module,
+                            input: {},
+                            status: step.status,
+                          })),
+                      }),
+                    });
+                    const data = (await response.json().catch(() => null)) as {
+                      error?: string;
+                      summary?: string;
+                      viewer?: PlanViewerModel;
+                      confirmation?: ActionConfirmationView;
+                      plan?: {
+                        status?: string;
+                        steps?: Array<{
+                          actionId?: string;
+                          status?: string;
+                          input?: Record<string, unknown>;
+                          result?: {
+                            recordId?: string | null;
+                            recordLabel?: string | null;
+                            message?: string;
+                          };
+                        }>;
+                      };
+                    } | null;
+                    console.info(
+                      "[EA PlanViewer] approve response",
+                      response.status,
+                      data?.plan?.status ?? data?.error,
+                    );
+                    if (!response.ok) {
+                      throw new Error(data?.error ?? `Execute failed (${response.status})`);
+                    }
+                    if (data?.confirmation) {
+                      setActionConfirmation(data.confirmation);
+                      setPlanViewer(actionConfirmationToPlanViewer(data.confirmation));
+                    } else if (data?.viewer) {
+                      setPlanViewer(data.viewer);
+                    } else {
+                      setPlanViewer(null);
+                      setActionConfirmation(null);
+                    }
+                    showNotice(data?.summary?.split("\n")[0] ?? "Plan completed");
+                    const createdStep = data?.plan?.steps?.find(
+                      (step) =>
+                        step.actionId === "clients.createClient" && step.status === "succeeded",
+                    );
+                    const outcomeText = createdStep
+                      ? formatExecutedClientOutcome({
+                          companyName:
+                            (typeof createdStep.result?.recordLabel === "string" &&
+                              createdStep.result.recordLabel) ||
+                            (typeof createdStep.input?.companyName === "string"
+                              ? createdStep.input.companyName
+                              : "Client"),
+                          location:
+                            typeof createdStep.input?.companyCity === "string"
+                              ? createdStep.input.companyCity
+                              : typeof createdStep.input?.region === "string"
+                                ? String(createdStep.input.region)
+                                : null,
+                          clientId: createdStep.result?.recordId ?? null,
+                        })
+                      : data?.summary;
+                    if (outcomeText) {
+                      setMessages((current) => [
+                        ...current,
+                        {
+                          id: `action_summary_${Date.now()}`,
+                          role: "assistant",
+                          content: outcomeText,
+                          createdAt: new Date().toISOString(),
+                        },
+                      ]);
+                    }
+                    invalidateCachedJson(PLATFORM_CACHE_KEYS.clients);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(
+                        new CustomEvent("unit311:clients-changed", {
+                          detail: { planId: planViewer.planId },
+                        }),
+                      );
+                    }
+                  } catch (error) {
+                    console.error("[EA PlanViewer] approve failed", error);
+                    showNotice(
+                      error instanceof Error ? error.message : "Plan execution failed",
+                    );
+                  } finally {
+                    setActionConfirmBusy(false);
+                  }
+                })();
+              }}
+              onCancel={() => {
+                void (async () => {
+                  setActionConfirmBusy(true);
+                  try {
+                    const isGoal =
+                      planViewer.kind === "goal_plan" || planViewer.planId.startsWith("goal_");
+                    const url = isGoal
+                      ? `/api/executive-assistant/planning/goals/${planViewer.planId}`
+                      : `/api/executive-assistant/actions/plans/${planViewer.planId}`;
+                    await fetch(url, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        confirmed: false,
+                        activeView,
+                        roleView,
+                        selection,
+                        steps:
+                          actionConfirmation?.actions.map((action) => ({
+                            stepId: action.stepId,
+                            actionId: action.actionId,
+                            name: action.name,
+                            module: action.module,
+                            input: action.input ?? {},
+                            status: action.status,
+                          })) ?? [],
+                      }),
+                    });
+                  } catch {
+                    // ignore cancel network errors
+                  } finally {
+                    setPlanViewer(null);
+                    setActionConfirmation(null);
+                    setActionConfirmBusy(false);
+                    showNotice("Plan cancelled");
+                  }
+                })();
+              }}
+            />
           ) : null}
           {pendingConfirm ? (
             <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3">

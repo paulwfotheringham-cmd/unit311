@@ -1,4 +1,10 @@
-import { resolveDirectIntent, topicHintFromHistory } from "./intent-router";
+import { topicHintFromHistory } from "./intent-router";
+import {
+  ensureActionModulesRegistered,
+  formatPlanReadyMessage,
+  redirectManualGuidanceToActionPlan,
+  resolveOrchestrationRoute,
+} from "./action-orchestration";
 import {
   createAssistantResponse,
   formatOpenAIError,
@@ -471,8 +477,38 @@ export async function* runAssistantTurn(input: {
   let turnArtifacts: NonNullable<AssistantChatMessage["artifacts"]> = [];
 
   try {
-    const directIntent = resolveDirectIntent(message, resolved.history);
-    if (directIntent) {
+    ensureActionModulesRegistered();
+
+    // Intent → registered action → propose/execute. Never fall through to workflow teaching.
+    const route = await resolveOrchestrationRoute(message, resolved.history, context);
+    if (route.kind === "need_info") {
+      assistantText = route.message;
+      yield { type: "delta", text: assistantText };
+      const assistantMessage: AssistantChatMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        content: assistantText,
+        createdAt: new Date().toISOString(),
+      };
+      const saved = await persistTurn({
+        session: input.session,
+        conversationId: resolved.conversationId,
+        history: resolved.history,
+        userMessage,
+        assistantMessage,
+        context,
+        title: resolved.title,
+      });
+      yield {
+        type: "done",
+        message: assistantMessage,
+        conversationId: saved.conversationId,
+      };
+      return;
+    }
+
+    if (route.kind === "tool") {
+      const directIntent = route.intent;
       const toolArgs =
         directIntent.tool === "emailAssistantArtifact" && activeArtifact
           ? {
@@ -500,10 +536,47 @@ export async function* runAssistantTurn(input: {
       const extracted = extractArtifactsFromToolResult(result, directIntent.tool);
       turnFollowUps = extracted.followUps;
       turnArtifacts = extracted.artifacts;
-      assistantText =
-        extracted.errorText ??
-        extracted.successText ??
-        "Done.";
+
+      if (
+        (directIntent.tool === "proposeBusinessActionPlan" ||
+          directIntent.tool === "planBusinessGoal") &&
+        !extracted.errorText
+      ) {
+        const steps = Array.isArray(directIntent.args.steps)
+          ? (directIntent.args.steps as Array<{ actionId?: string; input?: Record<string, unknown> }>)
+          : [];
+        const first = steps[0];
+        const actionId = typeof first?.actionId === "string" ? first.actionId : "";
+        const companyName =
+          typeof first?.input?.companyName === "string"
+            ? first.input.companyName
+            : typeof first?.input?.clientName === "string"
+              ? first.input.clientName
+              : null;
+        const location =
+          typeof first?.input?.companyCity === "string"
+            ? first.input.companyCity
+            : typeof first?.input?.region === "string"
+              ? String(first.input.region)
+              : null;
+        const actionName =
+          (typeof (result as { items?: Array<{ confirmation?: { title?: string } }> }).items?.[0]
+            ?.confirmation?.title === "string" &&
+            (result as { items: Array<{ confirmation: { title: string } }> }).items[0].confirmation
+              .title) ||
+          actionId ||
+          "complete that";
+        assistantText = formatPlanReadyMessage({
+          actionName,
+          companyName,
+          location,
+        });
+      } else {
+        assistantText =
+          extracted.errorText ??
+          extracted.successText ??
+          "Done.";
+      }
       yield { type: "delta", text: assistantText };
 
       const assistantMessage: AssistantChatMessage = {
@@ -619,7 +692,25 @@ export async function* runAssistantTurn(input: {
 
       for (const call of pendingToolCalls) {
         const toolStarted = Date.now();
-        const result = await executeAssistantTool(call.name, call.arguments, context);
+
+        // Never let workflow/page guidance bypass registered executable actions.
+        const redirected = await redirectManualGuidanceToActionPlan(
+          call.name,
+          message,
+          context,
+        );
+        const effectiveName = redirected?.tool ?? call.name;
+        const effectiveArgs = redirected?.args ?? call.arguments;
+
+        if (redirected) {
+          yield {
+            type: "tool_call",
+            name: effectiveName,
+            arguments: effectiveArgs,
+          };
+        }
+
+        const result = await executeAssistantTool(effectiveName, effectiveArgs, context);
         const status =
           result && typeof result === "object" && "status" in result
             ? String((result as { status?: string }).status)
@@ -627,10 +718,13 @@ export async function* runAssistantTurn(input: {
         const success = status === "ok" || status === "partial";
         void recordQualityEvent({
           kind: success ? "tool_success" : "tool_error",
-          toolName: call.name,
+          toolName: effectiveName,
           durationMs: Date.now() - toolStarted,
           success,
-          meta: { status },
+          meta: {
+            status,
+            redirectedFrom: redirected ? call.name : undefined,
+          },
         });
         const gaps =
           result && typeof result === "object" && Array.isArray((result as { dataGaps?: unknown }).dataGaps)
@@ -640,14 +734,57 @@ export async function* runAssistantTurn(input: {
           recordedDataGaps += gaps;
           void recordQualityEvent({
             kind: "data_gap",
-            toolName: call.name,
+            toolName: effectiveName,
             meta: { count: gaps },
           });
         }
-        yield { type: "tool_result", name: call.name, result };
-        const extracted = extractArtifactsFromToolResult(result, call.name);
+        yield { type: "tool_result", name: effectiveName, result };
+        const extracted = extractArtifactsFromToolResult(result, effectiveName);
         if (extracted.followUps.length > 0) turnFollowUps = extracted.followUps;
         if (extracted.artifacts.length > 0) turnArtifacts = extracted.artifacts;
+
+        // Action Framework / Planning Engine proposals end the turn — do not let the
+        // model continue with manual navigation instructions.
+        if (
+          effectiveName === "proposeBusinessActionPlan" ||
+          effectiveName === "planBusinessGoal"
+        ) {
+          assistantText =
+            extracted.errorText ??
+            extracted.successText ??
+            (typeof (result as { summary?: { message?: string } })?.summary?.message ===
+            "string"
+              ? (result as { summary: { message: string } }).summary.message
+              : "Action plan ready for approval.");
+          yield { type: "delta", text: assistantText };
+
+          const assistantMessage: AssistantChatMessage = {
+            id: createMessageId(),
+            role: "assistant",
+            content: assistantText,
+            createdAt: new Date().toISOString(),
+            followUpActions: turnFollowUps.length > 0 ? turnFollowUps : undefined,
+            artifacts: turnArtifacts.length > 0 ? turnArtifacts : undefined,
+          };
+
+          const saved = await persistTurn({
+            session: input.session,
+            conversationId: resolved.conversationId,
+            history: resolved.history,
+            userMessage,
+            assistantMessage,
+            context,
+            title: resolved.title,
+          });
+
+          yield {
+            type: "done",
+            message: assistantMessage,
+            conversationId: saved.conversationId,
+          };
+          return;
+        }
+
         toolOutputs.push({
           type: "function_call_output",
           call_id: call.callId,

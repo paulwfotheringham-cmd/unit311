@@ -188,6 +188,15 @@ export default function ClientManagementWorkspace({
   }, [loadClients]);
 
   useEffect(() => {
+    const onClientsChanged = () => {
+      invalidateCachedJson(PLATFORM_CACHE_KEYS.clients);
+      void loadClients();
+    };
+    window.addEventListener("unit311:clients-changed", onClientsChanged);
+    return () => window.removeEventListener("unit311:clients-changed", onClientsChanged);
+  }, [loadClients]);
+
+  useEffect(() => {
     const deepLinkId = searchParams.get("clientId");
     if (!deepLinkId || loading || clients.length === 0) return;
     if (deepLinkedClientRef.current === deepLinkId) return;

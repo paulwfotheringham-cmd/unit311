@@ -72,9 +72,13 @@ export async function buildBusinessContext(
       name: organisationName,
     },
     workspace: {
-      id: input.workspaceId ?? organisationId,
-      name: input.workspaceName ?? organisationName ?? "Unit311 Central",
-      slug: input.workspaceSlug ?? null,
+      id: input.workspaceId ?? organisationId ?? input.session.workspaceId ?? null,
+      name:
+        input.workspaceName ??
+        organisationName ??
+        input.session.workspaceName ??
+        "Unit311 Central",
+      slug: input.workspaceSlug ?? input.session.workspaceSlug ?? null,
     },
     page: {
       activeView,

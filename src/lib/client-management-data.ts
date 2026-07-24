@@ -117,7 +117,7 @@ export const CLIENT_STATUS_OPTIONS: ClientAccountStatus[] = [
 
 const CLIENT_STATUS_SET = new Set<string>(CLIENT_STATUS_OPTIONS);
 
-/** Allowed Directory transitions (FDR-MOD-011-LIFECYCLE). Archived is terminal. */
+/** Allowed Directory transitions (FDR-MOD-011-LIFECYCLE). Archived may restore to Dormant. */
 const CLIENT_STATUS_TRANSITIONS: Readonly<
   Record<ClientAccountStatus, readonly ClientAccountStatus[]>
 > = {
@@ -126,7 +126,8 @@ const CLIENT_STATUS_TRANSITIONS: Readonly<
   Onboarding: ["Active", "Dormant", "Archived"],
   Active: ["Dormant", "Archived"],
   Dormant: ["Active", "Archived"],
-  Archived: [],
+  /** Restore path for Action Framework / Directory ops — returns to Dormant for review. */
+  Archived: ["Dormant"],
 };
 
 export function isClientAccountStatus(value: unknown): value is ClientAccountStatus {
@@ -168,7 +169,7 @@ export function assertClientAccountStatusTransition(
 ): void {
   if (!canTransitionClientAccountStatus(from, to)) {
     throw new Error(
-      `Invalid client lifecycle transition: ${from} → ${to}. Archived is terminal.`,
+      `Invalid client lifecycle transition: ${from} → ${to}.`,
     );
   }
 }

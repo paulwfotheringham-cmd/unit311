@@ -71,6 +71,8 @@ const MIGRATIONS = [
   "supabase/migrations/106_executive_assistant_saved_flag.sql",
   "supabase/migrations/107_procurement_module.sql",
   "supabase/migrations/108_calendar_meeting_sessions.sql",
+  "supabase/migrations/109_executive_assistant_action_framework.sql",
+  "supabase/migrations/110_executive_assistant_planning_engine.sql",
 ];
 
 function isAuthorized(request: NextRequest) {

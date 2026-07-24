@@ -429,3 +429,26 @@ export async function deleteInternalClient(id: string, scope?: ClientsWorkspaceS
     }
   });
 }
+
+/** Soft-archive a client (accountStatus → Archived). */
+export async function archiveInternalClient(
+  id: string,
+  scope?: ClientsWorkspaceScope,
+): Promise<ManagedClient> {
+  return updateInternalClient(id, { accountStatus: "Archived" }, scope);
+}
+
+/**
+ * Restore an archived client to Dormant (review before re-activating).
+ * Prefer this over a raw status patch so callers share one restore policy.
+ */
+export async function restoreInternalClient(
+  id: string,
+  scope?: ClientsWorkspaceScope,
+): Promise<ManagedClient> {
+  const existing = await requireInternalClientInWorkspace(id, scope);
+  if (normalizeClientAccountStatus(existing.accountStatus) !== "Archived") {
+    throw new Error("Only archived clients can be restored.");
+  }
+  return updateInternalClient(id, { accountStatus: "Dormant" }, scope);
+}
